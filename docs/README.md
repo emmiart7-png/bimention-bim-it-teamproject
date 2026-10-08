@@ -10,6 +10,7 @@
 | `index.html` | 웹 화면 (입력, 결과 카드, 대안 비교, 입면별 표, JSON 내려받기) |
 | `engine.js` | 계산 엔진. 엑셀 7·8·9·10·13번 시트와 같은 식 |
 | `geo.js` | 브이월드 주소 검색 · 건물 외곽선 · 외곽선 → 입면 변환 |
+| `unity.js` | Unity WebGL 빌드 불러오기 (`unity/Build/`) |
 | `features.js` | 하루 재생 평면도, 누적 순이익 · 민감도, 연간 히트맵, 인쇄, 공유 링크 |
 
 ## 화면 기능
@@ -35,6 +36,8 @@
 3. **엑셀 검증 모드**: 엑셀 가정값(일사량 700, 차양계수)으로 계산. 엑셀과 같은 숫자가 나오는지 확인용.
 
 ## Unity 연결
+
+**Unity 팀은 저장소의 [`unity-bridge/`](../unity-bridge/README.md) 폴더를 쓰면 된다** (C# 스크립트 · .jslib · 적용 방법). 빌드를 넣을 때는 `unity/Build/`에 복사하고 `unity.js`의 `NAME`을 맞춘다. 아래는 원리 설명.
 
 웹 → Unity: 계산할 때 웹이 아래를 호출한다. Unity 씬에 이름이 `LouverBridge`인 오브젝트를 두고 `OnSiteInput(string json)`을 만든다.
 

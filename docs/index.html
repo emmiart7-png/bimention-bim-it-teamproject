@@ -194,7 +194,7 @@ svg text{font-family:inherit}
   </section>
   <section class="panel noprint">
     <h2>루버 시뮬레이션 (Unity)</h2>
-    <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 이 폴더에 넣고 README의 연결 방법을 따르면, 계산할 때 같은 입력이 Unity로 전달됩니다.</div>
+    <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
   </section>
   <section class="panel">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
@@ -242,8 +242,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=6"></script>
-<script src="geo.js?v=6"></script>
+<script src="engine.js?v=7"></script>
+<script src="geo.js?v=7"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -298,8 +298,25 @@ svg text{font-family:inherit}
   }
 
   // Unity 연결: Unity WebGL 빌드가 window.unityInstance 를 만들면 입력을 넘기고, Unity는 window.LouverBridge.receiveSolarResult(json)로 돌려준다
+  // Unity 연결 (unity-bridge/ 의 LouverBridge.cs · .jslib 와 짝)
+  // - 입력이 바뀐 경우에만 보낸다: Unity 결과 → 웹 재계산 → 다시 Unity 로 보내는 반복을 막는다
+  // - null 은 0 으로 바꿔 보낸다 (Unity JsonUtility 가 null 숫자를 읽지 못함)
+  let lastSent='', lastInput=null;
+  const clean = o => JSON.stringify(o,(k,v)=>v===null?0:v);
   window.LouverBridge = {
-    sendToUnity(input){ if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverBridge','OnSiteInput',JSON.stringify(input)); }catch(e){ console.warn(e); } } },
+    simDateTime: '2026-06-21T12:00:00+09:00',
+    sendToUnity(input, force){
+      lastInput=input;
+      const key=clean({...input, sim_datetime:undefined});
+      if(!window.unityInstance || (!force && key===lastSent)) return;
+      lastSent=key;
+      try{ window.unityInstance.SendMessage('LouverBridge','OnSiteInput',clean({...input, sim_datetime:this.simDateTime})); }catch(e){ console.warn(e); }
+    },
+    sendDateTime(iso){
+      this.simDateTime=iso;
+      if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverBridge','SetDateTime',iso); }catch(e){ console.warn(e); } }
+    },
+    onUnityReady(){ if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); },
     receiveSolarResult(json){ const s=typeof json==='string'?json:JSON.stringify(json,null,1); $('unityJson').value=s; document.querySelector('input[name=src][value=unity]').checked=true; $('unityBox').classList.remove('hidden'); run(); }
   };
 
@@ -432,6 +449,7 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=6"></script>
+<script src="features.js?v=7"></script>
+<script src="unity.js?v=7"></script>
 </body>
 </html>

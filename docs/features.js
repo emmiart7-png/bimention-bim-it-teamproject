@@ -43,6 +43,7 @@
     const [y, m, d] = $('simDate').value.split('-').map(Number);
     const mins = Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins % 60;
     $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
     const spec = E.merge(E.DEFAULT_SPEC, last.input.louver_spec), ds = spec.blade_depth_mm / spec.blade_spacing_mm;
