@@ -41,6 +41,7 @@
     life_yr: 30,
     cop_cooling: 3,
     cop_heating: 3,
+    heating_gain_utilization: 0.7, // 겨울 햇빛 열 중 실제로 난방을 줄이는 비율 (가정, 엑셀 13번 B12)
     shgc: 0.6,
     emission_t_mwh: 0.46,
     // 조명 사용량 (kWh/년, 루버 단 창 1,000㎡ 기준 → 창 면적에 비례)
@@ -264,14 +265,14 @@
         const X = A.excel_mode;
         coolSaved = q.window_area_m2 * A.shgc * (X.cooling_irradiance_kwh_m2.bare - X.cooling_irradiance_kwh_m2[alt]) / A.cop_cooling / 1000;
         const tw = alt === 'external_reactive' ? (winterMode ? X.winter_transmission.external_reactive_winter : X.winter_transmission.external_reactive_rule) : X.winter_transmission[alt];
-        heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor / A.cop_heating / 1000;
+        heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor * A.heating_gain_utilization / A.cop_heating / 1000;
       } else {
         for (const f of lf) {
           const s = solar.facades.find(x => x.id === f.id);
           if (!s) { warnings.push(`입면 ${f.id}: 일사량 값 없음`); continue; }
           const Aw = windowArea(f);
           const c = Aw * A.shgc * (s.cooling_season.bare_kwh_m2_yr - s.cooling_season[alt + '_kwh_m2_yr']) / A.cop_cooling / 1000;
-          const h = Aw * A.shgc * (s.heating_season.bare_kwh_m2_yr - s.heating_season[alt + '_kwh_m2_yr']) / A.cop_heating / 1000;
+          const h = Aw * A.shgc * (s.heating_season.bare_kwh_m2_yr - s.heating_season[alt + '_kwh_m2_yr']) * A.heating_gain_utilization / A.cop_heating / 1000;
           coolSaved += c; heatAdded += h;
           per_facade.push({ id: f.id, window_area_m2: Aw, louver_area_m2: Aw * merge(DEFAULT_SPEC, input.louver_spec).louver_to_window_ratio, cooling_saved_mwh_yr: c, heating_added_mwh_yr: h, closed_hours_yr: s.closed_hours_yr, blade_rotation_deg_yr: s.blade_rotation_deg_yr });
         }

@@ -166,6 +166,9 @@ svg text{font-family:inherit}
       <div><label for="cop">냉난방 COP</label><input id="cop" type="number" step="0.1" value="3"></div>
     </div>
     <div class="row3">
+      <div><label for="util" title="창으로 들어온 겨울 햇빛 열 중 실제로 난방을 줄이는 비율 (나머지는 과열 · 환기로 버려짐)">겨울 햇빛 열 활용률</label><input id="util" type="number" step="0.05" min="0" max="1" value="0.7"></div>
+    </div>
+    <div class="row3">
       <div><label for="emis">배출계수 (tCO₂/MWh)</label><input id="emis" type="number" step="0.01" value="0.46"></div>
       <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
@@ -178,10 +181,15 @@ svg text{font-family:inherit}
     <h2>4. 일사량 출처</h2>
     <div class="seg" role="radiogroup">
       <label><input type="radio" name="src" value="radiance" checked><span>팀 Radiance (그림자 반영)</span></label>
-      <label><input type="radio" name="src" value="solar"><span>간이식 (맑은 날)</span></label>
       <label><input type="radio" name="src" value="unity"><span>Unity 결과</span></label>
-      <label><input type="radio" name="src" value="excel"><span>엑셀 검증 모드</span></label>
     </div>
+    <details id="srcAdv" style="margin-top:10px"><summary class="muted" style="cursor:pointer">검증용 계산</summary>
+      <div class="seg" style="margin-top:8px">
+        <label><input type="radio" name="src" value="solar"><span>간이식 (맑은 날)</span></label>
+        <label><input type="radio" name="src" value="excel"><span>엑셀 검증 모드</span></label>
+      </div>
+      <p class="muted" style="margin-top:6px">간이식: 어느 위치 · 방위나 직접 계산 (맑은 날 직달, 그림자 · 날씨 없음). 엑셀 검증: 엑셀 13 · 14번 시트와 같은 숫자인지 확인.</p>
+    </details>
     <div id="unityBox" class="hidden">
       <label for="unityJson">Unity가 보낸 solar_result (JSON)</label>
       <textarea id="unityJson" placeholder='{"meta":{...},"facades":[{"id":"S","cooling_season":{...},"heating_season":{...}}]}'></textarea>
@@ -246,8 +254,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=12"></script>
-<script src="geo.js?v=12"></script>
+<script src="engine.js?v=13"></script>
+<script src="geo.js?v=13"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -297,7 +305,7 @@ svg text{font-family:inherit}
       site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value)},
       project_type:$('ptype').value, winter_mode:$('winter').checked, facades,
       louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
-      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('cop').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
+      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('cop').value),heating_gain_utilization:Number($('util').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
     };
   }
 
@@ -377,11 +385,11 @@ svg text{font-family:inherit}
     if(s.blade_depth_mm) $('depth').value=s.blade_depth_mm; if(s.blade_spacing_mm) $('spacing').value=s.blade_spacing_mm;
     if(s.louver_to_window_ratio) $('ratio').value=s.louver_to_window_ratio; if(s.area_per_unit_m2) $('unitArea').value=s.area_per_unit_m2;
     if(a.elec_price_krw_kwh) $('price').value=a.elec_price_krw_kwh; if(a.elec_escalation!=null) $('esc').value=+(a.elec_escalation*100).toFixed(2);
-    if(a.cop_cooling) $('cop').value=a.cop_cooling; if(a.emission_t_mwh) $('emis').value=a.emission_t_mwh;
+    if(a.cop_cooling) $('cop').value=a.cop_cooling; if(a.heating_gain_utilization!=null) $('util').value=a.heating_gain_utilization; if(a.emission_t_mwh) $('emis').value=a.emission_t_mwh;
     if(a.cost_multiplier) $('costMul').value=a.cost_multiplier;
     if(a.maintenance_rate&&a.maintenance_rate.external_reactive!=null) $('maint').value=+(a.maintenance_rate.external_reactive*100).toFixed(2);
     if(a.protective_glass) $('glass').checked=!!a.protective_glass.external_reactive;
-    if(mode){ const r=document.querySelector(`input[name=src][value=${mode}]`); if(r) r.checked=true; }
+    if(mode){ const r=document.querySelector(`input[name=src][value=${mode}]`); if(r){ r.checked=true; if(r.closest('details')) r.closest('details').open=true; } }
   }
   window.UI={addRow,run,clearFacades:()=>{tbody.innerHTML='';},readInput,fillInput,getLast:()=>last};
   const dl=(name,obj)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href);};
@@ -461,7 +469,7 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=12"></script>
-<script src="unity.js?v=12"></script>
+<script src="features.js?v=13"></script>
+<script src="unity.js?v=13"></script>
 </body>
 </html>
