@@ -138,7 +138,10 @@
     const fs = i.facades.map(f => `${esc(f.id)} ${f.azimuth_deg}° ${r1(f.window_area_m2)}㎡${f.louver ? '' : ' (루버 없음)'}`).join(' · ');
     $('printSite').innerHTML = `<p><b>${esc(i.site.address || '주소 미입력')}</b> · 위도 ${i.site.lat_deg} · 경도 ${i.site.lon_deg} · ${i.project_type === 'remodel' ? '리모델링' : '신축'} · 겨울 모드 ${i.winter_mode !== false ? '사용' : '안 함'}</p><p>입면: ${fs}</p><p class="muted">일사량: ${src} · 출력 ${new Date().toLocaleDateString('ko-KR')} · 반응형외피 검토 도구 v0.1 · 임시 단가 기준 개략 검토</p>`;
   }
-  $('printBtn').onclick = () => { renderPrintSummary(); window.print(); };
+  function note(html) { const m = $('hdrMsg'); m.innerHTML = html; m.hidden = false; }
+  const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (framed) note('미리보기 창 안에서는 인쇄와 클립보드 복사가 막혀 있습니다. 크롬이나 엣지에서 직접 열어 주세요.');
+  $('printBtn').onclick = () => { renderPrintSummary(); note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
 
   // ---------------- 5. 링크로 공유 ----------------
   const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -149,7 +152,8 @@
     const url = location.origin + location.pathname + '#s=' + code;
     history.replaceState(null, '', '#s=' + code);
     try { await navigator.clipboard.writeText(url); $('shareBtn').textContent = '복사됨'; setTimeout(() => $('shareBtn').textContent = '링크 복사', 2000); }
-    catch (e) { window.prompt('이 링크를 복사하세요', url); }
+    catch (e) { /* 클립보드가 막힌 환경 */ }
+    note('공유 링크 (복사되지 않았으면 아래 칸을 눌러 Ctrl + C):<br><input id="shareUrl" readonly style="margin-top:6px">'); const u = $('shareUrl'); u.value = url; u.onclick = () => u.select(); u.select();
   };
   function loadFromHash() {
     const m = location.hash.match(/^#s=([A-Za-z0-9_-]+)$/);
