@@ -296,7 +296,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
   setBase();
   $('vwSave').onclick=()=>{ try{ localStorage.setItem('vworldKey',$('vwKey').value.trim()); }catch(e){} setBase(); status('키를 저장했습니다. 건물을 클릭해 보세요.'); };
 
-  let outline=null, marker=null, current=null;
+  let outline=null, marker=null, current=null, edges=null;
   async function pickAt(lat,lon){
     $('lat').value=lat.toFixed(5); $('lon').value=lon.toFixed(5);
     if(marker) map.removeLayer(marker); marker=L.circleMarker([lat,lon],{radius:5,color:'#0064E0'}).addTo(map);
@@ -334,6 +334,10 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
     if(!fs.length){ status('입면을 만들지 못했습니다. 짧은 변 제외 값을 줄여 보세요.', true); return; }
     UI.clearFacades();
     fs.forEach(f=>UI.addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:'',louver:f.louver}));
+    // 지도에 입면 표시: 루버 면 = 파란 굵은 선, 루버 없는 면 = 회색 점선
+    if(edges) map.removeLayer(edges);
+    edges=L.layerGroup(fs.map(f=>L.polyline(f.path.map(([x,y])=>[y,x]),f.louver?{color:'#0064E0',weight:7,opacity:0.9}:{color:'#8595A4',weight:4,dashArray:'6 6'})
+      .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
     UI.run();

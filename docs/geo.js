@@ -59,7 +59,7 @@
     return r.result.featureCollection.features.map(f => ({
       id: f.id || f.properties.bd_mgt_sn,
       name: [f.properties.buld_nm, f.properties.buld_nm_dc].filter(Boolean).join(' ').trim(),
-      floors: f.properties.gro_flo_co != null && f.properties.gro_flo_co !== '' ? Number(f.properties.gro_flo_co) : null,
+      floors: Number(f.properties.gro_flo_co) > 0 ? Number(f.properties.gro_flo_co) : null,
       ring: outerRing(f.geometry),
       props: f.properties
     })).filter(b => b.ring && b.ring.length >= 4);
@@ -103,16 +103,16 @@
     // 반시계 방향으로 맞춘다 (바깥 법선 = 진행 방향의 오른쪽 → (dy, −dx))
     let area = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
     if (area < 0) pts.reverse();
-    let edges = pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); const az = (Math.atan2(dy, -dx) / RAD + 360) % 360; return { len, az, dx, dy }; });
+    let edges = pts.map((a, i) => { const b = pts[(i + 1) % pts.length]; const dx = b[0] - a[0], dy = b[1] - a[1]; const len = Math.hypot(dx, dy); const az = (Math.atan2(dy, -dx) / RAD + 360) % 360; return { len, az, dx, dy, a, b }; });
     // 이웃한 변의 방향이 거의 같으면 합친다
     const diff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
     let merged = [];
     for (const e of edges) {
       const last = merged.at(-1);
-      if (last && diff(last.az, e.az) <= opts.mergeDeg) { const L = last.len + e.len; last.az = (Math.atan2(last.dy + e.dy, -(last.dx + e.dx)) / RAD + 360) % 360; last.dx += e.dx; last.dy += e.dy; last.len = L; }
+      if (last && diff(last.az, e.az) <= opts.mergeDeg) { const L = last.len + e.len; last.az = (Math.atan2(last.dy + e.dy, -(last.dx + e.dx)) / RAD + 360) % 360; last.dx += e.dx; last.dy += e.dy; last.len = L; last.b = e.b; }
       else merged.push({ ...e });
     }
-    if (merged.length > 1 && diff(merged[0].az, merged.at(-1).az) <= opts.mergeDeg) { const f = merged.shift(), l = merged.at(-1); l.dx += f.dx; l.dy += f.dy; l.len += f.len; l.az = (Math.atan2(l.dy, -l.dx) / RAD + 360) % 360; }
+    if (merged.length > 1 && diff(merged[0].az, merged.at(-1).az) <= opts.mergeDeg) { const f = merged.shift(), l = merged.at(-1); l.dx += f.dx; l.dy += f.dy; l.len += f.len; l.b = f.b; l.az = (Math.atan2(l.dy, -l.dx) / RAD + 360) % 360; }
     const fl = floors && floors > 0 ? floors : opts.defaultFloors;
     const height = Math.round(fl * opts.floorHeight_m * 10) / 10;
     const counts = {};
@@ -120,7 +120,7 @@
       const az = Math.round(e.az);
       const d = dirName(az); counts[d] = (counts[d] || 0) + 1;
       const north = diff(az, 0) <= opts.northNoLouverDeg;
-      return { id: d + counts[d], azimuth_deg: az, width_m: Math.round(e.len * 10) / 10, height_m: height, wwr: opts.wwr, window_area_m2: Math.round(e.len * height * opts.wwr * 10) / 10, louver: !north };
+      return { id: d + counts[d], azimuth_deg: az, width_m: Math.round(e.len * 10) / 10, height_m: height, wwr: opts.wwr, window_area_m2: Math.round(e.len * height * opts.wwr * 10) / 10, louver: !north, path: [[e.a[0] / mx, e.a[1] / my], [e.b[0] / mx, e.b[1] / my]] };
     });
   }
 
