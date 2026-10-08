@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>반응형외피 검토 도구</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+#map{height:340px;border-radius:12px;border:1px solid var(--line);margin-top:10px}
+.status{font-size:13px;margin-top:8px;color:var(--sub);min-height:20px}
+.status.err{color:#C4314B}
+.inline{display:flex;gap:8px;align-items:end}
+.inline>*:first-child{flex:1}
+:root{--ink:#0A1317;--sub:#444950;--muted:#5D6C7B;--line:#DEE3E9;--soft:#F1F4F7;--blue:#0064E0;--blue2:#0091FF;--tint:#E8F3FF;--warn-bg:#FFF4D6;--warn:#7A5600;--bg:#FFFFFF;--card:#FFFFFF}
+@media (prefers-color-scheme:dark){:root{--ink:#F1F4F7;--sub:#CED0D4;--muted:#A3AFBC;--line:#2B3036;--soft:#1C1E21;--blue:#2E8BFF;--blue2:#5AAEFF;--tint:#12263F;--warn-bg:#3A2F12;--warn:#F7D27A;--bg:#0A1317;--card:#12171B}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif;font-size:15px;line-height:1.5}
+header{padding:20px 24px 12px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
+header h1{margin:0;font-size:22px;font-weight:700}
+header p{margin:0;color:var(--muted);font-size:13px}
+main{display:grid;grid-template-columns:minmax(380px,500px) 1fr;gap:24px;padding:20px 24px 40px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:16px}}
+section.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
+h2{font-size:15px;margin:0 0 10px;font-weight:700}
+label{display:block;font-size:13px;color:var(--sub);margin:8px 0 3px}
+input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
+textarea{min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--ink)}
+.check input{width:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:center}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td input{padding:4px 5px;font-size:13px;text-align:center;min-width:52px}
+.tablewrap{overflow-x:auto}
+td input[type=checkbox]{width:auto}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;padding:10px 22px;font-size:15px}
+button.link{border:none;padding:4px 6px;color:var(--blue)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{margin:0;border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--ink)}
+.seg input{display:none}
+.seg input:checked+span{color:var(--blue);font-weight:700}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--card)}
+.card.best{border:2px solid var(--blue);background:var(--tint)}
+.card h3{margin:0 0 8px;font-size:16px}
+.big{font-size:30px;font-weight:700;line-height:1.15}
+.big small{font-size:14px;font-weight:500;color:var(--muted)}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.kv b{font-weight:600}
+.neg{color:#C4314B}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+.muted{color:var(--muted);font-size:12px}
+#unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:16px;background:var(--soft)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>반응형외피 검토 도구 <span class="muted">v0.1 시제품</span></h1>
+  <p>사이트와 입면을 넣으면 루버를 자동으로 입혀 에너지 · 탄소 · 물량 · 공사비를 계산합니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
+</header>
+<main>
+<div>
+  <section class="panel">
+    <h2>0. 지도에서 건물 고르기 (브이월드)</h2>
+    <div class="inline">
+      <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="발급받은 키 (이 브라우저에만 저장)" autocomplete="off"></div>
+      <button id="vwSave">저장</button>
+    </div>
+    <div class="inline">
+      <div><label for="searchAddr">주소 검색</label><input id="searchAddr" placeholder="예: 경기 성남시 분당구 정자일로 95"></div>
+      <button id="searchBtn">찾기</button>
+    </div>
+    <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
+    <div class="status" id="vwStatus">지도에서 건물을 클릭하세요.</div>
+    <div class="row3">
+      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="자동"></div>
+      <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" step="0.1" value="4"></div>
+      <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" step="0.05" value="0.6"></div>
+    </div>
+    <div class="row">
+      <div><label for="minEdge">짧은 변 제외 (m 미만)</label><input id="minEdge" type="number" value="5"></div>
+      <div><label class="check"><input type="checkbox" id="noNorth" checked> 북쪽 ±45° 입면은 루버 없음</label></div>
+    </div>
+    <div class="btns"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
+  </section>
+
+  <section class="panel">
+    <h2>1. 사이트</h2>
+    <label for="preset">빠른 선택</label>
+    <select id="preset"></select>
+    <label for="address">주소</label>
+    <input id="address">
+    <div class="row">
+      <div><label for="lat">위도 (°)</label><input id="lat" type="number" step="0.0001"></div>
+      <div><label for="lon">경도 (°)</label><input id="lon" type="number" step="0.0001"></div>
+    </div>
+    <div class="row">
+      <div><label for="ptype">사업 유형</label><select id="ptype"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
+      <div><label class="check"><input type="checkbox" id="winter" checked> 겨울 모드 (12~2월 햇빛 받기)</label></div>
+    </div>
+    <p class="muted">지도에서 건물을 고르면 위도 · 경도 · 주소가 자동으로 채워집니다.</p>
+  </section>
+
+  <section class="panel">
+    <h2>2. 입면</h2>
+    <div class="tablewrap"><table id="facades">
+      <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="btns"><button id="addFacade">입면 추가</button><button id="box4">상자형 4면 만들기</button></div>
+    <p class="muted">방위: 입면이 바라보는 방향 (북 0 · 동 90 · 남 180 · 서 270). 창 ㎡를 비우면 폭 × 높이 × 창면적비로 계산합니다.</p>
+  </section>
+
+  <section class="panel">
+    <h2>3. 루버 사양 · 가정값</h2>
+    <div class="row">
+      <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
+      <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="300"></div>
+    </div>
+    <div class="row">
+      <div><label for="ratio">루버 면적 / 창 면적</label><input id="ratio" type="number" step="0.05" value="0.9"></div>
+      <div><label for="unitArea">유닛 1개당 루버 ㎡</label><input id="unitArea" type="number" value="6"></div>
+    </div>
+    <div class="row3">
+      <div><label for="price">전기요금 (원/kWh)</label><input id="price" type="number" value="150"></div>
+      <div><label for="esc">요금 인상률 (%/년)</label><input id="esc" type="number" step="0.5" value="4"></div>
+      <div><label for="cop">냉난방 COP</label><input id="cop" type="number" step="0.1" value="3"></div>
+    </div>
+    <div class="row3">
+      <div><label for="emis">배출계수 (tCO₂/MWh)</label><input id="emis" type="number" step="0.01" value="0.46"></div>
+      <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
+      <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
+    </div>
+    <label class="check"><input type="checkbox" id="glass" checked> 외부 반응형에 보호 유리 포함</label>
+    <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
+  </section>
+
+  <section class="panel">
+    <h2>4. 일사량 출처</h2>
+    <div class="seg" role="radiogroup">
+      <label><input type="radio" name="src" value="solar" checked><span>간이식 (맑은 날)</span></label>
+      <label><input type="radio" name="src" value="unity"><span>Unity 결과</span></label>
+      <label><input type="radio" name="src" value="excel"><span>엑셀 검증 모드</span></label>
+    </div>
+    <div id="unityBox" class="hidden">
+      <label for="unityJson">Unity가 보낸 solar_result (JSON)</label>
+      <textarea id="unityJson" placeholder='{"meta":{...},"facades":[{"id":"S","cooling_season":{...},"heating_season":{...}}]}'></textarea>
+    </div>
+    <div class="btns"><button class="primary" id="run">계산하기</button></div>
+  </section>
+</div>
+
+<div>
+  <section class="panel">
+    <h2>루버 시뮬레이션 (Unity)</h2>
+    <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 이 폴더에 넣고 README의 연결 방법을 따르면, 계산할 때 같은 입력이 Unity로 전달됩니다.</div>
+  </section>
+  <section class="panel">
+    <h2>결과 <span class="muted" id="srcNote"></span></h2>
+    <div id="warnings"></div>
+    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+  </section>
+  <section class="panel">
+    <h2>대안 비교</h2>
+    <div id="compare"></div>
+  </section>
+  <section class="panel">
+    <h2>입면별 (선택한 일사량 기준)</h2>
+    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
+    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
+  </section>
+</div>
+</main>
+<script src="engine.js"></script>
+<script src="geo.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const PRESETS = [
+    {name:'네이버 1784 · 그린팩토리 (성남 정자동)', address:'경기 성남시 분당구 정자동', lat:37.3595, lon:127.1052},
+    {name:'서울 시청', address:'서울 중구 세종대로 110', lat:37.5663, lon:126.9779},
+    {name:'세종 정부청사', address:'세종 도움6로 11', lat:36.5040, lon:127.2650},
+    {name:'대전 시청', address:'대전 서구 둔산로 100', lat:36.3504, lon:127.3845},
+    {name:'광주 시청', address:'광주 서구 내방로 111', lat:35.1600, lon:126.8514},
+    {name:'부산 시청', address:'부산 연제구 중앙대로 1001', lat:35.1798, lon:129.0750},
+    {name:'제주 시청', address:'제주 제주시 광양9길 10', lat:33.4996, lon:126.5312}
+  ];
+  PRESETS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p.name;$('preset').appendChild(o);});
+  const setPreset = i => {const p=PRESETS[i];$('address').value=p.address;$('lat').value=p.lat;$('lon').value=p.lon;};
+  $('preset').onchange = e => setPreset(e.target.value); setPreset(0);
+
+  // 입면 표
+  const tbody = document.querySelector('#facades tbody');
+  function addRow(f){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><input class="f-id" value="${f.id}"></td><td><input class="f-az" type="number" value="${f.az}"></td><td><input class="f-w" type="number" value="${f.w??''}"></td><td><input class="f-h" type="number" value="${f.h??''}"></td><td><input class="f-wwr" type="number" step="0.05" value="${f.wwr??0.6}"></td><td><input class="f-area" type="number" value="${f.area??''}" placeholder="자동"></td><td><input class="f-lv" type="checkbox" ${f.louver?'checked':''}></td><td><button class="link" aria-label="입면 삭제" title="삭제">×</button></td>`;
+    tr.querySelector('button').onclick=()=>tr.remove();
+    tbody.appendChild(tr);
+  }
+  const defaults=[{id:'E',az:90,area:300,louver:true},{id:'S',az:180,area:400,louver:true},{id:'W',az:270,area:300,louver:true},{id:'N',az:0,area:300,louver:false}];
+  defaults.forEach(addRow);
+  $('addFacade').onclick=()=>addRow({id:'F'+(tbody.children.length+1),az:180,w:20,h:30,wwr:0.6,louver:true});
+  $('box4').onclick=()=>{
+    const w=Number(prompt('건물 폭 (동서 방향, m)', '40')), d=Number(prompt('건물 깊이 (남북 방향, m)', '30')), h=Number(prompt('건물 높이 (m)', '60')), r=Number(prompt('창면적비 (0~1)', '0.6'));
+    if(!(w>0&&d>0&&h>0&&r>0))return;
+    tbody.innerHTML='';
+    [{id:'S',az:180,w},{id:'N',az:0,w},{id:'E',az:90,w:d},{id:'W',az:270,w:d}].forEach(f=>addRow({...f,h,wwr:r,louver:f.id!=='N'}));
+  };
+  document.querySelectorAll('input[name=src]').forEach(r=>r.onchange=()=>$('unityBox').classList.toggle('hidden',r.value!=='unity'||!r.checked));
+
+  function readInput(){
+    const facades=[...tbody.children].map(tr=>{
+      const v=c=>tr.querySelector(c).value, num=c=>v(c)===''?null:Number(v(c));
+      const f={id:v('.f-id').trim()||'F',azimuth_deg:num('.f-az'),width_m:num('.f-w'),height_m:num('.f-h'),wwr:num('.f-wwr'),louver:tr.querySelector('.f-lv').checked};
+      const a=num('.f-area'); f.window_area_m2 = a!==null ? a : (f.width_m&&f.height_m&&f.wwr ? +(f.width_m*f.height_m*f.wwr).toFixed(1) : 0);
+      return f;
+    });
+    const maint=Number($('maint').value)/100;
+    return {
+      site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value)},
+      project_type:$('ptype').value, winter_mode:$('winter').checked, facades,
+      louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
+      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('cop').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
+    };
+  }
+
+  // Unity 연결: Unity WebGL 빌드가 window.unityInstance 를 만들면 입력을 넘기고, Unity는 window.LouverBridge.receiveSolarResult(json)로 돌려준다
+  window.LouverBridge = {
+    sendToUnity(input){ if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverBridge','OnSiteInput',JSON.stringify(input)); }catch(e){ console.warn(e); } } },
+    receiveSolarResult(json){ const s=typeof json==='string'?json:JSON.stringify(json,null,1); $('unityJson').value=s; document.querySelector('input[name=src][value=unity]').checked=true; $('unityBox').classList.remove('hidden'); run(); }
+  };
+
+  const fmtEok = v => (v/1e8).toFixed(2)+'억';
+  const fmtMan = v => Math.round(v/1e4).toLocaleString('ko-KR')+'만';
+  const f1 = v => (Math.round(v*10)/10).toLocaleString('ko-KR');
+  let last=null;
+
+  function run(){
+    const input=readInput();
+    const mode=document.querySelector('input[name=src]:checked').value;
+    let solar=null, err='';
+    if(mode==='unity'){ try{ solar=JSON.parse($('unityJson').value); }catch(e){ err='Unity 결과 JSON을 읽을 수 없습니다: '+e.message; } }
+    if(err){ $('warnings').innerHTML=`<div class="warn">${err}</div>`; return; }
+    window.LouverBridge.sendToUnity(input);
+    const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':'solar'});
+    last={input,out};
+    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':'· 맑은 날 간이식';
+    $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
+    const alts=Object.keys(out.result);
+    const best=alts.reduce((a,b)=>out.result[b].carbon.saved_t_yr>out.result[a].carbon.saved_t_yr?b:a);
+    $('cards').innerHTML=alts.map(k=>{const r=out.result[k];const n=r.energy.net_saved_mwh_yr;return `<div class="card ${k===best?'best':''}"><h3>${r.name}${k===best?' · 탄소 감축 최대':''}</h3>
+      <div class="big ${n<0?'neg':''}">${f1(n)} <small>MWh/년 순 절감</small></div>
+      <div class="kv"><span>탄소 감축</span><b class="${n<0?'neg':''}">${f1(r.carbon.saved_t_yr)} tCO₂/년</b></div>
+      <div class="kv"><span>공사비</span><b>${fmtEok(r.cost.total_krw)}</b></div>
+      <div class="kv"><span>손익분기</span><b>${r.money.breakeven_year===null?'100년 초과':r.money.breakeven_year+'년'}</b></div>
+      <div class="kv"><span>루버 · 구동 유닛</span><b>${f1(r.quantity.louver_area_m2)}㎡ · ${r.quantity.drive_units}개</b></div></div>`;}).join('');
+    const rows=[['냉방 전력 절감 (MWh/년)',r=>f1(r.energy.cooling_saved_mwh_yr)],['조명 전력 증가 (MWh/년)',r=>f1(r.energy.lighting_added_mwh_yr)],['겨울 난방 증가 (MWh/년)',r=>f1(r.energy.heating_added_mwh_yr)],['순 전력 절감 (MWh/년)',r=>f1(r.energy.net_saved_mwh_yr)],['탄소 감축 (tCO₂/년)',r=>f1(r.carbon.saved_t_yr)],['수명 기간 탄소 (tCO₂)',r=>f1(r.carbon.saved_t_life)],['연 전기요금 절감',r=>fmtMan(r.money.energy_saved_krw_yr)],['연 유지관리비',r=>fmtMan(r.money.maintenance_krw_yr)],['총 공사비',r=>fmtEok(r.cost.total_krw)],['보호 유리 (㎡)',r=>f1(r.quantity.protective_glass_m2)],['탄소 1톤당 공사비',r=>r.carbon.cost_per_t_krw?fmtMan(r.carbon.cost_per_t_krw):'—']];
+    $('compare').innerHTML=`<table><thead><tr><th style="text-align:left">통유리 대비</th>${alts.map(k=>`<th>${out.result[k].name}</th>`).join('')}</tr></thead><tbody>${rows.map(([n,fn])=>`<tr><td style="text-align:left">${n}</td>${alts.map(k=>`<td>${fn(out.result[k])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
+    $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
+  }
+  $('run').onclick=run;
+  window.UI={addRow,run,clearFacades:()=>{tbody.innerHTML='';}};
+  const dl=(name,obj)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href);};
+  $('dlInput').onclick=()=>dl('site_input.json',readInput());
+  $('dlResult').onclick=()=>{ if(!last) run(); dl('result.json',{result:last.out.result,warnings:last.out.warnings}); };
+  run();
+})();
+</script>
+<script>
+// 2단계: 브이월드 지도 · 주소 검색 · 건물 외곽선 → 입면
+(function(){
+  const $ = id => document.getElementById(id);
+  const status = (t, err) => { const s=$('vwStatus'); s.textContent=t; s.classList.toggle('err',!!err); };
+  let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
+  $('vwKey').value=key;
+  const cfg = () => ({ key: $('vwKey').value.trim(), domain: location.origin });
+  if(typeof L==='undefined'){ status('지도 라이브러리를 불러오지 못했습니다 (인터넷 연결 확인). 아래 1단계 입력은 그대로 쓸 수 있습니다.', true); return; }
+  const map=L.map('map').setView([37.3595,127.1052],17);
+  let base=null;
+  function setBase(){
+    if(base) map.removeLayer(base);
+    const k=cfg().key;
+    base = k ? L.tileLayer(`https://api.vworld.kr/req/wmts/1.0.0/${k}/Base/{z}/{y}/{x}.png`,{maxZoom:19,attribution:'© 브이월드 (국토교통부)'})
+             : L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});
+    base.addTo(map);
+  }
+  setBase();
+  $('vwSave').onclick=()=>{ try{ localStorage.setItem('vworldKey',$('vwKey').value.trim()); }catch(e){} setBase(); status('키를 저장했습니다. 건물을 클릭해 보세요.'); };
+
+  let outline=null, marker=null, current=null;
+  async function pickAt(lat,lon){
+    $('lat').value=lat.toFixed(5); $('lon').value=lon.toFixed(5);
+    if(marker) map.removeLayer(marker); marker=L.circleMarker([lat,lon],{radius:5,color:'#0064E0'}).addTo(map);
+    if(!cfg().key && !VWorld.isLocal()){ status('브이월드 인증키를 넣어야 건물을 불러올 수 있습니다.', true); return; }
+    status('건물 외곽선을 불러오는 중…');
+    try{
+      const list=await VWorld.buildingsNear(lat,lon,cfg());
+      if(!list.length){ status('이 근처에서 건물을 찾지 못했습니다. 건물 위를 클릭해 보세요.', true); return; }
+      current=VWorld.pickBuilding(list,lat,lon);
+      if(outline) map.removeLayer(outline);
+      outline=L.polygon(current.ring.map(([x,y])=>[y,x]),{color:'#0064E0',weight:3,fillOpacity:0.15}).addTo(map);
+      map.fitBounds(outline.getBounds(),{maxZoom:18,padding:[20,20]});
+      $('floors').value = current.floors || '';
+      $('makeFacades').disabled=false;
+      status(`${current.name||'이름 없는 건물'} · 지상 ${current.floors??'?'}층 · 꼭짓점 ${current.ring.length-1}개. "이 건물로 입면 만들기"를 누르세요.`);
+    }catch(e){ status(e.message, true); }
+  }
+  map.on('click', e=>pickAt(e.latlng.lat,e.latlng.lng));
+
+  $('searchBtn').onclick=async()=>{
+    const q=$('searchAddr').value.trim(); if(!q) return;
+    if(!cfg().key && !VWorld.isLocal()){ status('주소 검색에는 브이월드 인증키가 필요합니다.', true); return; }
+    status('주소를 찾는 중…');
+    try{
+      const p=await VWorld.geocode(q,cfg());
+      if(!p){ status('주소를 찾지 못했습니다. 도로명 또는 지번으로 다시 입력해 보세요.', true); return; }
+      $('address').value=q; map.setView([p.lat,p.lon],18); pickAt(p.lat,p.lon);
+    }catch(e){ status(e.message, true); }
+  };
+  $('searchAddr').addEventListener('keydown',e=>{ if(e.key==='Enter') $('searchBtn').click(); });
+
+  $('makeFacades').onclick=()=>{
+    if(!current) return;
+    const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||5, northNoLouverDeg:$('noNorth').checked?45:-1});
+    if(!fs.length){ status('입면을 만들지 못했습니다. 짧은 변 제외 값을 줄여 보세요.', true); return; }
+    UI.clearFacades();
+    fs.forEach(f=>UI.addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:'',louver:f.louver}));
+    if(!$('address').value && current.name) $('address').value=current.name;
+    status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
+    UI.run();
+  };
+})();
+</script>
+</body>
+</html>

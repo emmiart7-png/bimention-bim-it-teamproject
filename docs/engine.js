@@ -1,0 +1,252 @@
+/*
+ * 반응형외피 계산 엔진 v0.1
+ * - 입력: site_input (데이터 형식 문서 ①), solar_result (②, 없으면 간이식으로 직접 계산)
+ * - 출력: result (문서 '출력' 표)
+ * 식은 엑셀 은미_2일차_경제성자료.xlsx 의 7·8·9·10·13번 시트와 같다.
+ * 브라우저: window.LouverEngine / Node: require('./engine.js')
+ */
+(function (root) {
+  'use strict';
+  const RAD = Math.PI / 180;
+  const ALTS = ['internal_reactive', 'external_fixed', 'external_reactive'];
+  const ALT_NAMES = { internal_reactive: '내부 반응형', external_fixed: '외부 고정', external_reactive: '외부 반응형' };
+
+  // 엑셀 1_입력값 · 2_단가조사 · 13_탄소 기본값
+  const DEFAULT_ASSUMPTIONS = {
+    unit_price: {
+      louver_ext_krw_m2: 250000,      // 알루미늄 외부 루버 자재
+      frame_krw_m2: 70000,            // 지지 프레임·부속
+      drive_unit_krw: 600000,         // 구동 유닛
+      control_system_krw: 30000000,   // 센서·제어 시스템 (1식)
+      install_ext_krw_m2: 130000,     // 외부 루버 설치
+      gondola_krw_day: 700000,        // 곤돌라
+      lift_krw_day: 600000,           // 고소작업차
+      louver_int_krw_m2: 350000,      // 내부 반응형 루버 자재
+      install_int_krw_m2: 100000,     // 내부 루버 설치
+      software_krw: 40000000,         // 제어 소프트웨어 개발 (1회)
+      software_run_krw_yr: 4000000,   // 소프트웨어 연 운영
+      protective_glass_krw_m2: 500000 // 외부 루버 보호 유리
+    },
+    scaffold_days_ext: 60,
+    scaffold_days_int: 5,
+    design_fee_rate: 0.08,
+    contingency_rate: 0.05,
+    cost_multiplier: 1,
+    protective_glass: { external_reactive: true, external_fixed: false },
+    maintenance_rate: { internal_reactive: 0.05, external_fixed: 0.02, external_reactive: 0.05 },
+    maintenance_multiplier: 1,
+    elec_price_krw_kwh: 150,
+    elec_price_multiplier: 1,
+    elec_escalation: 0.04,
+    life_yr: 30,
+    cop_cooling: 3,
+    cop_heating: 3,
+    shgc: 0.6,
+    emission_t_mwh: 0.46,
+    // 조명 사용량 (kWh/년, 루버 단 창 1,000㎡ 기준 → 창 면적에 비례)
+    lighting_kwh_per_1000m2: { bare: 38000, internal_reactive: 42000, external_fixed: 52000, external_reactive: 43000 },
+    // 간이 일사 계산
+    clear_fraction: 0.6,             // 맑은 날 비율
+    winter_mode_transmission: 0.95,  // 겨울 모드에서 날을 햇빛과 나란히 둘 때
+    internal_shading_coef: 0.55,     // 내부 루버가 닫혔을 때 실내에 남는 열 비율
+    cooling_months: [6, 7, 8, 9],
+    heating_months: [12, 1, 2],
+    // 엑셀 검증 모드 전용 (8_시공전후 · 13_탄소)
+    excel_mode: {
+      annual_irradiance_kwh_m2: 700,
+      shading_coef: { bare: 1, internal_reactive: 0.55, external_fixed: 0.30, external_reactive: 0.25 },
+      winter_direct_kwh_day: 2346,
+      winter_days: 90,
+      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.34, external_reactive_rule: 0.054 }
+    }
+  };
+  const DEFAULT_SPEC = { blade_depth_mm: 300, blade_spacing_mm: 300, louver_to_window_ratio: 0.9, area_per_unit_m2: 6, cutoff_deg: [30, 60, 45, 30], min_sun_alt_deg: 5 };
+
+  function merge(base, over) {
+    if (over === undefined || over === null) return JSON.parse(JSON.stringify(base));
+    if (typeof base !== 'object' || base === null || Array.isArray(base)) return over;
+    const out = {};
+    for (const k of Object.keys(base)) out[k] = merge(base[k], over[k]);
+    for (const k of Object.keys(over)) if (!(k in base)) out[k] = over[k];
+    return out;
+  }
+
+  // ---- 태양 위치 (NOAA 간이식, 한국 시간 UTC+9) ----
+  function sunPosition(latDeg, lonDeg, y, m, d, hh, mm, tz) {
+    tz = tz === undefined ? 9 : tz;
+    const doy = Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 0)) / 864e5);
+    const g = 2 * Math.PI / 365 * (doy - 1 + (hh - 12) / 24);
+    const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const decl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const tst = hh * 60 + mm + eqt + 4 * lonDeg - 60 * tz;
+    const ha = (tst / 4 - 180) * RAD, lat = latDeg * RAD;
+    const cz = Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(ha);
+    const zen = Math.acos(Math.max(-1, Math.min(1, cz)));
+    const alt = 90 - zen / RAD;
+    let az = Math.acos(Math.max(-1, Math.min(1, (Math.sin(lat) * cz - Math.sin(decl)) / (Math.cos(lat) * Math.sin(zen))))) / RAD;
+    az = ha > 0 ? (az + 180) % 360 : (540 - az) % 360;
+    return { alt, az };
+  }
+
+  // 기운 각도 = 태양 방위와 입면 정면 방위의 차 (0~180)
+  const tiltOf = (sunAz, facadeAz) => Math.abs(((sunAz - facadeAz + 540) % 360) - 180);
+  // 월 → 컷오프 (춘분 3~5월, 하지 6~8월, 추분 9~11월, 동지 12~2월)
+  const cutoffOf = (month, c) => [c[3], c[3], c[0], c[0], c[0], c[1], c[1], c[1], c[2], c[2], c[2], c[3]][month - 1];
+  // 날 깊이 d, 간격 s일 때 열린 날(정면에 수직)의 직달 투과율
+  const openTransmission = (tilt, ds) => Math.max(0, 1 - ds * Math.tan(tilt * RAD));
+  // 닫힘일 때 햇빛이 막히는 최소 날 각도 (d = s 이면 90 − 2·기운 각도)
+  const closedAngle = (tilt, ds) => Math.max(0, Math.asin(Math.min(1, Math.cos(tilt * RAD) / ds)) / RAD - tilt);
+
+  // ---- 간이식: Unity 값이 없을 때 solar_result 를 직접 만든다 ----
+  function clearSkySolar(input, opts) {
+    opts = opts || {};
+    const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
+    const spec = merge(DEFAULT_SPEC, input.louver_spec);
+    const ds = spec.blade_depth_mm / spec.blade_spacing_mm; // 날 깊이/간격 (1이면 d = s)
+    const year = opts.year || 2026, step = opts.step_min || 10;
+    const winter = input.winter_mode !== false;
+    const lat = input.site.lat_deg, lon = input.site.lon_deg;
+    const facades = input.facades.map(f => ({ id: f.id, cooling_season: { bare_kwh_m2_yr: 0, internal_reactive_kwh_m2_yr: 0, external_fixed_kwh_m2_yr: 0, external_reactive_kwh_m2_yr: 0 }, heating_season: { bare_kwh_m2_yr: 0, internal_reactive_kwh_m2_yr: 0, external_fixed_kwh_m2_yr: 0, external_reactive_kwh_m2_yr: 0 }, closed_hours_yr: 0, blade_rotation_deg_yr: 0, _prev: 0 }));
+    const dt = step / 60; // h
+    for (let t = Date.UTC(year, 0, 1); t < Date.UTC(year + 1, 0, 1); t += step * 6e4) {
+      const dd = new Date(t), m = dd.getUTCMonth() + 1, d = dd.getUTCDate(), mins = dd.getUTCHours() * 60 + dd.getUTCMinutes();
+      const sp = sunPosition(lat, lon, year, m, d, Math.floor(mins / 60), mins % 60);
+      const cool = A.cooling_months.includes(m), heat = A.heating_months.includes(m);
+      const cut = cutoffOf(m, spec.cutoff_deg);
+      input.facades.forEach((f, i) => {
+        const r = facades[i];
+        let angle = 0;
+        if (sp.alt > 0.5) {
+          const tilt = tiltOf(sp.az, f.azimuth_deg);
+          const closed = tilt <= cut && sp.alt >= spec.min_sun_alt_deg;
+          const winterNow = winter && heat;
+          if (closed && !winterNow) { r.closed_hours_yr += dt; angle = closedAngle(tilt, ds); }
+          else if (winterNow && tilt < 90) angle = tilt; // 겨울 모드: 햇빛과 나란히
+          if (tilt < 90) {
+            const AM = 1 / Math.sin(sp.alt * RAD);
+            const dni = 1353 * Math.pow(0.7, Math.pow(AM, 0.678)) * A.clear_fraction;
+            const I = dni * Math.cos(sp.alt * RAD) * Math.cos(tilt * RAD) * dt / 1000; // kWh/㎡
+            const open = openTransmission(tilt, ds);
+            const tr = {
+              bare: 1,
+              internal_reactive: (closed && !winterNow) ? A.internal_shading_coef : 1,
+              external_fixed: open,
+              external_reactive: winterNow ? A.winter_mode_transmission : (closed ? 0 : open)
+            };
+            const bucket = cool ? r.cooling_season : heat ? r.heating_season : null;
+            if (bucket) {
+              bucket.bare_kwh_m2_yr += I;
+              for (const a of ALTS) bucket[a + '_kwh_m2_yr'] += I * tr[a];
+            }
+          }
+        }
+        r.blade_rotation_deg_yr += Math.abs(angle - r._prev); r._prev = angle;
+      });
+    }
+    facades.forEach(r => { delete r._prev; for (const s of ['cooling_season', 'heating_season']) for (const k in r[s]) r[s][k] = Math.round(r[s][k] * 10) / 10; r.closed_hours_yr = Math.round(r.closed_hours_yr); r.blade_rotation_deg_yr = Math.round(r.blade_rotation_deg_yr); });
+    return { meta: { weather_source: 'clear_sky', shading_included: false, timestep_min: step, version: 'engine-0.1' }, facades };
+  }
+
+  // ---- 물량 · 공사비 (7_공사비) ----
+  function quantities(input) {
+    const spec = merge(DEFAULT_SPEC, input.louver_spec);
+    const lf = input.facades.filter(f => f.louver);
+    const window_area_m2 = lf.reduce((s, f) => s + windowArea(f), 0);
+    const louver_area_m2 = window_area_m2 * spec.louver_to_window_ratio;
+    const drive_units = Math.round(louver_area_m2 / spec.area_per_unit_m2);
+    return { window_area_m2, louver_area_m2, drive_units };
+  }
+  const windowArea = f => (f.window_area_m2 !== undefined && f.window_area_m2 !== null && f.window_area_m2 !== '') ? Number(f.window_area_m2) : f.width_m * f.height_m * f.wwr;
+
+  function cost(alt, q, A) {
+    const P = A.unit_price, L = q.louver_area_m2, U = q.drive_units, W = q.window_area_m2;
+    const items = {};
+    if (alt === 'internal_reactive') {
+      items.louver = L * P.louver_int_krw_m2; items.frame = 0;
+      items.drive = U * P.drive_unit_krw + P.control_system_krw; items.software = P.software_krw;
+      items.protective_glass = 0; items.install = L * P.install_int_krw_m2;
+      items.scaffold = A.scaffold_days_int * P.lift_krw_day;
+    } else {
+      const reactive = alt === 'external_reactive';
+      items.louver = L * P.louver_ext_krw_m2; items.frame = L * P.frame_krw_m2;
+      items.drive = reactive ? U * P.drive_unit_krw + P.control_system_krw : 0;
+      items.software = reactive ? P.software_krw : 0;
+      items.protective_glass = A.protective_glass[alt] ? W * P.protective_glass_krw_m2 : 0;
+      items.install = L * P.install_ext_krw_m2;
+      items.scaffold = A.scaffold_days_ext * (P.gondola_krw_day + P.lift_krw_day);
+    }
+    for (const k in items) items[k] *= A.cost_multiplier;
+    const direct = Object.values(items).reduce((s, v) => s + v, 0);
+    items.design_fee = direct * A.design_fee_rate; items.contingency = direct * A.contingency_rate;
+    return { items_krw: items, total_krw: direct + items.design_fee + items.contingency };
+  }
+
+  // 누적 비용이 통유리보다 낮아지는 첫 해 (10_누적·민감도, 최대 maxYears)
+  function breakeven(C, saving, M, g, maxYears) {
+    for (let t = 0; t <= maxYears; t++) {
+      const ann = g === 0 ? t : (Math.pow(1 + g, t) - 1) / g;
+      if (C + M * t <= saving * ann) return t;
+    }
+    return null;
+  }
+
+  // ---- 본 계산 ----
+  function compute(input, solar, opts) {
+    opts = opts || {};
+    const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
+    const mode = opts.mode || 'solar'; // 'solar' | 'excel'
+    const warnings = [];
+    if (mode === 'solar' && !solar) { solar = clearSkySolar(input, opts); }
+    if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터 · 주변 그림자 미반영)');
+    if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13번 시트 가정값으로 계산');
+    const q = quantities(input);
+    const price = A.elec_price_krw_kwh * A.elec_price_multiplier; // 원/kWh
+    const lightScale = q.window_area_m2 / 1000;
+    const winterMode = input.winter_mode !== false;
+    const alts = input.alternative && input.alternative.length ? input.alternative : ALTS;
+    const lf = input.facades.filter(f => f.louver);
+    const result = {};
+    for (const alt of alts) {
+      let coolSaved = 0, heatAdded = 0;
+      const per_facade = [];
+      if (mode === 'excel') {
+        const X = A.excel_mode;
+        const base = X.annual_irradiance_kwh_m2 * q.window_area_m2 * A.shgc;
+        coolSaved = base * (X.shading_coef.bare - X.shading_coef[alt]) / A.cop_cooling / 1000;
+        const tw = alt === 'external_reactive' ? (winterMode ? A.winter_mode_transmission : X.winter_transmission.external_reactive_rule) : X.winter_transmission[alt];
+        heatAdded = X.winter_direct_kwh_day * (1 - tw) * A.shgc * X.winter_days * A.clear_fraction / A.cop_heating / 1000;
+      } else {
+        for (const f of lf) {
+          const s = solar.facades.find(x => x.id === f.id);
+          if (!s) { warnings.push(`입면 ${f.id}: 일사량 값 없음`); continue; }
+          const Aw = windowArea(f);
+          const c = Aw * A.shgc * (s.cooling_season.bare_kwh_m2_yr - s.cooling_season[alt + '_kwh_m2_yr']) / A.cop_cooling / 1000;
+          const h = Aw * A.shgc * (s.heating_season.bare_kwh_m2_yr - s.heating_season[alt + '_kwh_m2_yr']) / A.cop_heating / 1000;
+          coolSaved += c; heatAdded += h;
+          per_facade.push({ id: f.id, window_area_m2: Aw, louver_area_m2: Aw * merge(DEFAULT_SPEC, input.louver_spec).louver_to_window_ratio, cooling_saved_mwh_yr: c, heating_added_mwh_yr: h, closed_hours_yr: s.closed_hours_yr, blade_rotation_deg_yr: s.blade_rotation_deg_yr });
+        }
+      }
+      const lightAdded = (A.lighting_kwh_per_1000m2[alt] - A.lighting_kwh_per_1000m2.bare) * lightScale / 1000;
+      const net = coolSaved - lightAdded - heatAdded;
+      const cst = cost(alt, q, A);
+      const maint = cst.total_krw * A.maintenance_rate[alt] * A.maintenance_multiplier + (alt !== 'external_fixed' ? A.unit_price.software_run_krw_yr * A.maintenance_multiplier : 0);
+      // 엑셀 8·9·10번 시트는 전기요금에 난방을 넣지 않음 → 검증 모드에서만 제외
+      const moneyMwh = mode === 'excel' ? coolSaved - lightAdded : net;
+      const energySavedKrw = moneyMwh * 1000 * price;
+      const be = breakeven(cst.total_krw, energySavedKrw, maint, A.elec_escalation, opts.max_years || 100);
+      result[alt] = {
+        name: ALT_NAMES[alt],
+        quantity: { window_area_m2: q.window_area_m2, louver_area_m2: q.louver_area_m2, drive_units: alt === 'external_fixed' ? 0 : q.drive_units, protective_glass_m2: A.protective_glass[alt] ? q.window_area_m2 : 0 },
+        cost: cst,
+        energy: { cooling_saved_mwh_yr: coolSaved, lighting_added_mwh_yr: lightAdded, heating_added_mwh_yr: heatAdded, net_saved_mwh_yr: net },
+        carbon: { saved_t_yr: net * A.emission_t_mwh, saved_t_life: net * A.emission_t_mwh * A.life_yr, cost_per_t_krw: net > 0 ? cst.total_krw / (net * A.emission_t_mwh * A.life_yr) : null },
+        money: { energy_saved_krw_yr: energySavedKrw, maintenance_krw_yr: maint, breakeven_year: be },
+        per_facade
+      };
+    }
+    return { result, warnings, solar };
+  }
+
+  const api = { compute, clearSkySolar, sunPosition, quantities, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LouverEngine = api;
+})(typeof window !== 'undefined' ? window : globalThis);
