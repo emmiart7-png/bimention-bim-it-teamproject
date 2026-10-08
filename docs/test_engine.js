@@ -10,11 +10,11 @@ const input = {
     { id: 'N', azimuth_deg: 0, window_area_m2: 300, louver: false }
   ]
 };
-// 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 14_Radiance(팀) 반영 후)
+// 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 14_Radiance(팀) ⑥ solar_result 반영 후)
 const expect = {
-  internal_reactive: { total: 641840000, cool: 25.178, light: 4, heat: 0, net: 21.178, t: 9.742, maint: 36092000, be: null },
-  external_fixed: { total: 545790000, cool: 20.958, light: 14, heat: 19.521, net: -12.563, t: -5.779, maint: 10915800, be: null },
-  external_reactive: { total: 1291590000, cool: 36.655, light: 5, heat: 2.118, net: 29.537, t: 13.587, maint: 68579500, be: null }
+  internal_reactive: { total: 641840000, cool: 23.18, light: 4, heat: 0, net: 19.18, t: 8.823, maint: 36092000, be: null },
+  external_fixed: { total: 545790000, cool: 21.15, light: 14, heat: 22.054, net: -14.904, t: -6.856, maint: 10915800, be: null },
+  external_reactive: { total: 1291590000, cool: 34.51, light: 5, heat: 5.672, net: 23.838, t: 10.966, maint: 68579500, be: null }
 };
 const out = E.compute(input, null, { mode: 'excel' });
 let fail = 0;
@@ -49,3 +49,6 @@ process.exitCode = fail ? 1 : 0;
 const rr = E.compute(input, null, { mode: 'radiance' });
 console.log('\n팀 Radiance 방위별 모드');
 for (const [alt, r] of Object.entries(rr.result)) console.log(r.name, '순절감', r.energy.net_saved_mwh_yr.toFixed(1), 'MWh  냉방', r.energy.cooling_saved_mwh_yr.toFixed(1), ' 난방+', r.energy.heating_added_mwh_yr.toFixed(1), ' 탄소', r.carbon.saved_t_yr.toFixed(1), 't');
+const ro = E.compute(Object.assign({}, input, { winter_mode: false }), null, { mode: 'radiance' });
+console.log('\n겨울 모드 끔 (Radiance)');
+for (const [a, r] of Object.entries(ro.result)) console.log(r.name, '순절감', r.energy.net_saved_mwh_yr.toFixed(1), '난방+', r.energy.heating_added_mwh_yr.toFixed(1));
