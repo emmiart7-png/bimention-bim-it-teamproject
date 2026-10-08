@@ -242,11 +242,12 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=4"></script>
-<script src="geo.js?v=4"></script>
+<script src="engine.js?v=5"></script>
+<script src="geo.js?v=5"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
+  if(typeof window.LouverEngine==='undefined'){ const d=document.createElement('div'); d.className='warn'; d.style.margin='16px 24px'; d.innerHTML='계산 파일(engine.js)을 불러오지 못했습니다. 이 화면은 앱의 파일 미리보기라서 HTML 한 장만 열립니다. <b>크롬 · 엣지에서 깃허브 페이지 주소</b>로 열거나, 이 폴더에서 <b>node serve.js</b>를 실행한 뒤 http://localhost:8080 으로 여세요.'; document.body.prepend(d); window.UI=null; return; }
   const $ = id => document.getElementById(id);
   const PRESETS = [
     {name:'네이버 1784 · 그린팩토리 (성남 정자동)', address:'경기 성남시 분당구 정자동', lat:37.3595, lon:127.1052},
@@ -363,6 +364,7 @@ svg text{font-family:inherit}
 <script>
 // 2단계: 브이월드 지도 · 주소 검색 · 건물 외곽선 → 입면
 (function(){
+  if(!window.UI || typeof window.VWorld==='undefined') return;
   const $ = id => document.getElementById(id);
   const status = (t, err) => { const s=$('vwStatus'); s.textContent=t; s.classList.toggle('err',!!err); };
   let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
@@ -429,6 +431,6 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=4"></script>
+<script src="features.js?v=5"></script>
 </body>
 </html>

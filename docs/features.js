@@ -8,6 +8,7 @@
  */
 (function () {
   'use strict';
+  if (!window.LouverEngine || !window.UI) return;
   const $ = id => document.getElementById(id);
   const E = window.LouverEngine;
   const NS = 'http://www.w3.org/2000/svg';
