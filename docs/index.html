@@ -60,10 +60,11 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 #unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:16px;background:var(--soft)}
 .hidden{display:none}
 .hdr-btns{display:flex;gap:8px}
-.plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
+.plans{display:block;margin-top:12px}
 .plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:13px}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
+.siteplan{max-width:880px;margin:12px auto 0}
 .hmcap{font-weight:600;font-size:14px;margin:12px 0 4px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
@@ -209,7 +210,7 @@ svg text{font-family:inherit}
     <div id="compare"></div>
   </section>
   <section class="panel">
-    <h2>하루 재생 · 방위별 루버 평면도 (외부 반응형)</h2>
+    <h2>하루 재생 · 루버 평면도 (외부 반응형)</h2>
     <div class="timebar noprint">
       <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
       <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1430" step="10" value="720"></div>
@@ -217,9 +218,8 @@ svg text{font-family:inherit}
     </div>
     <div class="btns noprint" style="margin-top:6px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
     <div class="sun" id="sunInfo"></div>
-    <label class="check noprint" style="margin-top:8px"><input type="checkbox" id="planAll"> 입면을 묶지 않고 모두 보기</label>
     <div class="plans" id="plans"></div>
-    <div class="legend"><span><i style="background:#0064E0"></i>루버 날</span><span><i style="background:#F7B928"></i>햇빛 방향</span><span>위 = 바깥, 아래 = 실내, 점선 = 유리</span></div>
+    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
   </section>
   <section class="panel">
     <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
@@ -246,8 +246,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=10"></script>
-<script src="geo.js?v=10"></script>
+<script src="engine.js?v=11"></script>
+<script src="geo.js?v=11"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -461,7 +461,7 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=10"></script>
-<script src="unity.js?v=10"></script>
+<script src="features.js?v=11"></script>
+<script src="unity.js?v=11"></script>
 </body>
 </html>

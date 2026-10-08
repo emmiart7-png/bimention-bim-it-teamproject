@@ -18,25 +18,73 @@
 
   // ---------------- 1. 하루 재생 ----------------
   const STATE_TEXT = { night: '해 없음', back: '해가 입면 뒤', open: '열림', closed: '닫힘', winter: '겨울 모드 · 햇빛과 나란히' };
-  function planSVG(f, ds) {
-    const W = 240, H = 176, bladeY = 92, glassY = 140, sp = 34, d = sp * Math.min(2, Math.max(0.3, ds));
-    const s = f.side || 1, a = (f.angle || 0) * Math.PI / 180;
-    let g = `<rect x="0" y="0" width="${W}" height="${glassY}" fill="#FFFFFF"/><rect x="0" y="${glassY}" width="${W}" height="${H - glassY}" fill="#E8F3FF"/>`;
-    g += `<line x1="0" y1="${glassY}" x2="${W}" y2="${glassY}" stroke="#0064E0" stroke-width="2" stroke-dasharray="5 5"/>`;
-    // 햇빛 화살표 (입면 앞에 해가 있을 때)
-    if (f.tr) {
-      const th = f.tilt * Math.PI / 180, dx = -s * Math.sin(th), dy = Math.cos(th), L = 52;
-      for (const x0 of [60, 120, 180]) {
-        const ex = x0, ey = bladeY - d / 2 - 8, sx = ex - dx * L, sy = ey - dy * L;
-        const hx = ex - dx * 10, hy = ey - dy * 10, px = -dy * 5, py = dx * 5;
-        g += `<line x1="${r1(sx)}" y1="${r1(sy)}" x2="${r1(hx)}" y2="${r1(hy)}" stroke="#F7B928" stroke-width="3"/><polygon points="${r1(ex)},${r1(ey)} ${r1(hx + px)},${r1(hy + py)} ${r1(hx - px)},${r1(hy - py)}" fill="#F7B928"/>`;
+  // 건물 평면 하나 (위 = 북) 에 동 · 남 · 서 루버와 오늘 해가 지나는 길을 함께 그린다
+  const SIDES = [{ key: '동', az: 90 }, { key: '남', az: 180 }, { key: '서', az: 270 }];
+  const angDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+  // 방위마다 대표 입면: 루버를 단 입면 중 방위가 ±45° 안에서 가장 가깝고, 같으면 창이 큰 것
+  function pickSides(fs) {
+    const area = id => { const f = last.input.facades.find(x => x.id === id); return f ? (f.window_area_m2 || 0) : 0; };
+    return SIDES.map(sd => {
+      const c = fs.filter(f => angDiff(f.azimuth_deg, sd.az) <= 45);
+      c.sort((a, b) => angDiff(a.azimuth_deg, sd.az) - angDiff(b.azimuth_deg, sd.az) || area(b.id) - area(a.id));
+      return { ...sd, f: c[0] || null, n: c.length };
+    });
+  }
+  function sideText(f) {
+    if (!f) return '루버 없음';
+    if (f.state === 'night') return '해 없음 · 날 0°';
+    if (f.state === 'back') return '해가 뒤 · 날 0°';
+    if (f.state === 'winter') return `겨울 모드 · 날 ${Math.round(f.angle)}°`;
+    return `${f.state === 'closed' ? '닫힘' : '열림'} · 날 ${Math.round(f.angle || 0)}°`;
+  }
+  function sitePlanSVG(st, path, ds) {
+    const W = 880, H = 500, cx = 440, cy = 190, bw = 300, bh = 190;
+    const L = cx - bw / 2, R = cx + bw / 2, T = cy - bh / 2, B = cy + bh / 2;
+    const rx = 400, ry = 280; // 해 길 타원
+    const P = az => [cx + rx * Math.sin(az * Math.PI / 180), cy - ry * Math.cos(az * Math.PI / 180)];
+    let g = `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
+    // 오늘 해가 지나는 길 (해 뜬 동안의 방위)
+    if (path.length > 1) g += `<polyline points="${path.map(az => P(az).map(r1).join(',')).join(' ')}" fill="none" stroke="#F2B544" stroke-width="5" stroke-linecap="round" stroke-dasharray="18 16"/>`;
+    // 건물
+    g += `<rect x="${L}" y="${T}" width="${bw}" height="${bh}" fill="#E8EDF3" stroke="#1E4E8C" stroke-width="2"/>`;
+    g += `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="16" fill="#8595A4">건물 (위 = 북)</text>`;
+    // 루버 날: 각 입면의 바깥 방향 n, 입면을 따라가는 방향 t
+    const len = 22 * Math.min(1.6, Math.max(0.5, ds)), gap = 8;
+    const sides = pickSides(st.facades.filter(f => f.louver));
+    const geom = { 90: { n: [1, 0], t: [0, 1], x0: R + gap + len / 2, y0: T + 14, y1: B - 14, vertical: true },
+      180: { n: [0, 1], t: [-1, 0], y0: B + gap + len / 2, x0: L + 16, x1: R - 16, vertical: false },
+      270: { n: [-1, 0], t: [0, -1], x0: L - gap - len / 2, y0: T + 14, y1: B - 14, vertical: true } };
+    for (const sd of sides) {
+      if (!sd.f) continue;
+      const G = geom[sd.az], f = sd.f, s = f.side || 1, a = (f.angle || 0) * Math.PI / 180;
+      // 하루 재생 평면도와 같은 규칙: 날 0° = 유리에 수직, 각도만큼 해 쪽으로 돈다
+      const ux = s * Math.sin(a), uy = Math.cos(a);
+      const vx = ux * G.t[0] - uy * G.n[0], vy = ux * G.t[1] - uy * G.n[1], h = len / 2;
+      const count = G.vertical ? 8 : 11;
+      for (let i = 0; i < count; i++) {
+        const k = i / (count - 1);
+        const px = G.vertical ? G.x0 : G.x0 + (G.x1 - G.x0) * k, py = G.vertical ? G.y0 + (G.y1 - G.y0) * k : G.y0;
+        g += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="7" stroke-linecap="round"/>`;
       }
     }
-    // 루버 날 (위 = 바깥)
-    const ux = s * Math.sin(a), uy = Math.cos(a), h = d / 2;
-    for (let x = sp / 2; x < W; x += sp) g += `<line x1="${r1(x - ux * h)}" y1="${r1(bladeY - uy * h)}" x2="${r1(x + ux * h)}" y2="${r1(bladeY + uy * h)}" stroke="#0064E0" stroke-width="5" stroke-linecap="round"/>`;
-    const label = `${f.id} 입면 루버: ${STATE_TEXT[f.state]}${f.angle ? ', 날 ' + Math.round(f.angle) + '도' : ''}`;
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}" xmlns="${NS}">${g}</svg>`;
+    // 방위별 이름표
+    const lab = { 90: [R + gap + len + 14, cy - 34, 'start'], 180: [cx, B + gap + len + 30, 'middle'], 270: [L - gap - len - 14, cy - 34, 'end'] };
+    for (const sd of sides) {
+      const [x, y, anc] = lab[sd.az], w = 140, bx = anc === 'start' ? x : anc === 'end' ? x - w : x - w / 2;
+      const name = sd.f ? `${sd.key} · ${sd.f.azimuth_deg}°` : sd.key;
+      const active = sd.f && (sd.f.state === 'closed' || sd.f.state === 'winter');
+      g += `<rect x="${r1(bx)}" y="${y - 2}" width="${w}" height="64" rx="10" fill="${active ? '#E8F3FF' : '#F1F4F7'}"/>`;
+      g += `<text x="${r1(bx + w / 2)}" y="${y + 24}" text-anchor="middle" font-size="19" font-weight="700" fill="#0A1317">${esc(name)}</text>`;
+      g += `<text x="${r1(bx + w / 2)}" y="${y + 50}" text-anchor="middle" font-size="16" fill="${active ? '#0064E0' : '#5D6C7B'}">${esc(sideText(sd.f))}</text>`;
+    }
+    // 해
+    if (st.sun.alt > 0) {
+      const [sx, sy] = P(st.sun.az);
+      g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="26" fill="#FFF8EC" stroke="#F2B544" stroke-width="9"/>`;
+    }
+    g += `<text x="${W - 16}" y="28" text-anchor="end" font-size="15" fill="#8595A4">북 ↑</text>`;
+    const desc = sides.map(sd => `${sd.key} ${sideText(sd.f)}`).join(', ');
+    return { svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 동 · 남 · 서 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`, sides };
   }
   function renderPlans() {
     if (!last) return;
@@ -46,34 +94,14 @@
     if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
+    // 오늘 해가 떠 있는 동안의 방위 (10분 간격)
+    const path = [];
+    for (let t = 0; t < 1440; t += 10) { const sp = E.sunPosition(last.input.site.lat_deg, last.input.site.lon_deg, y || 2026, m || 6, d || 21, Math.floor(t / 60), t % 60); if (sp.alt > 0) path.push(sp.az); }
     const spec = E.merge(E.DEFAULT_SPEC, last.input.louver_spec), ds = spec.blade_depth_mm / spec.blade_spacing_mm;
-    const fs = st.facades.filter(f => f.louver);
-    // 건물 외곽선의 변마다 입면이 생기므로, 기본은 8방위로 묶어 방위마다 평면도 하나 (창이 가장 큰 입면을 대표로)
-    const groups = $('planAll').checked ? fs.map(f => ({ name: `${f.id} · ${f.azimuth_deg}°`, rep: f, ids: [f.id] })) : groupByDir(fs);
-    $('plans').innerHTML = groups.length ? groups.map(g => {
-      const f = g.rep;
-      let txt = STATE_TEXT[f.state];
-      if (f.state === 'closed') txt += ` · 날 ${Math.round(f.angle)}°`;
-      if (f.tr && f.state !== 'closed') txt += ` · 직달 ${Math.round(f.tr.external_reactive * 100)}% 통과`;
-      const sub = g.ids.length > 1 ? `<div class="muted">입면 ${g.ids.length}개: ${esc(g.ids.join(', '))}</div>` : '';
-      return `<div class="plan">${planSVG(f, ds)}<div class="st">${esc(g.name)}</div><div class="muted">${txt}</div>${sub}</div>`;
-    }).join('') : '<p class="muted">루버를 단 입면이 없습니다.</p>';
+    const { svg, sides } = sitePlanSVG(st, path, ds);
+    const many = sides.filter(sd => sd.n > 1).map(sd => `${sd.key} ${sd.n}개 면 중 ${sd.f.id}`);
+    $('plans').innerHTML = `<div class="siteplan">${svg}</div>` + (many.length ? `<p class="muted">입면이 여러 개인 방위는 대표 입면으로 그렸습니다: ${esc(many.join(' · '))}</p>` : '');
   }
-  const DIRS = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
-  function groupByDir(fs) {
-    const area = id => { const f = last.input.facades.find(x => x.id === id); return f ? (f.window_area_m2 || 0) : 0; };
-    const map = new Map();
-    for (const f of fs) {
-      const k = Math.round((((f.azimuth_deg % 360) + 360) % 360) / 45) % 8;
-      if (!map.has(k)) map.set(k, []);
-      map.get(k).push(f);
-    }
-    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([k, arr]) => {
-      const rep = arr.slice().sort((a, b) => area(b.id) - area(a.id))[0];
-      return { name: `${DIRS[k]} · ${rep.azimuth_deg}°`, rep, ids: arr.map(f => f.id) };
-    });
-  }
-  $('planAll').addEventListener('change', renderPlans);
   let timer = null;
   $('simTime').addEventListener('input', renderPlans);
   $('simDate').addEventListener('change', renderPlans);
