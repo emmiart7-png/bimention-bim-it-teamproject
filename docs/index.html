@@ -152,7 +152,7 @@ svg text{font-family:inherit}
     <h2>3. 루버 사양 · 가정값</h2>
     <div class="row">
       <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
-      <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="300"></div>
+      <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="350"></div>
     </div>
     <div class="row">
       <div><label for="ratio">루버 면적 / 창 면적</label><input id="ratio" type="number" step="0.05" value="0.9"></div>
@@ -175,7 +175,8 @@ svg text{font-family:inherit}
   <section class="panel">
     <h2>4. 일사량 출처</h2>
     <div class="seg" role="radiogroup">
-      <label><input type="radio" name="src" value="solar" checked><span>간이식 (맑은 날)</span></label>
+      <label><input type="radio" name="src" value="radiance" checked><span>팀 Radiance (그림자 반영)</span></label>
+      <label><input type="radio" name="src" value="solar"><span>간이식 (맑은 날)</span></label>
       <label><input type="radio" name="src" value="unity"><span>Unity 결과</span></label>
       <label><input type="radio" name="src" value="excel"><span>엑셀 검증 모드</span></label>
     </div>
@@ -242,8 +243,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=7"></script>
-<script src="geo.js?v=7"></script>
+<script src="engine.js?v=8"></script>
+<script src="geo.js?v=8"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -335,10 +336,10 @@ svg text{font-family:inherit}
     // 간이식 일사량은 사이트 · 입면 · 루버 사양이 같으면 다시 계산하지 않는다 (슬라이더가 빠르게 반응하도록)
     const solarKey=JSON.stringify([input.site.lat_deg,input.site.lon_deg,input.facades,input.louver_spec,input.winter_mode]);
     if(mode==='solar' && solarCache.k===solarKey) solar=solarCache.s;
-    const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':'solar'});
+    const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':mode==='radiance'?'radiance':'solar'});
     if(mode==='solar') solarCache={k:solarKey,s:out.solar};
     last={input,out,mode};
-    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':'· 맑은 날 간이식';
+    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?'· 팀 Radiance (1784 9층, 그림자 반영)':'· 맑은 날 간이식';
     $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
     const alts=Object.keys(out.result);
     const best=alts.reduce((a,b)=>out.result[b].carbon.saved_t_yr>out.result[a].carbon.saved_t_yr?b:a);
@@ -449,7 +450,7 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=7"></script>
-<script src="unity.js?v=7"></script>
+<script src="features.js?v=8"></script>
+<script src="unity.js?v=8"></script>
 </body>
 </html>

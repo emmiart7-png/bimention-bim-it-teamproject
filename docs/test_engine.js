@@ -10,11 +10,11 @@ const input = {
     { id: 'N', azimuth_deg: 0, window_area_m2: 300, louver: false }
   ]
 };
-// 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 10_누적·민감도)
+// 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 14_Radiance(팀) 반영 후)
 const expect = {
-  internal_reactive: { total: 641840000, cool: 63, light: 4, heat: 0, net: 59, t: 27.14, maint: 36092000, be: null },
-  external_fixed: { total: 545790000, cool: 98, light: 14, heat: 16.722, net: 67.278, t: 30.948, maint: 10915800, be: 35 },
-  external_reactive: { total: 1291590000, cool: 105, light: 5, heat: 1.267, net: 98.733, t: 45.417, maint: 68579500, be: 74 }
+  internal_reactive: { total: 641840000, cool: 25.178, light: 4, heat: 0, net: 21.178, t: 9.742, maint: 36092000, be: null },
+  external_fixed: { total: 545790000, cool: 20.958, light: 14, heat: 19.521, net: -12.563, t: -5.779, maint: 10915800, be: null },
+  external_reactive: { total: 1291590000, cool: 36.655, light: 5, heat: 2.118, net: 29.537, t: 13.587, maint: 68579500, be: null }
 };
 const out = E.compute(input, null, { mode: 'excel' });
 let fail = 0;
@@ -33,7 +33,7 @@ for (const [alt, x] of Object.entries(expect)) {
   ];
   for (const [n, a, b, tol] of checks) {
     // 내부 반응형 손익분기: 엑셀은 60년 초과 → 엔진은 100년까지 찾으므로 60 초과면 통과
-    const ok = (alt === 'internal_reactive' && n.startsWith('손익')) ? (a === null || a > 60) : near(a, b, tol);
+    const ok = (n.startsWith('손익') && b === null) ? (a === null || a > 60) : near(a, b, tol);
     if (!ok) fail++;
     console.log(ok ? 'OK ' : 'XX ', E.ALT_NAMES[alt].padEnd(7), n.padEnd(12), a, b === null ? '(60년 초과)' : '(엑셀 ' + b + ')');
   }
@@ -45,3 +45,7 @@ console.log('\n간이식 모드', (Date.now() - t0) + 'ms');
 for (const [alt, r] of Object.entries(s.result)) console.log(r.name, '순절감', r.energy.net_saved_mwh_yr.toFixed(1), 'MWh  냉방', r.energy.cooling_saved_mwh_yr.toFixed(1), ' 난방+', r.energy.heating_added_mwh_yr.toFixed(1), ' 탄소', r.carbon.saved_t_yr.toFixed(1), 't  손익분기', r.money.breakeven_year);
 for (const f of s.solar.facades) console.log(f.id, JSON.stringify(f.cooling_season), '닫힘', f.closed_hours_yr, 'h  회전', f.blade_rotation_deg_yr, '°');
 process.exitCode = fail ? 1 : 0;
+
+const rr = E.compute(input, null, { mode: 'radiance' });
+console.log('\n팀 Radiance 방위별 모드');
+for (const [alt, r] of Object.entries(rr.result)) console.log(r.name, '순절감', r.energy.net_saved_mwh_yr.toFixed(1), 'MWh  냉방', r.energy.cooling_saved_mwh_yr.toFixed(1), ' 난방+', r.energy.heating_added_mwh_yr.toFixed(1), ' 탄소', r.carbon.saved_t_yr.toFixed(1), 't');

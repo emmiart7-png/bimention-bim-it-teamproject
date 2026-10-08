@@ -52,15 +52,37 @@
     cooling_months: [6, 7, 8, 9],
     heating_months: [12, 1, 2],
     // 엑셀 검증 모드 전용 (8_시공전후 · 13_탄소)
+    // 엑셀 검증 모드: 엑셀 1·8·13·14번 시트와 같은 값 (팀 Radiance, 9층, 동·남·서 면적 가중)
     excel_mode: {
-      annual_irradiance_kwh_m2: 700,
-      shading_coef: { bare: 1, internal_reactive: 0.55, external_fixed: 0.30, external_reactive: 0.25 },
-      winter_direct_kwh_day: 2346,
+      cooling_irradiance_kwh_m2: { bare: 279.754, internal_reactive: 279.754 * 0.55, external_fixed: 174.965, external_reactive: 96.481 }, // 냉방기 6~9월
+      winter_kwh_m2_day: 2.35284,     // 동지 통유리 하루 창 일사량
       winter_days: 90,
-      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.34, external_reactive_rule: 0.054 }
+      weather_factor: 1,              // Radiance 는 실제 날씨 반영
+      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.53907, external_reactive_rule: 0.24132 }
     }
   };
-  const DEFAULT_SPEC = { blade_depth_mm: 300, blade_spacing_mm: 300, louver_to_window_ratio: 0.9, area_per_unit_m2: 6, cutoff_deg: [30, 60, 45, 30], min_sun_alt_deg: 5 };
+  // 팀 Radiance 결과 (1784 타워 9층, 주변 건물 325개 그림자 반영, 날 폭 300 / 간격 350). 방위별 냉방기(6~9월) · 난방기(12~2월) kWh/㎡
+  const RADIANCE_9F = {
+    E: { az: 90, cool: { bare: 218.1, external_fixed: 133.1, fixed45: 71.5, external_reactive: 69.1 }, heat: { bare: 137.4, external_fixed: 40, fixed45: 24, external_reactive: 40.2 } },
+    S: { az: 180, cool: { bare: 280.9, external_fixed: 157.7, fixed45: 135.6, external_reactive: 115.4 }, heat: { bare: 352.3, external_fixed: 238.6, fixed45: 143, external_reactive: 66.5 } },
+    W: { az: 270, cool: { bare: 340, external_fixed: 236.8, fixed45: 128.4, external_reactive: 102 }, heat: { bare: 123.9, external_fixed: 44.7, fixed45: 23.7, external_reactive: 44.2 } },
+    N: { az: 0, cool: { bare: 115.7, external_fixed: 54.2, fixed45: 38.8, external_reactive: 54.4 }, heat: { bare: 77, external_fixed: 47.3, fixed45: 28.3, external_reactive: 47.5 } }
+  };
+  // 입면마다 방위가 가장 가까운 Radiance 값을 쓴다 (같은 지역 · 비슷한 높이일 때의 근사). 겨울 모드면 외부 반응형 겨울값 = 통유리 × 0.95
+  function radianceSolar(input) {
+    const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
+    const winter = input.winter_mode !== false;
+    const near = az => Object.values(RADIANCE_9F).reduce((b, v) => Math.abs(((v.az - az + 540) % 360) - 180) < Math.abs(((b.az - az + 540) % 360) - 180) ? v : b);
+    return {
+      meta: { weather_source: 'radiance_1784_9F', shading_included: true, timestep_min: 10, version: 'team-radiance' },
+      facades: input.facades.map(f => { const v = near(f.azimuth_deg); return {
+        id: f.id,
+        cooling_season: { bare_kwh_m2_yr: v.cool.bare, internal_reactive_kwh_m2_yr: v.cool.bare * A.internal_shading_coef, external_fixed_kwh_m2_yr: v.cool.external_fixed, external_reactive_kwh_m2_yr: v.cool.external_reactive },
+        heating_season: { bare_kwh_m2_yr: v.heat.bare, internal_reactive_kwh_m2_yr: v.heat.bare, external_fixed_kwh_m2_yr: v.heat.external_fixed, external_reactive_kwh_m2_yr: winter ? v.heat.bare * A.winter_mode_transmission : v.heat.external_reactive }
+      }; })
+    };
+  }
+  const DEFAULT_SPEC = { blade_depth_mm: 300, blade_spacing_mm: 350, louver_to_window_ratio: 0.9, area_per_unit_m2: 6, cutoff_deg: [30, 60, 45, 30], min_sun_alt_deg: 5 };
 
   function merge(base, over) {
     if (over === undefined || over === null) return JSON.parse(JSON.stringify(base));
@@ -215,9 +237,11 @@
     const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
     const mode = opts.mode || 'solar'; // 'solar' | 'excel'
     const warnings = [];
-    if (mode === 'solar' && !solar) { solar = clearSkySolar(input, opts); }
+    if (mode === 'radiance') { solar = radianceSolar(input); }
+    if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
     if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터 · 주변 그림자 미반영)');
-    if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13번 시트 가정값으로 계산');
+    if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
+    if (mode === 'radiance') warnings.push('일사량: 팀 Radiance 결과(1784 9층, 주변 그림자 반영)를 입면 방위에 맞춰 적용. 다른 건물 · 층에서는 근사값');
     const q = quantities(input);
     const price = A.elec_price_krw_kwh * A.elec_price_multiplier; // 원/kWh
     const lightScale = q.window_area_m2 / 1000;
@@ -230,10 +254,9 @@
       const per_facade = [];
       if (mode === 'excel') {
         const X = A.excel_mode;
-        const base = X.annual_irradiance_kwh_m2 * q.window_area_m2 * A.shgc;
-        coolSaved = base * (X.shading_coef.bare - X.shading_coef[alt]) / A.cop_cooling / 1000;
+        coolSaved = q.window_area_m2 * A.shgc * (X.cooling_irradiance_kwh_m2.bare - X.cooling_irradiance_kwh_m2[alt]) / A.cop_cooling / 1000;
         const tw = alt === 'external_reactive' ? (winterMode ? A.winter_mode_transmission : X.winter_transmission.external_reactive_rule) : X.winter_transmission[alt];
-        heatAdded = X.winter_direct_kwh_day * (1 - tw) * A.shgc * X.winter_days * A.clear_fraction / A.cop_heating / 1000;
+        heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor / A.cop_heating / 1000;
       } else {
         for (const f of lf) {
           const s = solar.facades.find(x => x.id === f.id);
@@ -273,6 +296,6 @@
     return out;
   }
 
-  const api = { compute, clearSkySolar, sunPosition, quantities, stateAt, louverState, cumulativeNet, merge, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
+  const api = { compute, clearSkySolar, radianceSolar, RADIANCE_9F, sunPosition, quantities, stateAt, louverState, cumulativeNet, merge, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LouverEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
