@@ -109,7 +109,8 @@
   $('simPlay').onclick = () => {
     if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = '재생'; return; }
     $('simPlay').textContent = '멈춤';
-    timer = setInterval(() => { const t = $('simTime'); t.value = (Number(t.value) + 10) % 1440; renderPlans(); }, 90);
+    // 2분씩 18ms 마다 (예전과 같은 빠르기: 1시간 ≈ 0.5초). 10분씩 건너뛰면 한여름 정오 남면 날이 한 번에 20° 넘게 튄다
+    timer = setInterval(() => { const t = $('simTime'); t.value = (Number(t.value) + 2) % 1440; renderPlans(); }, 18);
   };
 
   // ---------------- 2. 누적 순이익 + 민감도 ----------------
