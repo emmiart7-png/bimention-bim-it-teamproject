@@ -104,11 +104,11 @@ svg text{font-family:inherit}
       <button id="vwSave">저장</button>
     </div>
     <div class="inline">
-      <div><label for="searchAddr">주소 검색</label><input id="searchAddr" placeholder="예: 경기 성남시 분당구 정자일로 95"></div>
+      <div><label for="searchAddr">주소 검색</label><input id="searchAddr" placeholder="예: 정자일로 95 · 네이버 1784 · 불정로 6"></div>
       <button id="searchBtn">찾기</button>
     </div>
+    <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
     <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
-    <div class="status" id="vwStatus">지도에서 건물을 클릭하세요.</div>
     <div class="row3">
       <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="자동"></div>
       <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" step="0.1" value="4"></div>
@@ -242,8 +242,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=5"></script>
-<script src="geo.js?v=5"></script>
+<script src="engine.js?v=6"></script>
+<script src="geo.js?v=6"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -409,8 +409,9 @@ svg text{font-family:inherit}
     status('주소를 찾는 중…');
     try{
       const p=await VWorld.geocode(q,cfg());
-      if(!p){ status('주소를 찾지 못했습니다. 도로명 또는 지번으로 다시 입력해 보세요.', true); return; }
-      $('address').value=q; map.setView([p.lat,p.lon],18); pickAt(p.lat,p.lon);
+      if(!p){ status('찾지 못했습니다. 도로명 주소(예: 정자일로 95)나 건물 이름으로 다시 입력해 보세요.', true); return; }
+      status(`찾음: ${p.label}${p.address&&p.address!==p.label?' ('+p.address+')':''} · 건물 외곽선을 불러오는 중…`);
+      $('address').value=p.address||q; map.setView([p.lat,p.lon],18); pickAt(p.lat,p.lon);
     }catch(e){ status(e.message, true); }
   };
   $('searchAddr').addEventListener('keydown',e=>{ if(e.key==='Enter') $('searchBtn').click(); });
@@ -431,6 +432,6 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=5"></script>
+<script src="features.js?v=6"></script>
 </body>
 </html>

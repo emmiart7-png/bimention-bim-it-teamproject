@@ -43,10 +43,21 @@
   }
 
   // ---- 주소 → 좌표 ----
-  async function geocode(address, cfg) {
+  // 도로명 주소 → 지번 주소 → 장소 이름(건물명) 순서로 찾고, 마지막으로 정확한 주소 변환을 시도한다
+  async function geocode(query, cfg) {
+    const tries = [{ type: 'address', category: 'road' }, { type: 'address', category: 'parcel' }, { type: 'place' }];
+    for (const t of tries) {
+      const r = check(await vworld('search', { service: 'search', request: 'search', version: '2.0', crs: 'EPSG:4326', size: '1', page: '1', query, ...t }, cfg));
+      const it = r && r.result && r.result.items && r.result.items[0];
+      if (it && it.point) {
+        const a = it.address || {};
+        const label = it.title || a.bldnm || a.road || a.parcel || query;
+        return { lat: Number(it.point.y), lon: Number(it.point.x), type: t.type, label, address: a.road || a.parcel || '' };
+      }
+    }
     for (const type of ['road', 'parcel']) {
-      const r = check(await vworld('address', { service: 'address', request: 'getcoord', version: '2.0', crs: 'epsg:4326', address, refine: 'true', simple: 'false', type }, cfg));
-      if (r && r.result && r.result.point) return { lat: Number(r.result.point.y), lon: Number(r.result.point.x), type };
+      const r = check(await vworld('address', { service: 'address', request: 'getcoord', version: '2.0', crs: 'epsg:4326', address: query, refine: 'true', simple: 'false', type }, cfg));
+      if (r && r.result && r.result.point) return { lat: Number(r.result.point.y), lon: Number(r.result.point.x), type, label: query, address: query };
     }
     return null;
   }
