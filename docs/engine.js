@@ -150,7 +150,8 @@
       external_fixed: open,
       external_reactive: winterNow ? A.winter_mode_transmission : (closed ? 0 : open)
     };
-    return { state: winterNow ? 'winter' : closed ? 'closed' : 'open', angle, side, tilt, closed, tr };
+    // rule / rule_angle: 겨울 모드와 상관없이 규칙만 따를 때 (내부 반응형은 겨울 모드가 없다)
+    return { state: winterNow ? 'winter' : closed ? 'closed' : 'open', angle, side, tilt, closed, rule: closedRule, rule_angle: closedRule ? closedAngle(tilt, ds) : 0, tr };
   }
 
   // 편의 함수: 입력과 날짜 · 시각으로 모든 입면 상태

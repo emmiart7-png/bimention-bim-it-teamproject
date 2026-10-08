@@ -9,6 +9,7 @@
 | --- | --- | --- | --- |
 | 웹 → Unity | Unity가 뜬 직후, 웹에서 건물 · 입면 · 루버 사양이 바뀔 때 | `site_input` JSON (위치, 입면 목록, 루버 사양, 겨울 모드) | `onSiteInput` 이벤트 |
 | 웹 → Unity | 웹의 "하루 재생" 날짜 · 시각을 바꿀 때 | `2026-06-21T12:30:00+09:00` (한국 시간) | `onDateTime` 이벤트 |
+| 웹 → Unity | 웹의 "외관 / 실내 / 나란히" 버튼 | `exterior` · `interior` · `split` | `SetView` → 카메라 전환, `onView` 이벤트 |
 | Unity → 웹 | 연간 일사량 계산이 끝났을 때 | `solar_result` JSON | `bridge.SendSolarResult(result)` |
 
 웹은 Unity 결과를 받으면 자동으로 "Unity 일사량" 기준으로 에너지 · 탄소 · 비용을 다시 계산한다.
@@ -25,6 +26,18 @@
    - 또는 `LouverBridgeExample.cs`를 붙이고 "여기에"라고 적힌 곳에 기존 함수 호출을 넣는다
 4. 에디터에서 시험: `LouverBridge` 컴포넌트의 ⋮ 메뉴 → **"시험: 1784 하지 정오"**. Console에 입면 4개와 12:00이 찍히면 연결 성공.
 5. 연간 계산이 끝나면 `bridge.SendSolarResult(result)`. 에디터에서는 Console에 JSON이 찍힌다.
+
+## 외관 · 실내 화면
+
+웹의 Unity 칸 위에 **외관 / 실내 / 나란히** 버튼이 있다. 누르면 `SetView`가 불린다.
+
+1. 씬에 카메라 두 개를 둔다: 건물 밖 **외관 카메라**, 실내(예: 9층 서남쪽 모서리 방)에서 창 쪽을 보는 **실내 카메라**
+2. `LouverBridge` Inspector의 `Exterior Camera`, `Interior Camera`에 각각 넣는다
+3. 실내 카메라의 Audio Listener는 지운다 (한 씬에 하나만)
+4. 에디터 시험: ⋮ 메뉴 → "시험: 실내 보기" · "시험: 나란히 보기" · "시험: 외관 보기"
+
+나란히(`split`)는 화면 왼쪽 절반이 외관, 오른쪽 절반이 실내다. 실내에서는 루버 날 그림자와 바닥에 드는 햇빛이 보이면 좋다.
+빌드는 하나로 충분하다 (WebGL을 두 개 띄우면 메모리가 두 배로 든다).
 
 ## 결과(`solar_result`) 채우는 법
 

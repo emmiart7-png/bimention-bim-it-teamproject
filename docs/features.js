@@ -48,13 +48,32 @@
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
     const spec = E.merge(E.DEFAULT_SPEC, last.input.louver_spec), ds = spec.blade_depth_mm / spec.blade_spacing_mm;
     const fs = st.facades.filter(f => f.louver);
-    $('plans').innerHTML = fs.length ? fs.map(f => {
+    // 건물 외곽선의 변마다 입면이 생기므로, 기본은 8방위로 묶어 방위마다 평면도 하나 (창이 가장 큰 입면을 대표로)
+    const groups = $('planAll').checked ? fs.map(f => ({ name: `${f.id} · ${f.azimuth_deg}°`, rep: f, ids: [f.id] })) : groupByDir(fs);
+    $('plans').innerHTML = groups.length ? groups.map(g => {
+      const f = g.rep;
       let txt = STATE_TEXT[f.state];
       if (f.state === 'closed') txt += ` · 날 ${Math.round(f.angle)}°`;
       if (f.tr && f.state !== 'closed') txt += ` · 직달 ${Math.round(f.tr.external_reactive * 100)}% 통과`;
-      return `<div class="plan">${planSVG(f, ds)}<div class="st">${esc(f.id)} · ${f.azimuth_deg}°</div><div class="muted">${txt}</div></div>`;
+      const sub = g.ids.length > 1 ? `<div class="muted">입면 ${g.ids.length}개: ${esc(g.ids.join(', '))}</div>` : '';
+      return `<div class="plan">${planSVG(f, ds)}<div class="st">${esc(g.name)}</div><div class="muted">${txt}</div>${sub}</div>`;
     }).join('') : '<p class="muted">루버를 단 입면이 없습니다.</p>';
   }
+  const DIRS = ['북', '북동', '동', '남동', '남', '남서', '서', '북서'];
+  function groupByDir(fs) {
+    const area = id => { const f = last.input.facades.find(x => x.id === id); return f ? (f.window_area_m2 || 0) : 0; };
+    const map = new Map();
+    for (const f of fs) {
+      const k = Math.round((((f.azimuth_deg % 360) + 360) % 360) / 45) % 8;
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(f);
+    }
+    return [...map.entries()].sort((a, b) => a[0] - b[0]).map(([k, arr]) => {
+      const rep = arr.slice().sort((a, b) => area(b.id) - area(a.id))[0];
+      return { name: `${DIRS[k]} · ${rep.azimuth_deg}°`, rep, ids: arr.map(f => f.id) };
+    });
+  }
+  $('planAll').addEventListener('change', renderPlans);
   let timer = null;
   $('simTime').addEventListener('input', renderPlans);
   $('simDate').addEventListener('change', renderPlans);
@@ -109,10 +128,24 @@
     sel.innerHTML = fs.map(f => `<option value="${esc(f.id)}">${esc(f.id)} · ${f.azimuth_deg}°</option>`).join('');
     if (fs.some(f => f.id === prev)) sel.value = prev;
   }
-  function renderHeatmap() {
-    if (!last) return;
-    const id = $('hmFacade').value;
-    if (!id) { $('heatmap').innerHTML = '<p class="muted">루버를 단 입면이 없습니다.</p>'; return; }
+  // 칸 색: 대안마다 의미가 다르다
+  //  외부 반응형: 닫힘(파랑, 진할수록 많이 돎) · 열림 · 겨울 모드
+  //  내부 반응형: 같은 규칙으로 닫지만 열은 이미 실내에 (보라). 겨울 모드 없음
+  //  외부 고정 (날 0°): 움직이지 않음. 유리까지 들어오는 직달 비율 (노랑이 진할수록 많이 들어옴)
+  const HM = {
+    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 햇빛과 나란히']] },
+    internal_reactive: { name: '내부 반응형', legend: [['#A121CE', '닫힘 (열은 이미 실내에)'], ['#FCE3A0', '열림 · 햇빛 들어옴']] },
+    external_fixed: { name: '외부 고정 (날 0°)', legend: [['#F7B928', '유리까지 들어오는 직달 (진할수록 많음)']] }
+  };
+  function cell(alt, st) {
+    if (!st || st.state === 'night' || st.state === 'back' || !st.tr) return ['#E6EAEE', 1];
+    if (alt === 'external_fixed') return ['#F7B928', 0.08 + 0.92 * st.tr.external_fixed];
+    if (alt === 'internal_reactive') return st.rule ? ['#A121CE', 0.3 + 0.7 * Math.min(1, st.rule_angle / 90)] : ['#FCE3A0', 1];
+    if (st.state === 'closed') return ['#0064E0', 0.3 + 0.7 * Math.min(1, st.angle / 90)];
+    if (st.state === 'winter') return ['#FA9A2A', 1];
+    return ['#FCE3A0', 1];
+  }
+  function heatSVG(id, alt, grid) {
     const cw = 13, ch = 20, L = 50, T = 26, cols = 48;
     let s = '';
     for (let h = 0; h <= 24; h += 3) s += `<text x="${L + h * 2 * cw}" y="17" text-anchor="middle" font-size="14" fill="#5D6C7B">${h}시</text>`;
@@ -120,18 +153,29 @@
       const y = T + (m - 1) * ch;
       s += `<text x="${L - 6}" y="${y + 13}" text-anchor="end" font-size="14" fill="#5D6C7B">${m}월</text>`;
       for (let c = 0; c < cols; c++) {
-        const st = E.stateAt(last.input, 2026, m, 15, Math.floor(c / 2), (c % 2) * 30).facades.find(f => f.id === id);
-        let fill = '#E6EAEE', op = 1;
-        if (st.state === 'closed') { fill = '#0064E0'; op = 0.3 + 0.7 * Math.min(1, st.angle / 90); }
-        else if (st.state === 'open') fill = '#FCE3A0';
-        else if (st.state === 'winter') fill = '#FA9A2A';
+        const [fill, op] = cell(alt, grid[m - 1][c]);
         s += `<rect x="${L + c * cw}" y="${y}" width="${cw - 1}" height="${ch - 2}" fill="${fill}" fill-opacity="${r1(op)}"/>`;
       }
     }
     const W = L + cols * cw + 8, H = T + 12 * ch + 4;
-    $('heatmap').innerHTML = `<div class="tablewrap"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(id)} 입면의 월별 · 시각별 루버 상태" xmlns="${NS}" style="width:100%;height:auto">${s}</svg></div>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(id)} 입면 ${esc(HM[alt].name)}의 월별 · 시각별 상태" xmlns="${NS}" style="width:100%;height:auto">${s}</svg>`;
+  }
+  function renderHeatmap() {
+    if (!last) return;
+    const id = $('hmFacade').value, sel = $('hmAlt').value;
+    if (!id) { $('heatmap').innerHTML = '<p class="muted">루버를 단 입면이 없습니다.</p>'; $('hmLegend').innerHTML = ''; return; }
+    // 상태는 한 번만 계산해 세 대안이 같이 쓴다 (각 달 15일, 30분 간격)
+    const grid = [];
+    for (let m = 1; m <= 12; m++) { const row = []; for (let c = 0; c < 48; c++) row.push(E.stateAt(last.input, 2026, m, 15, Math.floor(c / 2), (c % 2) * 30).facades.find(f => f.id === id)); grid.push(row); }
+    const alts = sel === 'all' ? ['external_reactive', 'internal_reactive', 'external_fixed'] : [sel];
+    $('heatmap').innerHTML = alts.map(a => `${alts.length > 1 ? `<div class="hmcap">${esc(HM[a].name)}</div>` : ''}<div class="tablewrap">${heatSVG(id, a, grid)}</div>`).join('');
+    const items = []; const seen = new Set();
+    for (const a of alts) for (const [c, t] of HM[a].legend) { if (seen.has(c + t)) continue; seen.add(c + t); items.push(`<span><i style="background:${c}"></i>${esc(t)}</span>`); }
+    items.push('<span><i style="background:#E6EAEE"></i>해 없음 · 입면 뒤</span>');
+    $('hmLegend').innerHTML = items.join('');
   }
   $('hmFacade').addEventListener('change', renderHeatmap);
+  $('hmAlt').addEventListener('change', renderHeatmap);
 
   // ---------------- 4. 인쇄 / PDF ----------------
   function renderPrintSummary() {
