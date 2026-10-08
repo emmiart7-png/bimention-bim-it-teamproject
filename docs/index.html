@@ -21,6 +21,7 @@ header{padding:20px 24px 12px;border-bottom:1px solid var(--line);display:flex;f
 header h1{margin:0;font-size:22px;font-weight:700}
 header p{margin:0;color:var(--muted);font-size:13px}
 main{display:grid;grid-template-columns:minmax(380px,500px) 1fr;gap:24px;padding:20px 24px 40px;max-width:1500px;margin:0 auto}
+main>div{min-width:0}
 @media (max-width:900px){main{grid-template-columns:1fr;padding:16px}}
 section.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
 h2{font-size:15px;margin:0 0 10px;font-weight:700}
@@ -58,15 +59,43 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .muted{color:var(--muted);font-size:12px}
 #unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:16px;background:var(--soft)}
 .hidden{display:none}
+.hdr-btns{display:flex;gap:8px}
+.plans{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
+.plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:13px}
+.plan svg{width:100%;height:auto;display:block}
+.plan .st{font-weight:600}
+.timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.timebar>div{flex:1;min-width:140px}
+.timebar input[type=range]{padding:0}
+.sun{font-size:13px;color:var(--sub);margin-top:6px}
+.sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 16px}
+.sliders input[type=range]{padding:0}
+.sliders output{font-weight:600;color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+svg text{font-family:inherit}
+#printSummary{display:none}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff;color:#000;font-size:11px}
+  .noprint,.btns,#warnings{display:none!important}
+  main{display:block;padding:0}
+  section.panel{break-inside:avoid;border:1px solid #ccc;margin-bottom:8px;padding:8px 10px}
+  #printSummary{display:block}
+  .cards{grid-template-columns:repeat(3,1fr)}
+  .card.best{background:#fff}
+  header p{display:none}
+}
 </style>
 </head>
 <body>
 <header>
   <h1>반응형외피 검토 도구 <span class="muted">v0.1 시제품</span></h1>
   <p>사이트와 입면을 넣으면 루버를 자동으로 입혀 에너지 · 탄소 · 물량 · 공사비를 계산합니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
+  <div class="hdr-btns noprint"><button id="shareBtn">링크 복사</button><button id="printBtn">인쇄 / PDF</button></div>
 </header>
 <main>
-<div>
+<div class="noprint">
   <section class="panel">
     <h2>0. 지도에서 건물 고르기 (브이월드)</h2>
     <div class="inline">
@@ -158,7 +187,11 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 </div>
 
 <div>
-  <section class="panel">
+  <section class="panel" id="printSummary">
+    <h2>검토 대상</h2>
+    <div id="printSite"></div>
+  </section>
+  <section class="panel noprint">
     <h2>루버 시뮬레이션 (Unity)</h2>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 이 폴더에 넣고 README의 연결 방법을 따르면, 계산할 때 같은 입력이 Unity로 전달됩니다.</div>
   </section>
@@ -170,6 +203,36 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
   <section class="panel">
     <h2>대안 비교</h2>
     <div id="compare"></div>
+  </section>
+  <section class="panel">
+    <h2>하루 재생 · 입면별 루버 평면도 (외부 반응형)</h2>
+    <div class="timebar noprint">
+      <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
+      <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1430" step="10" value="720"></div>
+      <button id="simPlay">재생</button>
+    </div>
+    <div class="btns noprint" style="margin-top:6px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
+    <div class="sun" id="sunInfo"></div>
+    <div class="plans" id="plans"></div>
+    <div class="legend"><span><i style="background:#0064E0"></i>루버 날</span><span><i style="background:#F7B928"></i>햇빛 방향</span><span>위 = 바깥, 아래 = 실내, 점선 = 유리</span></div>
+  </section>
+  <section class="panel">
+    <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
+    <div class="sliders noprint">
+      <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
+      <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
+      <div><label for="sEsc">요금 인상률 (%/년) <output id="oEsc"></output></label><input id="sEsc" type="range" min="0" max="8" step="0.5"></div>
+      <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
+    </div>
+    <div id="cumChart"></div>
+    <p class="muted">선이 0 위로 올라가는 해가 손익분기입니다. 슬라이더는 왼쪽 가정값과 연결되어 있습니다.</p>
+  </section>
+  <section class="panel">
+    <h2>연간 운영 히트맵 (외부 반응형)</h2>
+    <div class="noprint" style="max-width:260px"><label for="hmFacade">입면</label><select id="hmFacade"></select></div>
+    <div id="heatmap"></div>
+    <div class="legend"><span><i style="background:#0064E0"></i>닫힘 (진할수록 많이 돎)</span><span><i style="background:#FCE3A0"></i>열림 · 햇빛 들어옴</span><span><i style="background:#FA9A2A"></i>겨울 모드</span><span><i style="background:#E6EAEE"></i>해 없음 · 입면 뒤</span></div>
+    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
   </section>
   <section class="panel">
     <h2>입면별 (선택한 일사량 기준)</h2>
@@ -241,7 +304,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
   const fmtEok = v => (v/1e8).toFixed(2)+'억';
   const fmtMan = v => Math.round(v/1e4).toLocaleString('ko-KR')+'만';
   const f1 = v => (Math.round(v*10)/10).toLocaleString('ko-KR');
-  let last=null;
+  let last=null, solarCache={};
 
   function run(){
     const input=readInput();
@@ -250,8 +313,12 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
     if(mode==='unity'){ try{ solar=JSON.parse($('unityJson').value); }catch(e){ err='Unity 결과 JSON을 읽을 수 없습니다: '+e.message; } }
     if(err){ $('warnings').innerHTML=`<div class="warn">${err}</div>`; return; }
     window.LouverBridge.sendToUnity(input);
+    // 간이식 일사량은 사이트 · 입면 · 루버 사양이 같으면 다시 계산하지 않는다 (슬라이더가 빠르게 반응하도록)
+    const solarKey=JSON.stringify([input.site.lat_deg,input.site.lon_deg,input.facades,input.louver_spec,input.winter_mode]);
+    if(mode==='solar' && solarCache.k===solarKey) solar=solarCache.s;
     const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':'solar'});
-    last={input,out};
+    if(mode==='solar') solarCache={k:solarKey,s:out.solar};
+    last={input,out,mode};
     $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':'· 맑은 날 간이식';
     $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
     const alts=Object.keys(out.result);
@@ -266,9 +333,26 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
     $('compare').innerHTML=`<table><thead><tr><th style="text-align:left">통유리 대비</th>${alts.map(k=>`<th>${out.result[k].name}</th>`).join('')}</tr></thead><tbody>${rows.map(([n,fn])=>`<tr><td style="text-align:left">${n}</td>${alts.map(k=>`<td>${fn(out.result[k])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
     const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
     $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
+    window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
   }
   $('run').onclick=run;
-  window.UI={addRow,run,clearFacades:()=>{tbody.innerHTML='';}};
+  // 공유 링크로 받은 입력을 화면에 다시 채운다
+  function fillInput(inp, mode){
+    if(inp.site){ $('address').value=inp.site.address||''; $('lat').value=inp.site.lat_deg; $('lon').value=inp.site.lon_deg; }
+    if(inp.project_type) $('ptype').value=inp.project_type;
+    $('winter').checked = inp.winter_mode!==false;
+    if(inp.facades){ tbody.innerHTML=''; inp.facades.forEach(f=>addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:f.window_area_m2,louver:f.louver})); }
+    const s=inp.louver_spec||{}, a=inp.assumptions||{};
+    if(s.blade_depth_mm) $('depth').value=s.blade_depth_mm; if(s.blade_spacing_mm) $('spacing').value=s.blade_spacing_mm;
+    if(s.louver_to_window_ratio) $('ratio').value=s.louver_to_window_ratio; if(s.area_per_unit_m2) $('unitArea').value=s.area_per_unit_m2;
+    if(a.elec_price_krw_kwh) $('price').value=a.elec_price_krw_kwh; if(a.elec_escalation!=null) $('esc').value=+(a.elec_escalation*100).toFixed(2);
+    if(a.cop_cooling) $('cop').value=a.cop_cooling; if(a.emission_t_mwh) $('emis').value=a.emission_t_mwh;
+    if(a.cost_multiplier) $('costMul').value=a.cost_multiplier;
+    if(a.maintenance_rate&&a.maintenance_rate.external_reactive!=null) $('maint').value=+(a.maintenance_rate.external_reactive*100).toFixed(2);
+    if(a.protective_glass) $('glass').checked=!!a.protective_glass.external_reactive;
+    if(mode){ const r=document.querySelector(`input[name=src][value=${mode}]`); if(r) r.checked=true; }
+  }
+  window.UI={addRow,run,clearFacades:()=>{tbody.innerHTML='';},readInput,fillInput,getLast:()=>last};
   const dl=(name,obj)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href);};
   $('dlInput').onclick=()=>dl('site_input.json',readInput());
   $('dlResult').onclick=()=>{ if(!last) run(); dl('result.json',{result:last.out.result,warnings:last.out.warnings}); };
@@ -344,5 +428,6 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
   };
 })();
 </script>
+<script src="features.js"></script>
 </body>
 </html>

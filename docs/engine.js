@@ -97,12 +97,45 @@
   // 닫힘일 때 햇빛이 막히는 최소 날 각도 (d = s 이면 90 − 2·기운 각도)
   const closedAngle = (tilt, ds) => Math.max(0, Math.asin(Math.min(1, Math.cos(tilt * RAD) / ds)) / RAD - tilt);
 
+  // ---- 한 시각, 한 입면의 루버 상태 (애니메이션 · 히트맵 · 연간 계산이 모두 이 식을 쓴다) ----
+  // state: 'night'(해 없음) · 'back'(해가 입면 뒤) · 'open' · 'closed' · 'winter'(겨울 모드, 햇빛과 나란히)
+  // angle: 날 회전 각도(0 = 정면에 수직), side: 해가 정면의 오른쪽(+1)/왼쪽(−1) (밖에서 실내를 볼 때가 아니라 실내에서 밖을 볼 때)
+  function louverState(sp, month, facadeAz, spec, A, winterOn) {
+    const ds = spec.blade_depth_mm / spec.blade_spacing_mm;
+    const heat = A.heating_months.includes(month);
+    if (sp.alt <= 0.5) return { state: 'night', angle: 0, side: 1, tilt: null, tr: null };
+    const tilt = tiltOf(sp.az, facadeAz);
+    const signed = ((sp.az - facadeAz + 540) % 360) - 180;
+    const side = signed >= 0 ? 1 : -1;
+    const closedRule = tilt <= cutoffOf(month, spec.cutoff_deg) && sp.alt >= spec.min_sun_alt_deg;
+    const winterNow = winterOn && heat;
+    const closed = closedRule && !winterNow;
+    let angle = 0;
+    if (closed) angle = closedAngle(tilt, ds);
+    else if (winterNow && tilt < 90) angle = tilt;
+    if (tilt >= 90) return { state: 'back', angle, side, tilt, closed: false, tr: null };
+    const open = openTransmission(tilt, ds);
+    const tr = {
+      bare: 1,
+      internal_reactive: closed ? A.internal_shading_coef : 1,
+      external_fixed: open,
+      external_reactive: winterNow ? A.winter_mode_transmission : (closed ? 0 : open)
+    };
+    return { state: winterNow ? 'winter' : closed ? 'closed' : 'open', angle, side, tilt, closed, tr };
+  }
+
+  // 편의 함수: 입력과 날짜 · 시각으로 모든 입면 상태
+  function stateAt(input, y, m, d, hh, mm) {
+    const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions), spec = merge(DEFAULT_SPEC, input.louver_spec);
+    const sp = sunPosition(input.site.lat_deg, input.site.lon_deg, y, m, d, hh, mm);
+    return { sun: sp, facades: input.facades.map(f => ({ id: f.id, louver: f.louver, azimuth_deg: f.azimuth_deg, ...louverState(sp, m, f.azimuth_deg, spec, A, input.winter_mode !== false) })) };
+  }
+
   // ---- 간이식: Unity 값이 없을 때 solar_result 를 직접 만든다 ----
   function clearSkySolar(input, opts) {
     opts = opts || {};
     const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
     const spec = merge(DEFAULT_SPEC, input.louver_spec);
-    const ds = spec.blade_depth_mm / spec.blade_spacing_mm; // 날 깊이/간격 (1이면 d = s)
     const year = opts.year || 2026, step = opts.step_min || 10;
     const winter = input.winter_mode !== false;
     const lat = input.site.lat_deg, lon = input.site.lon_deg;
@@ -112,35 +145,21 @@
       const dd = new Date(t), m = dd.getUTCMonth() + 1, d = dd.getUTCDate(), mins = dd.getUTCHours() * 60 + dd.getUTCMinutes();
       const sp = sunPosition(lat, lon, year, m, d, Math.floor(mins / 60), mins % 60);
       const cool = A.cooling_months.includes(m), heat = A.heating_months.includes(m);
-      const cut = cutoffOf(m, spec.cutoff_deg);
       input.facades.forEach((f, i) => {
         const r = facades[i];
-        let angle = 0;
-        if (sp.alt > 0.5) {
-          const tilt = tiltOf(sp.az, f.azimuth_deg);
-          const closed = tilt <= cut && sp.alt >= spec.min_sun_alt_deg;
-          const winterNow = winter && heat;
-          if (closed && !winterNow) { r.closed_hours_yr += dt; angle = closedAngle(tilt, ds); }
-          else if (winterNow && tilt < 90) angle = tilt; // 겨울 모드: 햇빛과 나란히
-          if (tilt < 90) {
-            const AM = 1 / Math.sin(sp.alt * RAD);
-            const dni = 1353 * Math.pow(0.7, Math.pow(AM, 0.678)) * A.clear_fraction;
-            const I = dni * Math.cos(sp.alt * RAD) * Math.cos(tilt * RAD) * dt / 1000; // kWh/㎡
-            const open = openTransmission(tilt, ds);
-            const tr = {
-              bare: 1,
-              internal_reactive: (closed && !winterNow) ? A.internal_shading_coef : 1,
-              external_fixed: open,
-              external_reactive: winterNow ? A.winter_mode_transmission : (closed ? 0 : open)
-            };
-            const bucket = cool ? r.cooling_season : heat ? r.heating_season : null;
-            if (bucket) {
-              bucket.bare_kwh_m2_yr += I;
-              for (const a of ALTS) bucket[a + '_kwh_m2_yr'] += I * tr[a];
-            }
+        const s = louverState(sp, m, f.azimuth_deg, spec, A, winter);
+        if (s.closed) r.closed_hours_yr += dt;
+        if (s.tr) {
+          const AM = 1 / Math.sin(sp.alt * RAD);
+          const dni = 1353 * Math.pow(0.7, Math.pow(AM, 0.678)) * A.clear_fraction;
+          const I = dni * Math.cos(sp.alt * RAD) * Math.cos(s.tilt * RAD) * dt / 1000; // kWh/㎡
+          const bucket = cool ? r.cooling_season : heat ? r.heating_season : null;
+          if (bucket) {
+            bucket.bare_kwh_m2_yr += I;
+            for (const a of ALTS) bucket[a + '_kwh_m2_yr'] += I * s.tr[a];
           }
         }
-        r.blade_rotation_deg_yr += Math.abs(angle - r._prev); r._prev = angle;
+        r.blade_rotation_deg_yr += Math.abs(s.angle - r._prev); r._prev = s.angle;
       });
     }
     facades.forEach(r => { delete r._prev; for (const s of ['cooling_season', 'heating_season']) for (const k in r[s]) r[s][k] = Math.round(r[s][k] * 10) / 10; r.closed_hours_yr = Math.round(r.closed_hours_yr); r.blade_rotation_deg_yr = Math.round(r.blade_rotation_deg_yr); });
@@ -247,6 +266,13 @@
     return { result, warnings, solar };
   }
 
-  const api = { compute, clearSkySolar, sunPosition, quantities, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
+  // 통유리 대비 누적 순이익 (원): 전기요금 절감 × 인상 반영 누적 − 공사비 − 유지관리비 × 연수
+  function cumulativeNet(r, escalation, years) {
+    const out = [];
+    for (let t = 0; t <= years; t++) { const ann = escalation === 0 ? t : (Math.pow(1 + escalation, t) - 1) / escalation; out.push(r.money.energy_saved_krw_yr * ann - r.cost.total_krw - r.money.maintenance_krw_yr * t); }
+    return out;
+  }
+
+  const api = { compute, clearSkySolar, sunPosition, quantities, stateAt, louverState, cumulativeNet, merge, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LouverEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
