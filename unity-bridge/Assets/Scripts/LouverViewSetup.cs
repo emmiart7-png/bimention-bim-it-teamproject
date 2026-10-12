@@ -1,9 +1,11 @@
 // 외관 · 실내 카메라를 자동으로 만들어 LouverBridge 에 연결한다 (씬 파일을 고치지 않아도 됨)
 // - 씬이 열리면 스스로 생긴다 (RuntimeInitializeOnLoadMethod). 씬에 이미 붙어 있으면 그것을 쓴다
-// - 외관: 건물 전체가 보이게 남서쪽 위에서 바라봄. 마우스 끌기 = 돌리기, 휠 = 확대 · 축소
+// - 외관: 실내 카메라 층의 남서쪽 모서리를 가까이서 바라봄 (날이 보이게). 마우스 끌기 = 돌리기, 휠 = 확대 · 축소
 // - 실내: interiorFloor 층 남서쪽 모서리 안쪽에서 창(남서쪽)을 바라봄
 // 좌표: Unity 북쪽 = +Z, 동쪽 = +X, 위 = +Y
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
@@ -14,11 +16,14 @@ public class LouverViewSetup : MonoBehaviour
     [Tooltip("층고 (m)")] public float floorHeightM = 4.2f;
     [Tooltip("실내 카메라를 모서리에서 안쪽으로 들일 거리 (m)")] public float interiorInsetM = 4f;
     [Tooltip("눈높이 (m)")] public float eyeHeightM = 1.5f;
+    [Tooltip("외관 시작 거리 (m). 휠로 바꿀 수 있음")] public float startDistanceM = 260f;
+    [Tooltip("루버 날 색 (유리와 구분되게)")] public Color bladeColor = new Color(0.12f, 0.31f, 0.55f);
+    [Tooltip("날 색 덮어쓰기")] public bool tintBlades = true;
     public Camera exteriorCamera;
     public Camera interiorCamera;
 
     Vector3 target;       // 외관 카메라가 바라보는 점 (건물 중심)
-    float distance, yaw = 225f, pitch = 22f;
+    float distance, yaw = 80f, pitch = 25f;   // 카메라가 타워 서쪽 위에서 동쪽을 바라봄 (주변 건물에 덜 가림)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -28,19 +33,17 @@ public class LouverViewSetup : MonoBehaviour
 
     void Start()
     {
+        // 화질: 웹(WebGL)은 Mobile 설정을 써서 안티에일리어싱이 꺼져 있고 해상도가 0.8 이라 얇은 날이 지글거린다
+        if (GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp) { urp.msaaSampleCount = 4; urp.renderScale = 1f; }
         var rig = FindAnyObjectByType<LouverRig>();
         // 루버 날 범위 = 타워. (모델 전체는 지형 블록 · 주변 건물까지 들어 있어 너무 크다)
         Bounds all = BoundsUnder(rig != null && rig.louverRoot != null ? rig.louverRoot : null);
-        float groundY = GroundY(all);
+        float groundY = all.min.y;   // 1층 바닥 = 루버 날의 맨 아래 (지형 블록은 더 낮아 쓰지 않음)
 
         // ---- 외관 카메라 ----
         if (exteriorCamera == null) exteriorCamera = Camera.main;
         if (exteriorCamera == null) exteriorCamera = MakeCamera("ExteriorCamera", 45f, 0.3f);
         if (FindAnyObjectByType<AudioListener>() == null) exteriorCamera.gameObject.AddComponent<AudioListener>();
-        target = all.center;
-        distance = Mathf.Max(30f, all.extents.magnitude * 1.8f);
-        exteriorCamera.farClipPlane = distance * 6f;
-        PlaceExterior();
 
         // ---- 실내 카메라 ----
         if (interiorCamera == null) interiorCamera = MakeCamera("InteriorCamera", 70f, 0.05f);
@@ -51,6 +54,14 @@ public class LouverViewSetup : MonoBehaviour
         interiorCamera.transform.rotation = Quaternion.LookRotation(new Vector3(-1f, -0.08f, -1f));
         interiorCamera.farClipPlane = distance * 6f;
         interiorCamera.enabled = false;
+
+        // 외관 시작: 타워 중간 높이를 남남서쪽 위에서 (주변 건물 위로). 휠로 가까이 가면 날이 하나하나 보인다
+        target = new Vector3(all.center.x, all.min.y + all.size.y * 0.55f, all.center.z);
+        distance = startDistanceM;
+        exteriorCamera.farClipPlane = Mathf.Max(2000f, all.extents.magnitude * 12f);
+        PlaceExterior();
+        foreach (var cam in new[] { exteriorCamera, interiorCamera }) CleanCamera(cam);
+        if (tintBlades && rig != null && rig.louverRoot != null) TintBlades(rig.louverRoot, bladeColor);
 
         var bridge = FindAnyObjectByType<LouverBridge>();
         if (bridge != null)
@@ -80,6 +91,21 @@ public class LouverViewSetup : MonoBehaviour
 #endif
     }
 
+    // 주변 건물에 가리지 않는 방향 고르기: 남쪽에서 보는 방향부터 차례로 시험해 타워까지 시야가 트인 첫 방향
+    void PickClearView()
+    {
+        float[] yaws = { 20f, 0f, 40f, -20f, 60f, -40f, 80f, -60f, 100f, -80f };
+        float[] pitches = { 35f, 45f, 55f };   // 주변 건물 위로 내려다보게
+        foreach (float p in pitches)
+            foreach (float y in yaws)
+            {
+                Quaternion q = Quaternion.Euler(p, y, 0f);
+                Vector3 eye = target - q * Vector3.forward * distance;
+                if (!Physics.Linecast(eye, target, out var hit) || hit.distance > distance - 20f) { yaw = y; pitch = p; return; }
+            }
+        pitch = 55f; // 모두 막히면 위에서 내려다봄
+    }
+
     void PlaceExterior()
     {
         Quaternion q = Quaternion.Euler(pitch, yaw, 0f);
@@ -93,6 +119,38 @@ public class LouverViewSetup : MonoBehaviour
         var start = new Vector3(b.center.x, b.min.y + 1f, b.min.z - 3f);
         if (Physics.Raycast(start, Vector3.down, out var hit, 200f)) return Mathf.Min(hit.point.y, b.min.y);
         return b.min.y;
+    }
+
+    // 필름 그레인 · 피사계 심도 같은 후처리를 끄고, 가장자리 계단 현상을 줄인다
+    static void CleanCamera(Camera cam)
+    {
+        cam.allowMSAA = true;
+        var d = cam.GetUniversalAdditionalCameraData();
+        d.renderPostProcessing = false;
+        d.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+        d.antialiasingQuality = AntialiasingQuality.High;
+    }
+
+    // 날을 한 가지 진한 색 · 무광 재질로 바꾼다 (유리 반사와 섞여 안 보이던 문제)
+    // Unity 6 의 GPU Resident Drawer 는 MaterialPropertyBlock 을 무시할 수 있어 재질 자체를 바꾼다
+    static void TintBlades(Transform root, Color c)
+    {
+        var rs = root.GetComponentsInChildren<Renderer>();
+        if (rs.Length == 0) return;
+        var shader = Shader.Find("Universal Render Pipeline/Lit");
+        var m = shader != null ? new Material(shader) : new Material(rs[0].sharedMaterial);
+        m.name = "LouverBlade_Tint";
+        if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", c);
+        if (m.HasProperty("_Color")) m.SetColor("_Color", c);
+        if (m.HasProperty("_Smoothness")) m.SetFloat("_Smoothness", 0.15f);
+        if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
+        foreach (var r in rs)
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++) mats[i] = m;
+            r.sharedMaterials = mats;
+        }
+        Debug.Log($"[LouverViewSetup] 날 {rs.Length}개 색 변경");
     }
 
     static Camera MakeCamera(string name, float fov, float near)
