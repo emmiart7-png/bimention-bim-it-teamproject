@@ -32,7 +32,15 @@
       if (!r.ok) throw new Error('프록시 오류 ' + r.status + ' (node serve.js 로 열었는지 확인)');
       return r.json();
     }
-    return jsonp(BASE + path + '?' + q.toString(), cfg.timeoutMs);
+    // 브이월드는 키가 맞아도 가끔(연달아 부를 때) '인증키 정보가 올바르지 않습니다'를 돌려준다 → 잠깐 쉬고 최대 4번까지 다시
+    let res;
+    for (let i = 0; i < 4; i++) {
+      res = await jsonp(BASE + path + '?' + q.toString(), cfg.timeoutMs);
+      const r = res && res.response, txt = r && r.error && (r.error.text || r.error.code) || '';
+      if (!(r && r.status === 'ERROR' && /인증키|INCORRECT_KEY|INVALID_KEY/i.test(txt))) break;
+      await new Promise(ok => setTimeout(ok, 700 * (i + 1)));
+    }
+    return res;
   }
   function check(res) {
     const r = res && res.response;

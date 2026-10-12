@@ -241,6 +241,7 @@ svg text{font-family:inherit}
     <div class="btns noprint" style="margin:6px 0 12px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
     <div class="seg" id="simSrc" style="margin-bottom:8px;display:none"><label><input type="radio" name="simsrc" value="unity"><span>네이버 1784</span></label><label><input type="radio" name="simsrc" value="model" checked><span>선택한 건물</span></label></div>
     <div class="seg" id="viewSeg" style="margin-bottom:10px"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
+    <div class="btns noprint" id="faceBtns" style="margin:-4px 0 10px"><span class="muted" style="align-self:center">입면 보기</span><button data-face="east">동면</button><button data-face="south">남면</button><button data-face="west">서면</button><button data-face="all">전체</button></div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
       <label class="check" style="margin-bottom:8px"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label>
@@ -255,8 +256,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=24"></script>
-<script src="geo.js?v=24"></script>
+<script src="engine.js?v=25"></script>
+<script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -339,6 +340,11 @@ svg text{font-family:inherit}
     receiveSolarResult(json){ const s=typeof json==='string'?json:JSON.stringify(json,null,1); $('unityJson').value=s; document.querySelector('input[name=src][value=unity]').checked=true; $('unityBox').classList.remove('hidden'); run(); }
   };
 
+  // 입면 보기: Unity 외관 카메라를 그 입면 정면으로
+  document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{
+    const ext=document.querySelector('input[name=uview][value=exterior]'); if(ext && !ext.checked){ ext.checked=true; window.LouverBridge.sendView('exterior'); }
+    if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverViewSetup','LookAtFacade',b.dataset.face); }catch(e){ console.warn(e); } }
+  });
   document.querySelectorAll('input[name=uview]').forEach(r=>r.onchange=()=>{ if(r.checked) window.LouverBridge.sendView(r.value); });
 
   const fmtEok = v => (v/1e8).toFixed(2)+'억';
@@ -472,7 +478,7 @@ svg text{font-family:inherit}
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
   function showSim(which){
     const m=which==='model';
-    $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m; $('viewSeg').style.display=m?'none':'';
+    $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m; $('viewSeg').style.display=m?'none':''; $('faceBtns').style.display=m?'none':'';
     $('simTitle').textContent=m?'· 선택한 건물':'· 네이버 1784';
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
     window.dispatchEvent(new Event('resize'));
@@ -498,9 +504,9 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=24"></script>
+<script src="model3d.js?v=25"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=24"></script>
-<script src="unity.js?v=24"></script>
+<script src="features.js?v=25"></script>
+<script src="unity.js?v=25"></script>
 </body>
 </html>

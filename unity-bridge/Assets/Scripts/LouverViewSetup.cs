@@ -23,6 +23,8 @@ public class LouverViewSetup : MonoBehaviour
     public Camera interiorCamera;
 
     Vector3 target;       // 외관 카메라가 바라보는 점 (건물 중심)
+    Bounds tower;         // 루버 날 범위 = 타워
+    float viewFloorY;     // 실내 카메라 층 바닥 높이
     float distance, yaw = 80f, pitch = 25f;   // 카메라가 타워 서쪽 위에서 동쪽을 바라봄 (주변 건물에 덜 가림)
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -56,6 +58,7 @@ public class LouverViewSetup : MonoBehaviour
         interiorCamera.enabled = false;
 
         // 외관 시작: 타워 중간 높이를 남남서쪽 위에서 (주변 건물 위로). 휠로 가까이 가면 날이 하나하나 보인다
+        tower = all; viewFloorY = floorY;
         target = new Vector3(all.center.x, all.min.y + all.size.y * 0.55f, all.center.z);
         distance = startDistanceM;
         exteriorCamera.farClipPlane = Mathf.Max(2000f, all.extents.magnitude * 12f);
@@ -110,6 +113,36 @@ public class LouverViewSetup : MonoBehaviour
                 if (!Physics.Linecast(eye, target, out var hit) || hit.distance > distance - 20f) { yaw = y; pitch = p; return; }
             }
         pitch = 55f; // 모두 막히면 위에서 내려다봄
+    }
+
+    // 웹 → Unity: 한 입면을 정면에서 보기. SendMessage("LouverViewSetup", "LookAtFacade", "east" | "south" | "west" | "north" | "all")
+    // 카메라를 그 입면 바깥, 실내 카메라 층 높이쯤에 두고 비스듬히(20°) 바라봐서 날 각도가 잘 보이게
+    public void LookAtFacade(string side)
+    {
+        string sd = (side ?? "").Trim().ToLowerInvariant();
+        float baseYaw;   // 카메라가 바라보는 방향 (0 = 북쪽을 봄)
+        switch (sd)
+        {
+            case "east": case "동": baseYaw = 270f; break;   // 동쪽 바깥에서 서쪽을 봄
+            case "south": case "남": baseYaw = 0f; break;
+            case "west": case "서": baseYaw = 90f; break;
+            case "north": case "북": baseYaw = 180f; break;
+            default:
+                target = new Vector3(tower.center.x, tower.min.y + tower.size.y * 0.55f, tower.center.z);
+                distance = startDistanceM; yaw = 80f; pitch = 25f; Show(); return;
+        }
+        // 그 입면의 가운데, 실내 카메라 층보다 조금 위
+        Vector3 c = tower.center; float y = viewFloorY + floorHeightM * 3f;
+        Vector3 n = Quaternion.Euler(0f, baseYaw, 0f) * Vector3.back;   // 입면 바깥 방향
+        Vector3 face = new Vector3(c.x + n.x * tower.extents.x, y, c.z + n.z * tower.extents.z);
+        target = face; distance = 60f; yaw = baseYaw + 20f; pitch = 8f;
+        Show();
+    }
+    void Show()
+    {
+        var bridge = FindAnyObjectByType<LouverBridge>();
+        if (bridge != null && bridge.CurrentView != "exterior") bridge.SetView("exterior");
+        PlaceExterior();
     }
 
     void PlaceExterior()
