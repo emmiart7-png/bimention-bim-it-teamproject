@@ -244,7 +244,7 @@ svg text{font-family:inherit}
     <div class="btns noprint" id="faceBtns" style="margin:-4px 0 10px"><span class="muted" style="align-self:center">입면 보기</span><button data-face="east">동면</button><button data-face="south">남면</button><button data-face="west">서면</button><button data-face="all">전체</button></div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
-      <label class="check" style="margin-bottom:8px"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
       <div id="model3d" style="border-radius:12px;overflow:hidden;background:#DCE8F5"></div>
       <p class="muted" id="model3dMsg" style="margin-top:6px"></p>
       <p class="muted">브이월드 외곽선 · 층수 · 층고 · 날 간격으로 만든 단순 모형입니다. 마우스 끌기 = 돌리기, 휠 = 확대 · 축소</p>
@@ -475,6 +475,7 @@ svg text{font-family:inherit}
     }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
   $('ctxToggle').onchange=()=>{ if(window.Model3D) Model3D.showContext($('ctxToggle').checked); };
+  $('terToggle').onchange=()=>{ if(window.Model3D) Model3D.showTerrain($('terToggle').checked); };
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
   function showSim(which){
     const m=which==='model';
@@ -496,7 +497,7 @@ svg text{font-family:inherit}
       .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
     $('simSrc').style.display=''; showSim('model');
-    if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name}); loadContext(current); }catch(e){ console.warn(e); }
+    if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent='· '+t; }}); $('terNote').textContent='· 불러오는 중…'; loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
     UI.run();
   };
@@ -504,7 +505,7 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=25"></script>
+<script src="model3d.js?v=24"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=25"></script>
 <script src="unity.js?v=25"></script>

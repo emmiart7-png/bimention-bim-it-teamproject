@@ -14,6 +14,7 @@
   let THREE, renderer, scene, camera, controls, sun, hemi, ground, building, slabs, blades = [], box, msg;
   let model = null, lastInput = null, lastTime = null, ready = false;
   let context = null, showCtx = true;   // 주변 건물 (브이월드 외곽선 · 층수)
+  let terrain = null, showTer = true, elevAt = null, terrToken = 0;   // 지형 (AWS Terrain Tiles)
 
   function el(id) { return document.getElementById(id); }
   function note(t) { if (msg) msg.textContent = t; }
@@ -116,6 +117,65 @@
     sun.shadow.camera.far = r * 6; sun.shadow.camera.updateProjectionMatrix();
     note(`${opt.name || '선택한 건물'} · 지상 ${opt.floors}층 · 높이 ${height.toFixed(0)} m · 루버 면 ${louvered.length}개` + (step > 1 ? ` · 보기용으로 날 ${step}개 중 1개만 그림 (계산은 간격 ${Math.round(spacing * 1000)} mm)` : ''));
     if (lastInput && lastTime) update(lastInput, lastTime);
+    loadTerrain().catch(e => { console.warn(e); if (opt.onTerrain) opt.onTerrain('지형을 불러오지 못했습니다'); });
+    terrCb = opt.onTerrain || null;
+  }
+  let terrCb = null;
+
+  // ---- 지형: AWS Terrain Tiles (terrarium PNG, 고도 = R × 256 + G + B / 256 − 32768 m, 줌 15 ≈ 4.8 m/px) ----
+  const TZ = 15, TR = 450, TN = 91;   // 줌, 반경(m), 한 변 격자 점 수
+  function tileXY(lon, lat, z) {
+    const n = 2 ** z, lr = lat * RAD;
+    return [(lon + 180) / 360 * n, (1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n];
+  }
+  function loadImg(url) {
+    return new Promise((ok, no) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => ok(im); im.onerror = () => no(new Error('지형 타일 ' + url)); im.src = url; });
+  }
+  async function loadTerrain() {
+    if (!model) return;
+    const tok = ++terrToken, L = model.L;
+    const a = tileXY(L.lon0 - TR / L.mx, L.lat0 + TR / L.my, TZ), b = tileXY(L.lon0 + TR / L.mx, L.lat0 - TR / L.my, TZ);
+    const x0 = Math.floor(a[0]), x1 = Math.floor(b[0]), y0 = Math.floor(a[1]), y1 = Math.floor(b[1]);
+    const cv = document.createElement('canvas'); cv.width = (x1 - x0 + 1) * 256; cv.height = (y1 - y0 + 1) * 256;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    const jobs = [];
+    for (let tx = x0; tx <= x1; tx++) for (let ty = y0; ty <= y1; ty++)
+      jobs.push(loadImg('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/' + TZ + '/' + tx + '/' + ty + '.png').then(im => cx.drawImage(im, (tx - x0) * 256, (ty - y0) * 256)));
+    await Promise.all(jobs);
+    if (tok !== terrToken || !model) return;
+    const W = cv.width, H = cv.height, px = cx.getImageData(0, 0, W, H).data;
+    const h = (ix, iy) => { ix = Math.max(0, Math.min(W - 1, ix)); iy = Math.max(0, Math.min(H - 1, iy)); const k = (iy * W + ix) * 4; return px[k] * 256 + px[k + 1] + px[k + 2] / 256 - 32768; };
+    const sample = (lon, lat) => {
+      const [fx, fy] = tileXY(lon, lat, TZ), x = (fx - x0) * 256 - 0.5, y = (fy - y0) * 256 - 0.5;
+      const ix = Math.floor(x), iy = Math.floor(y), u = x - ix, v = y - iy;
+      return h(ix, iy) * (1 - u) * (1 - v) + h(ix + 1, iy) * u * (1 - v) + h(ix, iy + 1) * (1 - u) * v + h(ix + 1, iy + 1) * u * v;
+    };
+    const base = sample(L.lon0, L.lat0);   // 고른 건물 중심의 땅 높이 = 0
+    elevAt = (e, n) => sample(L.lon0 + e / L.mx, L.lat0 + n / L.my) - base;
+    const g = new THREE.PlaneGeometry(2 * TR, 2 * TR, TN - 1, TN - 1);
+    g.rotateX(-Math.PI / 2);   // (x, y) → (x, 0, −y): 북 = −z
+    const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
+    let lo = Infinity, hi = -Infinity; const ys = [];
+    for (let i = 0; i < pos.count; i++) { const y = elevAt(pos.getX(i), -pos.getZ(i)); ys.push(y); lo = Math.min(lo, y); hi = Math.max(hi, y); }
+    const c0 = new THREE.Color('#9AAE86'), c1 = new THREE.Color('#3F6531'), c = new THREE.Color();
+    for (let i = 0; i < pos.count; i++) { pos.setY(i, ys[i]); c.copy(c0).lerp(c1, hi - lo > 1 ? (ys[i] - lo) / (hi - lo) : 0); col.set([c.r, c.g, c.b], i * 3); }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
+    terrain = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
+    terrain.receiveShadow = true; terrain.castShadow = true; terrain.visible = showTer; scene.add(terrain);
+    model.terrainRange = [lo, hi];
+    ground.position.y = showTer ? lo - 0.5 : 0;
+    placeContext();
+    if (terrCb) terrCb('지형 높이 차 ' + Math.round(hi - lo) + ' m');
+  }
+  // 주변 건물을 땅 높이에 맞춰 올리거나 내린다
+  function placeContext() {
+    if (!context) return;
+    for (const m of context.children) m.position.y = (showTer && elevAt) ? elevAt(m.userData.c[0], m.userData.c[1]) : 0;
+  }
+  function showTerrain(on) {
+    showTer = on; if (terrain) terrain.visible = on;
+    if (ground) ground.position.y = (on && model && model.terrainRange) ? model.terrainRange[0] - 0.5 : 0;
+    placeContext();
   }
   // 주변 건물: list = VWorld.buildingsNear 결과. 층수가 없으면 3층, 층고 3.3 m 로 세운다
   function setContext(list, opt) {
@@ -134,9 +194,10 @@
       const h = (b.floors || 3) * fh;
       const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([e, nn]) => new THREE.Vector2(e, nn))), { depth: h, bevelEnabled: false });
       g.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; context.add(m); n++;
+      const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; m.userData.c = c; context.add(m); n++;
     }
     context.visible = showCtx; scene.add(context);
+    placeContext();
     model.contextCount = n;
     return n;
   }
@@ -151,6 +212,9 @@
   }
 
   function clear() {
+    terrToken++; elevAt = null;
+    if (terrain) { scene.remove(terrain); terrain.geometry.dispose(); terrain = null; }
+    if (ground) ground.position.y = 0;
     for (const o of [building, slabs]) if (o) { scene.remove(o); o.geometry.dispose(); }
     for (const b of blades) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
     blades = []; building = slabs = null; model = null;
@@ -191,5 +255,5 @@
   // 상자의 깊이 축(로컬 +z)을 수평 방향 (동 vE, 북 vN) 으로 돌리는 y 회전. three 좌표의 방향은 (x = vE, z = -vN)
   function yawFor(vE, vN) { return Math.atan2(vE, -vN); }
 
-  window.Model3D = { setBuilding, setContext, showContext, update, get hasModel() { return !!model; } };
+  window.Model3D = { setBuilding, setContext, showContext, showTerrain, update, get hasModel() { return !!model; } };
 })();
