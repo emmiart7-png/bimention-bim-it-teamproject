@@ -267,8 +267,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=19"></script>
-<script src="geo.js?v=19"></script>
+<script src="engine.js?v=20"></script>
+<script src="geo.js?v=20"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -471,10 +471,14 @@ svg text{font-family:inherit}
     $('ctxNote').textContent='· 불러오는 중…';
     try{
       const n=b.ring.length, lat=b.ring.reduce((s,p)=>s+p[1],0)/n, lon=b.ring.reduce((s,p)=>s+p[0],0)/n;
-      const list=(await VWorld.buildingsNear(lat,lon,cfg(),0.0025)).filter(x=>x.id!==b.id);
+      // 넓게 먼저 (약 250 m, 응답이 커서 40초까지 기다림), 실패하면 좁게 (약 120 m)
+      let list;
+      try{ list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0025); }
+      catch(e){ $('ctxNote').textContent='· 넓은 범위 실패, 좁혀서 다시…'; list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0012); }
+      list=list.filter(x=>x.id!==b.id);
       const k=Model3D.setContext(list,{floorHeight:3.3});
       $('ctxNote').textContent=`· ${k}동 (층수 없는 건물은 3층으로)`;
-    }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다'; console.warn(e); }
+    }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
   $('ctxToggle').onchange=()=>{ if(window.Model3D) Model3D.showContext($('ctxToggle').checked); };
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
@@ -507,7 +511,7 @@ svg text{font-family:inherit}
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="model3d.js?v=22"></script>
-<script src="features.js?v=19"></script>
-<script src="unity.js?v=19"></script>
+<script src="features.js?v=20"></script>
+<script src="unity.js?v=20"></script>
 </body>
 </html>

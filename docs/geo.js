@@ -25,14 +25,14 @@
   }
   const isLocal = () => ['localhost', '127.0.0.1'].includes(location.hostname);
   async function vworld(path, params, cfg) {
-    const q = new URLSearchParams({ ...params, key: cfg.key || '', domain: cfg.domain || location.origin, format: 'json' });
+    const q = new URLSearchParams({ ...params, key: cfg.key || '', domain: cfg.domain || location.origin, format: 'json' }); // cfg.timeoutMs: JSONP 기다리는 시간
     if (isLocal()) {
       // serve.js 프록시: 키를 비워 두면 서버의 VWORLD_KEY 환경변수를 쓴다
       const r = await fetch('/vworld/' + path + '?' + q.toString());
       if (!r.ok) throw new Error('프록시 오류 ' + r.status + ' (node serve.js 로 열었는지 확인)');
       return r.json();
     }
-    return jsonp(BASE + path + '?' + q.toString());
+    return jsonp(BASE + path + '?' + q.toString(), cfg.timeoutMs);
   }
   function check(res) {
     const r = res && res.response;
