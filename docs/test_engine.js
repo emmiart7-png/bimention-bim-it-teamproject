@@ -14,7 +14,7 @@ const input = {
 const expect = {
   internal_reactive: { total: 641840000, cool: 23.18, light: 4, heat: 0, net: 19.18, t: 8.823, maint: 36092000, be: null },
   external_fixed: { total: 545790000, cool: 21.15, light: 14, heat: 15.438, net: -8.288, t: -3.812, maint: 10915800, be: null },
-  external_reactive: { total: 1291590000, cool: 34.51, light: 5, heat: 3.97, net: 25.54, t: 11.748, maint: 68579500, be: null }
+  external_reactive: { total: 1291590000, cool: 34.51, light: 5, heat: 15.438, net: 14.072, t: 6.473, maint: 68579500, be: null }
 };
 const out = E.compute(input, null, { mode: 'excel' });
 let fail = 0;

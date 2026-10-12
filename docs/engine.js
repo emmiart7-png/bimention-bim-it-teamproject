@@ -48,7 +48,7 @@
     lighting_kwh_per_1000m2: { bare: 38000, internal_reactive: 42000, external_fixed: 52000, external_reactive: 43000 },
     // 간이 일사 계산
     clear_fraction: 0.6,             // 맑은 날 비율
-    winter_mode_transmission: 0.88,  // 겨울 모드에서 날을 햇빛과 나란히 둘 때 (팀 Radiance 결과 약 88%)
+    // 겨울 모드 = 12~2월 날 0° 고정 (팀 solar_result_winter_on (1).json, Unity v6.1). 간이식에서는 열린 날의 투과율을 그대로 쓴다
     internal_shading_coef: 0.55,     // 내부 루버가 닫혔을 때 실내에 남는 열 비율
     cooling_months: [6, 7, 8, 9],
     heating_months: [12, 1, 2],
@@ -59,16 +59,16 @@
       winter_kwh_m2_day: 2.56501,     // 난방기 통유리 합계 ÷ 90일 (solar_result 동·남·서 가중)
       winter_days: 90,
       weather_factor: 1,              // Radiance 는 실제 날씨 반영
-      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.52234, external_reactive_rule: 0.27813, external_reactive_winter: 0.87716 }
+      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.52234, external_reactive_rule: 0.27813, external_reactive_winter: 0.52234 }
     }
   };
   // 팀 Radiance solar_result (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 월별 15일 × 일수 적분,
-  // 날 폭 300 / 간격 350, 날짜별 컷오프 + 그늘이면 열림). 겨울 모드 켬 / 끔 두 가지. internal_reactive 는 팀 값이 없어 아래에서 통유리 × 0.55 로 둔다
+  // 날 폭 300 / 간격 350, 날짜별 컷오프 + 그늘이면 열림). 겨울 모드 켬(12~2월 날 0° 고정) / 끔 두 가지. internal_reactive 는 팀 값이 없어 아래에서 통유리 × 0.55 로 둔다
   const RADIANCE_9F = {
-    winter_on: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":136}, closed_hours_yr: 586, blade_rotation_deg_yr: 65933 },
-      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":340.6}, closed_hours_yr: 926, blade_rotation_deg_yr: 61241 },
-      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":140.6,"internal_reactive_kwh_m2_yr":140.6,"external_fixed_kwh_m2_yr":55.6,"external_reactive_kwh_m2_yr":109.6}, closed_hours_yr: 1106, blade_rotation_deg_yr: 59946 },
-      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":80.6,"internal_reactive_kwh_m2_yr":80.6,"external_fixed_kwh_m2_yr":49,"external_reactive_kwh_m2_yr":48.9}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } },
+    winter_on: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":60.1}, closed_hours_yr: 586, blade_rotation_deg_yr: 52176 },
+      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":229.3}, closed_hours_yr: 926, blade_rotation_deg_yr: 49500 },
+      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":140.6,"internal_reactive_kwh_m2_yr":140.6,"external_fixed_kwh_m2_yr":55.6,"external_reactive_kwh_m2_yr":55.6}, closed_hours_yr: 1106, blade_rotation_deg_yr: 46273 },
+      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":80.6,"internal_reactive_kwh_m2_yr":80.6,"external_fixed_kwh_m2_yr":49,"external_reactive_kwh_m2_yr":49}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } },
     winter_off: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":52.8}, closed_hours_yr: 614, blade_rotation_deg_yr: 56015 },
       S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":82.5}, closed_hours_yr: 1268, blade_rotation_deg_yr: 65700 },
       W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":140.6,"internal_reactive_kwh_m2_yr":140.6,"external_fixed_kwh_m2_yr":55.6,"external_reactive_kwh_m2_yr":54.5}, closed_hours_yr: 1134, blade_rotation_deg_yr: 50194 },
@@ -128,7 +128,7 @@
   const closedAngle = (tilt, ds) => Math.max(0, Math.asin(Math.min(1, Math.cos(tilt * RAD) / ds)) / RAD - tilt);
 
   // ---- 한 시각, 한 입면의 루버 상태 (애니메이션 · 히트맵 · 연간 계산이 모두 이 식을 쓴다) ----
-  // state: 'night'(해 없음) · 'back'(해가 입면 뒤) · 'open' · 'closed' · 'winter'(겨울 모드, 햇빛과 나란히)
+  // state: 'night'(해 없음) · 'back'(해가 입면 뒤) · 'open' · 'closed' · 'winter'(겨울 모드, 12~2월 날 0° 고정)
   // angle: 날 회전 각도(0 = 정면에 수직), side: 해가 정면의 오른쪽(+1)/왼쪽(−1) (밖에서 실내를 볼 때가 아니라 실내에서 밖을 볼 때)
   function louverState(sp, month, facadeAz, spec, A, winterOn) {
     const ds = spec.blade_depth_mm / spec.blade_spacing_mm;
@@ -142,14 +142,14 @@
     const closed = closedRule && !winterNow;
     let angle = 0;
     if (closed) angle = closedAngle(tilt, ds);
-    else if (winterNow && tilt < 90) angle = tilt;
+    // 겨울 모드: 날을 면과 수직(0°)으로 고정해 열어 둔다 (팀 Unity v6.1 · solar_result 와 같음)
     if (tilt >= 90) return { state: 'back', angle, side, tilt, closed: false, tr: null };
     const open = openTransmission(tilt, ds);
     const tr = {
       bare: 1,
       internal_reactive: closed ? A.internal_shading_coef : 1,
       external_fixed: open,
-      external_reactive: winterNow ? A.winter_mode_transmission : (closed ? 0 : open)
+      external_reactive: winterNow ? open : (closed ? 0 : open)
     };
     // rule / rule_angle: 겨울 모드와 상관없이 규칙만 따를 때 (내부 반응형은 겨울 모드가 없다)
     return { state: winterNow ? 'winter' : closed ? 'closed' : 'open', angle, side, tilt, closed, rule: closedRule, rule_angle: closedRule ? closedAngle(tilt, ds) : 0, tr };

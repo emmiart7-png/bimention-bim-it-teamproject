@@ -17,7 +17,7 @@
   let last = null;
 
   // ---------------- 1. 하루 재생 ----------------
-  const STATE_TEXT = { night: '해 없음', back: '해가 입면 뒤', open: '열림', closed: '닫힘', winter: '겨울 모드 · 햇빛과 나란히' };
+  const STATE_TEXT = { night: '해 없음', back: '해가 입면 뒤', open: '열림', closed: '닫힘', winter: '겨울 모드 · 0° 고정' };
   // 건물 평면 하나 (위 = 북) 에 동 · 남 · 서 루버와 오늘 해가 지나는 길을 함께 그린다
   const SIDES = [{ key: '동', az: 90 }, { key: '남', az: 180 }, { key: '서', az: 270 }];
   const angDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
@@ -162,7 +162,7 @@
   //  내부 반응형: 같은 규칙으로 닫지만 열은 이미 실내에 (보라). 겨울 모드 없음
   //  외부 고정 (날 0°): 움직이지 않음. 유리까지 들어오는 직달 비율 (노랑이 진할수록 많이 들어옴)
   const HM = {
-    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 햇빛과 나란히']] },
+    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 날 0° 고정 (열림)']] },
     internal_reactive: { name: '내부 반응형', legend: [['#A121CE', '닫힘 (열은 이미 실내에)'], ['#FCE3A0', '열림 · 햇빛 들어옴']] },
     external_fixed: { name: '외부 고정 (날 0°)', legend: [['#F7B928', '유리까지 들어오는 직달 (진할수록 많음)']] }
   };
