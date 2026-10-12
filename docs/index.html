@@ -154,7 +154,7 @@ svg text{font-family:inherit}
     <p class="muted">방위: 입면이 바라보는 방향 (북 0 · 동 90 · 남 180 · 서 270). 창 ㎡를 비우면 폭 × 높이 × 창면적비로 계산합니다.</p>
   </section>
 
-  <section class="panel">
+  <section class="panel collapsible collapsed">
     <h2>3. 루버 사양 · 가정값</h2>
     <div class="grid4">
       <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:13px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
@@ -174,10 +174,37 @@ svg text{font-family:inherit}
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
-  <section class="panel">
+  <section class="panel collapsible collapsed">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
     <div id="warnings"></div>
     <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+  </section>
+  <section class="panel collapsible collapsed">
+    <h2>대안 비교</h2>
+    <div id="compare"></div>
+  </section>
+  <section class="panel collapsible collapsed">
+    <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
+    <div class="sliders noprint">
+      <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
+      <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
+      <div><label for="sEsc">요금 인상률 (%/년) <output id="oEsc"></output></label><input id="sEsc" type="range" min="0" max="8" step="0.5"></div>
+      <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
+    </div>
+    <div id="cumChart"></div>
+    <p class="muted">선이 0 위로 올라가는 해가 손익분기입니다. 슬라이더는 왼쪽 가정값과 연결되어 있습니다.</p>
+  </section>
+  <section class="panel collapsible collapsed">
+    <h2>연간 운영 히트맵</h2>
+    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
+    <div id="heatmap"></div>
+    <div class="legend" id="hmLegend"></div>
+    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
+  </section>
+  <section class="panel collapsible collapsed">
+    <h2>입면별 (선택한 일사량 기준)</h2>
+    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
+    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
   </section>
   <section class="panel" style="display:none" aria-hidden="true">
     <h2>4. 일사량 출처</h2>
@@ -226,37 +253,10 @@ svg text{font-family:inherit}
     <div class="plans" id="plans"></div>
     <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
   </section>
-  <section class="panel">
-    <h2>대안 비교</h2>
-    <div id="compare"></div>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
-    <div class="sliders noprint">
-      <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
-      <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
-      <div><label for="sEsc">요금 인상률 (%/년) <output id="oEsc"></output></label><input id="sEsc" type="range" min="0" max="8" step="0.5"></div>
-      <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
-    </div>
-    <div id="cumChart"></div>
-    <p class="muted">선이 0 위로 올라가는 해가 손익분기입니다. 슬라이더는 왼쪽 가정값과 연결되어 있습니다.</p>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>연간 운영 히트맵</h2>
-    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
-    <div id="heatmap"></div>
-    <div class="legend" id="hmLegend"></div>
-    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>입면별 (선택한 일사량 기준)</h2>
-    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
-    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
-  </section>
 </div>
 </main>
-<script src="engine.js?v=23"></script>
-<script src="geo.js?v=23"></script>
+<script src="engine.js?v=24"></script>
+<script src="geo.js?v=24"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -498,9 +498,9 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=23"></script>
+<script src="model3d.js?v=24"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=23"></script>
-<script src="unity.js?v=23"></script>
+<script src="features.js?v=24"></script>
+<script src="unity.js?v=24"></script>
 </body>
 </html>
