@@ -91,9 +91,7 @@
     const [y, m, d] = $('simDate').value.split('-').map(Number);
     const mins = Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins % 60;
     $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-    // Unity 칸 아래의 날짜 · 시각도 같이 맞춘다
-    $('uDate').value = $('simDate').value; $('uTime').value = $('simTime').value; $('uTimeOut').textContent = $('simTimeOut').textContent;
-    if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
+        if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
     if (window.Model3D) window.Model3D.update(last.input, { y: y || 2026, m: m || 6, d: d || 21, hh, mm });
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
@@ -109,14 +107,9 @@
   $('simTime').addEventListener('input', renderPlans);
   $('simDate').addEventListener('change', renderPlans);
   document.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { $('simDate').value = b.dataset.day; renderPlans(); });
-  // Unity 칸 아래 날짜 · 시각 → 하루 재생과 같은 값으로
-  $('uTime').addEventListener('input', () => { $('simTime').value = $('uTime').value; renderPlans(); });
-  $('uDate').addEventListener('change', () => { $('simDate').value = $('uDate').value; renderPlans(); });
-  document.querySelectorAll('[data-uday]').forEach(b => b.onclick = () => { $('simDate').value = b.dataset.uday; renderPlans(); });
-  $('uPlay').onclick = () => $('simPlay').click();
   $('simPlay').onclick = () => {
-    if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = $('uPlay').textContent = '재생'; return; }
-    $('simPlay').textContent = $('uPlay').textContent = '멈춤';
+    if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = '재생'; return; }
+    $('simPlay').textContent = '멈춤';
     // 2분씩 18ms 마다 (예전과 같은 빠르기: 1시간 ≈ 0.5초). 10분씩 건너뛰면 한여름 정오 남면 날이 한 번에 20° 넘게 튄다
     timer = setInterval(() => { const t = $('simTime'); t.value = (Number(t.value) + 2) % 1440; renderPlans(); }, 18);
   };
@@ -183,12 +176,12 @@
     return ['#FCE3A0', 1];
   }
   function heatSVG(id, alt, grid) {
-    const cw = 13, ch = 20, L = 50, T = 26, cols = 48;
+    const cw = 13, ch = 11, L = 44, T = 18, cols = 48;  // 촘촘하게 (칸 높이 11)
     let s = '';
-    for (let h = 0; h <= 24; h += 3) s += `<text x="${L + h * 2 * cw}" y="17" text-anchor="middle" font-size="14" fill="#5D6C7B">${h}시</text>`;
+    for (let h = 0; h <= 24; h += 3) s += `<text x="${L + h * 2 * cw}" y="13" text-anchor="middle" font-size="12" fill="#5D6C7B">${h}시</text>`;
     for (let m = 1; m <= 12; m++) {
       const y = T + (m - 1) * ch;
-      s += `<text x="${L - 6}" y="${y + 13}" text-anchor="end" font-size="14" fill="#5D6C7B">${m}월</text>`;
+      s += `<text x="${L - 6}" y="${y + 9}" text-anchor="end" font-size="10" fill="#5D6C7B">${m}월</text>`;
       for (let c = 0; c < cols; c++) {
         const [fill, op] = cell(alt, grid[m - 1][c]);
         s += `<rect x="${L + c * cw}" y="${y}" width="${cw - 1}" height="${ch - 2}" fill="${fill}" fill-opacity="${r1(op)}"/>`;

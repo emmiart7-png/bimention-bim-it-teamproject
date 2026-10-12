@@ -30,6 +30,9 @@ input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);bo
 textarea{min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px 10px}
+.grid4 label{font-size:12px;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid4 input{padding:5px 7px;font-size:13px}
 .check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--ink)}
 .check input{width:auto}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -65,7 +68,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
 .siteplan{max-width:880px;margin:12px auto 0}
-.hmcap{font-weight:600;font-size:14px;margin:12px 0 4px}
+.hmcap{font-weight:600;font-size:13px;margin:6px 0 2px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
 .timebar input[type=range]{padding:0}
@@ -152,32 +155,24 @@ svg text{font-family:inherit}
 
   <section class="panel">
     <h2>3. 루버 사양 · 가정값</h2>
-    <div class="row">
+    <div class="grid4">
       <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
       <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="350"></div>
-    </div>
-    <div class="row">
       <div><label for="ratio">루버 면적 / 창 면적</label><input id="ratio" type="number" step="0.05" value="0.9"></div>
       <div><label for="unitArea">유닛 1개당 루버 ㎡</label><input id="unitArea" type="number" value="6"></div>
-    </div>
-    <div class="row3">
       <div><label for="price">전기요금 (원/kWh)</label><input id="price" type="number" value="150"></div>
       <div><label for="esc">요금 인상률 (%/년)</label><input id="esc" type="number" step="0.5" value="4"></div>
       <div><label for="cop">냉난방 COP</label><input id="cop" type="number" step="0.1" value="3"></div>
-    </div>
-    <div class="row3">
       <div><label for="util" title="창으로 들어온 겨울 햇빛 열 중 실제로 난방을 줄이는 비율 (나머지는 과열 · 환기로 버려짐)">겨울 햇빛 열 활용률</label><input id="util" type="number" step="0.05" min="0" max="1" value="0.7"></div>
-    </div>
-    <div class="row3">
       <div><label for="emis">배출계수 (tCO₂/MWh)</label><input id="emis" type="number" step="0.01" value="0.46"></div>
       <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <label class="check"><input type="checkbox" id="glass" checked> 외부 반응형에 보호 유리 포함</label>
+    <div class="btns" style="align-items:center;justify-content:space-between"><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 외부 반응형에 보호 유리 포함</label><button class="primary" id="run">계산하기</button></div>
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
-  <section class="panel">
+  <section class="panel" style="display:none" aria-hidden="true">
     <h2>4. 일사량 출처</h2>
     <div class="seg" role="radiogroup">
       <label><input type="radio" name="src" value="radiance" checked><span>팀 Radiance (그림자 반영)</span></label>
@@ -194,7 +189,6 @@ svg text{font-family:inherit}
       <label for="unityJson">Unity가 보낸 solar_result (JSON)</label>
       <textarea id="unityJson" placeholder='{"meta":{...},"facades":[{"id":"S","cooling_season":{...},"heating_season":{...}}]}'></textarea>
     </div>
-    <div class="btns"><button class="primary" id="run">계산하기</button></div>
   </section>
 </div>
 
@@ -204,8 +198,8 @@ svg text{font-family:inherit}
     <div id="printSite"></div>
   </section>
   <section class="panel noprint">
-    <h2>루버 시뮬레이션 <span class="muted" id="simTitle">· 네이버 1784 (Unity)</span></h2>
-    <div class="seg" id="simSrc" style="margin-bottom:8px;display:none"><label><input type="radio" name="simsrc" value="unity"><span>네이버 1784 (Unity)</span></label><label><input type="radio" name="simsrc" value="model" checked><span>선택한 건물</span></label></div>
+    <h2>루버 시뮬레이션 <span class="muted" id="simTitle">· 네이버 1784</span></h2>
+    <div class="seg" id="simSrc" style="margin-bottom:8px;display:none"><label><input type="radio" name="simsrc" value="unity"><span>네이버 1784</span></label><label><input type="radio" name="simsrc" value="model" checked><span>선택한 건물</span></label></div>
     <div class="seg" id="viewSeg" style="margin-bottom:10px"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
@@ -215,11 +209,15 @@ svg text{font-family:inherit}
       <p class="muted">브이월드 외곽선 · 층수 · 층고 · 날 간격으로 만든 단순 모형입니다. 마우스 끌기 = 돌리기, 휠 = 확대 · 축소</p>
     </div>
     <div class="timebar noprint" style="margin-top:10px">
-      <div><label for="uDate">날짜</label><input id="uDate" type="date" value="2026-06-21"></div>
-      <div style="flex:3"><label for="uTime">시각 <output id="uTimeOut">12:00</output></label><input id="uTime" type="range" min="0" max="1438" step="2" value="720"></div>
-      <button id="uPlay">재생</button>
+      <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
+      <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1438" step="2" value="720"></div>
+      <button id="simPlay">재생</button>
     </div>
-    <div class="btns noprint" style="margin-top:6px"><button data-uday="2026-03-21">춘분</button><button data-uday="2026-06-21">하지</button><button data-uday="2026-09-23">추분</button><button data-uday="2026-12-21">동지</button><span class="muted" style="align-self:center">아래 하루 재생과 같이 움직입니다</span></div>
+    <div class="btns noprint" style="margin-top:6px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
+    <div class="sun" id="sunInfo"></div>
+    <h3 style="font-size:14px;margin:14px 0 0">루버 평면도 <span class="muted">· 외부 반응형</span></h3>
+    <div class="plans" id="plans"></div>
+    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
   </section>
   <section class="panel">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
@@ -229,18 +227,6 @@ svg text{font-family:inherit}
   <section class="panel">
     <h2>대안 비교</h2>
     <div id="compare"></div>
-  </section>
-  <section class="panel">
-    <h2>하루 재생 · 루버 평면도 (외부 반응형)</h2>
-    <div class="timebar noprint">
-      <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
-      <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1438" step="2" value="720"></div>
-      <button id="simPlay">재생</button>
-    </div>
-    <div class="btns noprint" style="margin-top:6px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
-    <div class="sun" id="sunInfo"></div>
-    <div class="plans" id="plans"></div>
-    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
   </section>
   <section class="panel">
     <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
@@ -255,7 +241,7 @@ svg text{font-family:inherit}
   </section>
   <section class="panel">
     <h2>연간 운영 히트맵</h2>
-    <div class="noprint row" style="display:flex;gap:12px;flex-wrap:wrap"><div style="min-width:200px"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:200px"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
+    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
     <div id="heatmap"></div>
     <div class="legend" id="hmLegend"></div>
     <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
@@ -267,8 +253,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=20"></script>
-<script src="geo.js?v=20"></script>
+<script src="engine.js?v=21"></script>
+<script src="geo.js?v=21"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -485,7 +471,7 @@ svg text{font-family:inherit}
   function showSim(which){
     const m=which==='model';
     $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m; $('viewSeg').style.display=m?'none':'';
-    $('simTitle').textContent=m?'· 선택한 건물':'· 네이버 1784 (Unity)';
+    $('simTitle').textContent=m?'· 선택한 건물':'· 네이버 1784';
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
     window.dispatchEvent(new Event('resize'));
   }
@@ -511,7 +497,7 @@ svg text{font-family:inherit}
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="model3d.js?v=22"></script>
-<script src="features.js?v=20"></script>
-<script src="unity.js?v=20"></script>
+<script src="features.js?v=21"></script>
+<script src="unity.js?v=21"></script>
 </body>
 </html>
