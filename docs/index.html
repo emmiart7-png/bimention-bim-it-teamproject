@@ -214,6 +214,12 @@ svg text{font-family:inherit}
     </div>
     <div class="btns noprint" style="margin-top:6px"><button data-uday="2026-03-21">춘분</button><button data-uday="2026-06-21">하지</button><button data-uday="2026-09-23">추분</button><button data-uday="2026-12-21">동지</button><span class="muted" style="align-self:center">아래 하루 재생과 같이 움직입니다</span></div>
   </section>
+  <section class="panel noprint">
+    <h2>선택한 건물 3D 시뮬레이션</h2>
+    <label class="check" style="margin-bottom:8px"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label>
+    <div id="model3d" style="border-radius:12px;overflow:hidden;background:#DCE8F5"></div>
+    <p class="muted" id="model3dMsg" style="margin-top:6px">지도에서 건물을 고르고 "이 건물로 입면 만들기"를 누르면 그 건물과 루버가 3D로 만들어집니다 (브이월드 외곽선 · 층수 · 층고 · 날 간격 사용). 마우스 끌기 = 돌리기, 휠 = 확대 · 축소. 날짜 · 시각은 위 Unity 칸이나 아래 하루 재생과 같이 움직입니다.</p>
+  </section>
   <section class="panel">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
     <div id="warnings"></div>
@@ -260,8 +266,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=17"></script>
-<script src="geo.js?v=17"></script>
+<script src="engine.js?v=18"></script>
+<script src="geo.js?v=18"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -459,6 +465,17 @@ svg text{font-family:inherit}
   };
   $('searchAddr').addEventListener('keydown',e=>{ if(e.key==='Enter') $('searchBtn').click(); });
 
+  // 3D 주변 건물: 고른 건물 중심 반경 약 250 m 의 브이월드 건물 (최대 100동)
+  async function loadContext(b){
+    $('ctxNote').textContent='· 불러오는 중…';
+    try{
+      const n=b.ring.length, lat=b.ring.reduce((s,p)=>s+p[1],0)/n, lon=b.ring.reduce((s,p)=>s+p[0],0)/n;
+      const list=(await VWorld.buildingsNear(lat,lon,cfg(),0.0025)).filter(x=>x.id!==b.id);
+      const k=Model3D.setContext(list,{floorHeight:3.3});
+      $('ctxNote').textContent=`· ${k}동 (층수 없는 건물은 3층으로)`;
+    }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다'; console.warn(e); }
+  }
+  $('ctxToggle').onchange=()=>{ if(window.Model3D) Model3D.showContext($('ctxToggle').checked); };
   $('makeFacades').onclick=()=>{
     if(!current) return;
     const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||5, northNoLouverDeg:$('noNorth').checked?45:-1});
@@ -470,12 +487,16 @@ svg text{font-family:inherit}
     edges=L.layerGroup(fs.map(f=>L.polyline(f.path.map(([x,y])=>[y,x]),f.louver?{color:'#0064E0',weight:7,opacity:0.9}:{color:'#8595A4',weight:4,dashArray:'6 6'})
       .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
+    if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name}); loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
     UI.run();
   };
 })();
 </script>
-<script src="features.js?v=17"></script>
-<script src="unity.js?v=17"></script>
+<script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="model3d.js?v=21"></script>
+<script src="features.js?v=18"></script>
+<script src="unity.js?v=18"></script>
 </body>
 </html>

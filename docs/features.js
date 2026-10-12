@@ -95,6 +95,7 @@
     $('uDate').value = $('simDate').value; $('uTime').value = $('simTime').value; $('uTimeOut').textContent = $('simTimeOut').textContent;
     if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
+    if (window.Model3D) window.Model3D.update(last.input, { y: y || 2026, m: m || 6, d: d || 21, hh, mm });
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
     // 오늘 해가 떠 있는 동안의 방위 (10분 간격)
     const path = [];
