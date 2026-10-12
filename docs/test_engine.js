@@ -12,7 +12,7 @@ const input = {
 };
 // 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 14_Radiance(팀) ⑥ solar_result · 겨울 햇빛 활용률 0.7 반영 후)
 const expect = {
-  internal_reactive: { total: 641840000, cool: 23.18, light: 4, heat: 0, net: 19.18, t: 8.823, maint: 36092000, be: null },
+  internal_reactive: { total: 641840000, cool: 15.529, light: 4, heat: 0, net: 11.529, t: 5.304, maint: 36092000, be: null },
   external_fixed: { total: 545790000, cool: 21.15, light: 14, heat: 15.438, net: -8.288, t: -3.812, maint: 10915800, be: null },
   external_reactive: { total: 1291590000, cool: 34.51, light: 5, heat: 15.438, net: 14.072, t: 6.473, maint: 68579500, be: null }
 };

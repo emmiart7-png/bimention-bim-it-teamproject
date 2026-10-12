@@ -55,7 +55,7 @@
     // 엑셀 검증 모드 전용 (8_시공전후 · 13_탄소)
     // 엑셀 검증 모드: 엑셀 1·8·13·14번 시트와 같은 값 (팀 Radiance, 9층, 동·남·서 면적 가중)
     excel_mode: {
-      cooling_irradiance_kwh_m2: { bare: 257.550, internal_reactive: 257.550 * 0.55, external_fixed: 151.802, external_reactive: 85.001 }, // 냉방기 6~9월 (solar_result 동·남·서 가중)
+      cooling_irradiance_kwh_m2: { bare: 257.550, internal_reactive: 257.550 - (1 - 0.55) * (257.550 - 85.001), /* 같은 규칙으로 닫히고 막은 햇빛의 55%는 실내에 */ external_fixed: 151.802, external_reactive: 85.001 }, // 냉방기 6~9월 (solar_result 동·남·서 가중)
       winter_kwh_m2_day: 2.56501,     // 난방기 통유리 합계 ÷ 90일 (solar_result 동·남·서 가중)
       winter_days: 90,
       weather_factor: 1,              // Radiance 는 실제 날씨 반영
@@ -63,7 +63,7 @@
     }
   };
   // 팀 Radiance solar_result (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 월별 15일 × 일수 적분,
-  // 날 폭 300 / 간격 350, 날짜별 컷오프 + 그늘이면 열림). 겨울 모드 켬(12~2월 날 0° 고정) / 끔 두 가지. internal_reactive 는 팀 값이 없어 아래에서 통유리 × 0.55 로 둔다
+  // 날 폭 300 / 간격 350, 날짜별 컷오프 + 그늘이면 열림). 겨울 모드 켬(12~2월 날 0° 고정) / 끔 두 가지. internal_reactive 는 팀 값이 없어 아래에서 외부 반응형과 같은 시간에 닫히고 막은 햇빛의 55%가 실내에 남는다고 둔다
   const RADIANCE_9F = {
     winter_on: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":60.1}, closed_hours_yr: 586, blade_rotation_deg_yr: 52176 },
       S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":229.3}, closed_hours_yr: 926, blade_rotation_deg_yr: 49500 },
@@ -84,7 +84,7 @@
       meta: { weather_source: 'KOR_KG_Seoul-Seongnam TMYx (month-average hourly)', shading_included: true, timestep_min: 60, version: 'radiance-9F-0.1' },
       facades: input.facades.map(f => { const v = near(f.azimuth_deg); return {
         id: f.id,
-        cooling_season: Object.assign({}, v.cooling_season, { internal_reactive_kwh_m2_yr: v.cooling_season.bare_kwh_m2_yr * A.internal_shading_coef }),
+        cooling_season: Object.assign({}, v.cooling_season, { internal_reactive_kwh_m2_yr: v.cooling_season.bare_kwh_m2_yr - (1 - A.internal_shading_coef) * (v.cooling_season.bare_kwh_m2_yr - v.cooling_season.external_reactive_kwh_m2_yr) }),
         heating_season: Object.assign({}, v.heating_season, { internal_reactive_kwh_m2_yr: v.heating_season.bare_kwh_m2_yr }),
         closed_hours_yr: v.closed_hours_yr, blade_rotation_deg_yr: v.blade_rotation_deg_yr
       }; })
