@@ -91,6 +91,8 @@
     const [y, m, d] = $('simDate').value.split('-').map(Number);
     const mins = Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins % 60;
     $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    // Unity 칸 아래의 날짜 · 시각도 같이 맞춘다
+    $('uDate').value = $('simDate').value; $('uTime').value = $('simTime').value; $('uTimeOut').textContent = $('simTimeOut').textContent;
     if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
@@ -106,9 +108,14 @@
   $('simTime').addEventListener('input', renderPlans);
   $('simDate').addEventListener('change', renderPlans);
   document.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { $('simDate').value = b.dataset.day; renderPlans(); });
+  // Unity 칸 아래 날짜 · 시각 → 하루 재생과 같은 값으로
+  $('uTime').addEventListener('input', () => { $('simTime').value = $('uTime').value; renderPlans(); });
+  $('uDate').addEventListener('change', () => { $('simDate').value = $('uDate').value; renderPlans(); });
+  document.querySelectorAll('[data-uday]').forEach(b => b.onclick = () => { $('simDate').value = b.dataset.uday; renderPlans(); });
+  $('uPlay').onclick = () => $('simPlay').click();
   $('simPlay').onclick = () => {
-    if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = '재생'; return; }
-    $('simPlay').textContent = '멈춤';
+    if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = $('uPlay').textContent = '재생'; return; }
+    $('simPlay').textContent = $('uPlay').textContent = '멈춤';
     // 2분씩 18ms 마다 (예전과 같은 빠르기: 1시간 ≈ 0.5초). 10분씩 건너뛰면 한여름 정오 남면 날이 한 번에 20° 넘게 튄다
     timer = setInterval(() => { const t = $('simTime'); t.value = (Number(t.value) + 2) % 1440; renderPlans(); }, 18);
   };

@@ -207,6 +207,12 @@ svg text{font-family:inherit}
     <h2>루버 시뮬레이션 (Unity)</h2>
     <div class="seg" id="viewSeg" style="margin-bottom:10px"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
+    <div class="timebar noprint" style="margin-top:10px">
+      <div><label for="uDate">날짜</label><input id="uDate" type="date" value="2026-06-21"></div>
+      <div style="flex:3"><label for="uTime">시각 <output id="uTimeOut">12:00</output></label><input id="uTime" type="range" min="0" max="1438" step="2" value="720"></div>
+      <button id="uPlay">재생</button>
+    </div>
+    <div class="btns noprint" style="margin-top:6px"><button data-uday="2026-03-21">춘분</button><button data-uday="2026-06-21">하지</button><button data-uday="2026-09-23">추분</button><button data-uday="2026-12-21">동지</button><span class="muted" style="align-self:center">아래 하루 재생과 같이 움직입니다</span></div>
   </section>
   <section class="panel">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
@@ -254,8 +260,8 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=16"></script>
-<script src="geo.js?v=16"></script>
+<script src="engine.js?v=17"></script>
+<script src="geo.js?v=17"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -469,7 +475,7 @@ svg text{font-family:inherit}
   };
 })();
 </script>
-<script src="features.js?v=16"></script>
-<script src="unity.js?v=16"></script>
+<script src="features.js?v=17"></script>
+<script src="unity.js?v=17"></script>
 </body>
 </html>
