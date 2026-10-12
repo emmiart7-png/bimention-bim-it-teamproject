@@ -28,6 +28,7 @@ http.createServer((req, res) => {
     if (err) { res.writeHead(404); return res.end('not found'); }
     let ext = path.extname(file), headers = { 'Content-Type': types[ext] || 'application/octet-stream' };
     if (ext === '.gz' || ext === '.br') { headers['Content-Encoding'] = ext === '.gz' ? 'gzip' : 'br'; headers['Content-Type'] = types[path.extname(file.slice(0, -ext.length))] || 'application/octet-stream'; }
+    headers['Content-Length'] = buf.length; // Unity 로더가 진행률 계산에 씀
     res.writeHead(200, headers); res.end(buf);
   });
 }).listen(port, () => console.log(`http://localhost:${port}`));
