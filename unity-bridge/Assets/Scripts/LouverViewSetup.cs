@@ -52,7 +52,7 @@ public class LouverViewSetup : MonoBehaviour
         Vector3 corner = new Vector3(slice.min.x, floorY + eyeHeightM, slice.min.z);
         interiorCamera.transform.position = corner + new Vector3(interiorInsetM, 0f, interiorInsetM);
         interiorCamera.transform.rotation = Quaternion.LookRotation(new Vector3(-1f, -0.08f, -1f));
-        interiorCamera.farClipPlane = distance * 6f;
+        interiorCamera.farClipPlane = 2000f;   // (distance 는 아래에서 정해지므로 쓰지 않음)
         interiorCamera.enabled = false;
 
         // 외관 시작: 타워 중간 높이를 남남서쪽 위에서 (주변 건물 위로). 휠로 가까이 가면 날이 하나하나 보인다
@@ -63,11 +63,17 @@ public class LouverViewSetup : MonoBehaviour
         foreach (var cam in new[] { exteriorCamera, interiorCamera }) CleanCamera(cam);
         if (tintBlades && rig != null && rig.louverRoot != null) TintBlades(rig.louverRoot, bladeColor);
 
+        // 팀 v8 LouverPerformance (노이즈 · 끊김 줄이기): 씬에 없으면 붙이고, 외관 카메라 · 웹 화면 버튼에 연결
+        var perf = FindAnyObjectByType<LouverPerformance>();
+        if (perf == null) perf = new GameObject("LouverPerformance").AddComponent<LouverPerformance>();
+        perf.cam = exteriorCamera;
+
         var bridge = FindAnyObjectByType<LouverBridge>();
         if (bridge != null)
         {
             bridge.exteriorCamera = exteriorCamera;
             bridge.interiorCamera = interiorCamera;
+            bridge.onView.AddListener(perf.OnViewChanged);   // 실내 · 나란히면 날 그림자 켜고 면 끄기 멈춤
             bridge.SetView(bridge.CurrentView);
         }
         Debug.Log($"[LouverViewSetup] 바닥 {groundY:0.0} · 9층 바닥 {floorY:0.0} · 타워 {slice.min}~{slice.max} · 건물 크기 {all.size} · 외관 거리 {distance:0} m · 실내 {interiorFloor}층 {interiorCamera.transform.position}");
