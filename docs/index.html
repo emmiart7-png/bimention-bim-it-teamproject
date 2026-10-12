@@ -67,7 +67,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:13px}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
-.siteplan{max-width:880px;margin:12px auto 0}
+.siteplan{max-width:600px;margin:8px auto 0}
 .hmcap{font-weight:600;font-size:13px;margin:6px 0 2px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
@@ -80,6 +80,11 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
 svg text{font-family:inherit}
 #printSummary{display:none}
+.collapsible>h2{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
+.collapsible>h2::before{content:"▾";color:var(--muted);font-size:12px}
+.collapsible.collapsed>h2::before{content:"▸"}
+.collapsible.collapsed>h2{margin:0}
+.collapsible.collapsed>:not(h2){display:none!important}
 @media print{
   @page{size:A4;margin:12mm}
   body{background:#fff;color:#000;font-size:11px}
@@ -103,7 +108,7 @@ svg text{font-family:inherit}
 <main>
 <div class="noprint">
   <section class="panel">
-    <h2>0. 지도에서 건물 고르기 (브이월드)</h2>
+    <h2>1. 지도에서 건물 고르기 (브이월드)</h2>
     <div class="inline">
       <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="발급받은 키 (이 브라우저에만 저장)" autocomplete="off"></div>
       <button id="vwSave">저장</button>
@@ -126,7 +131,7 @@ svg text{font-family:inherit}
     <div class="btns"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
   </section>
 
-  <section class="panel">
+  <section class="panel" style="display:none" aria-hidden="true">
     <h2>1. 사이트</h2>
     <label for="preset">빠른 선택</label>
     <select id="preset"></select>
@@ -136,15 +141,11 @@ svg text{font-family:inherit}
       <div><label for="lat">위도 (°)</label><input id="lat" type="number" step="0.0001"></div>
       <div><label for="lon">경도 (°)</label><input id="lon" type="number" step="0.0001"></div>
     </div>
-    <div class="row">
-      <div><label for="ptype">사업 유형</label><select id="ptype"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
-      <div><label class="check"><input type="checkbox" id="winter" checked> 겨울 모드 (12~2월 햇빛 받기)</label></div>
-    </div>
     <p class="muted">지도에서 건물을 고르면 위도 · 경도 · 주소가 자동으로 채워집니다.</p>
   </section>
 
-  <section class="panel">
-    <h2>2. 입면</h2>
+  <section class="panel collapsible collapsed">
+    <h2>2. 입면 <span class="muted" style="font-weight:400">· 눌러서 펴기</span></h2>
     <div class="tablewrap"><table id="facades">
       <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
       <tbody></tbody>
@@ -156,6 +157,7 @@ svg text{font-family:inherit}
   <section class="panel">
     <h2>3. 루버 사양 · 가정값</h2>
     <div class="grid4">
+      <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:13px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
       <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
       <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="350"></div>
       <div><label for="ratio">루버 면적 / 창 면적</label><input id="ratio" type="number" step="0.05" value="0.9"></div>
@@ -168,10 +170,15 @@ svg text{font-family:inherit}
       <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 외부 반응형에 보호 유리 포함</label><button class="primary" id="run">계산하기</button></div>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="winter" checked> 겨울 모드 (12~2월 날 0°)</label><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
+  <section class="panel">
+    <h2>결과 <span class="muted" id="srcNote"></span></h2>
+    <div id="warnings"></div>
+    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+  </section>
   <section class="panel" style="display:none" aria-hidden="true">
     <h2>4. 일사량 출처</h2>
     <div class="seg" role="radiogroup">
@@ -220,15 +227,10 @@ svg text{font-family:inherit}
     <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
   </section>
   <section class="panel">
-    <h2>결과 <span class="muted" id="srcNote"></span></h2>
-    <div id="warnings"></div>
-    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
-  </section>
-  <section class="panel">
     <h2>대안 비교</h2>
     <div id="compare"></div>
   </section>
-  <section class="panel">
+  <section class="panel collapsible collapsed">
     <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
     <div class="sliders noprint">
       <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
@@ -239,22 +241,22 @@ svg text{font-family:inherit}
     <div id="cumChart"></div>
     <p class="muted">선이 0 위로 올라가는 해가 손익분기입니다. 슬라이더는 왼쪽 가정값과 연결되어 있습니다.</p>
   </section>
-  <section class="panel">
+  <section class="panel collapsible collapsed">
     <h2>연간 운영 히트맵</h2>
     <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
     <div id="heatmap"></div>
     <div class="legend" id="hmLegend"></div>
     <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
   </section>
-  <section class="panel">
+  <section class="panel collapsible collapsed">
     <h2>입면별 (선택한 일사량 기준)</h2>
     <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
     <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
   </section>
 </div>
 </main>
-<script src="engine.js?v=22"></script>
-<script src="geo.js?v=22"></script>
+<script src="engine.js?v=23"></script>
+<script src="geo.js?v=23"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -496,8 +498,9 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=22"></script>
-<script src="features.js?v=22"></script>
-<script src="unity.js?v=22"></script>
+<script src="model3d.js?v=23"></script>
+<script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
+<script src="features.js?v=23"></script>
+<script src="unity.js?v=23"></script>
 </body>
 </html>
