@@ -73,6 +73,8 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
 .siteplan{max-width:600px;margin:8px auto 0}
+.subh{font-size:16px;font-weight:700;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+.subblock{break-inside:avoid}
 .hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
@@ -166,7 +168,7 @@ svg text{font-family:inherit}
   </section>
 
   <section class="panel collapsible collapsed noprint">
-    <h2 style="display:flex;align-items:center;gap:6px">2. 입면 <span class="muted" style="font-weight:400">· 눌러서 펴기</span><button id="resetFacades" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
+    <h2 style="display:flex;align-items:center;gap:6px">2. 입면<button id="resetFacades" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
     <div class="tablewrap"><table id="facades">
       <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
       <tbody></tbody>
@@ -200,27 +202,27 @@ svg text{font-family:inherit}
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
     <div id="warnings"></div>
     <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>대안 비교</h2>
+    <div class="subblock">
+    <h3 class="subh">대안 비교</h3>
     <div id="compare"></div>
     <div id="glassCmp" style="margin-top:14px"></div>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>누적 순이익 (통유리 대비)</h2>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">누적 순이익 (통유리 대비)</h3>
     <div id="cumChart"></div>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>연간 운영 히트맵</h2>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">연간 운영 히트맵</h3>
     <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
     <div id="heatmap"></div>
     <div class="legend" id="hmLegend"></div>
     <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
-  </section>
-  <section class="panel collapsible collapsed">
-    <h2>입면별 (선택한 일사량 기준)</h2>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">입면별 (선택한 일사량 기준)</h3>
     <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
     <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
+    </div>
   </section>
   <section class="panel" style="display:none" aria-hidden="true">
     <h2>4. 일사량 출처</h2>
