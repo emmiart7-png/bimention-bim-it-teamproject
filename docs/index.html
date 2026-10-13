@@ -74,7 +74,10 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .plan .st{font-weight:600}
 .siteplan{max-width:600px;margin:8px auto 0}
 .subh{font-size:16px;font-weight:700;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
-.subblock{break-inside:avoid}
+.subblock{break-inside:avoid;min-width:0}
+.resultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
+@media (max-width:900px){.resultGrid{grid-template-columns:1fr}}
+@media print{.resultGrid{display:block}}
 .hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
@@ -254,6 +257,7 @@ svg text{font-family:inherit}
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
     <div id="warnings"></div>
     <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+    <div class="resultGrid">
     <div class="subblock">
     <h3 class="subh">대안 비교</h3>
     <div id="compare"></div>
@@ -274,6 +278,7 @@ svg text{font-family:inherit}
     <h3 class="subh">입면별 (선택한 일사량 기준)</h3>
     <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
     <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
+    </div>
     </div>
   </section>
 </main>
