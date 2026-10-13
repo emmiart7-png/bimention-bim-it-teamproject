@@ -41,7 +41,17 @@
     ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
     const ro = new ResizeObserver(resize); ro.observe(box); resize();
     ready = true;
-    (function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+    (function loop() { requestAnimationFrame(loop); controls.update(); lod(); renderer.render(scene, camera); })();
+  }
+  // 가까이 가면 날을 모두: 날 간격이 화면에서 5 px 이상이면 촘촘하게 (입면마다 따로)
+  function lod() {
+    if (!model || model.step === model.stepF) return;
+    const k = renderer.domElement.clientHeight / (2 * Math.tan(camera.fov * RAD / 2));   // 1 m 가 거리 1 m 에서 몇 px
+    const gap = model.spacing * model.stepF;
+    for (const b of blades) {
+      const d = Math.max(0.1, b.box.distanceToPoint(camera.position));
+      b.mesh.count = gap * k / d >= 5 ? b.pts.length : b.nCoarse;
+    }
   }
   function resize() {
     if (!renderer) return;
@@ -84,28 +94,33 @@
     const spacing = (opt.spacingMm || 350) / 1000, depth = (opt.depthMm || 300) / 1000;
     const louvered = opt.facades.filter(f => f.louver);
     const total = louvered.reduce((s, f) => s + f.width_m / spacing, 0);
-    // 보기용으로 솎아 그림: 멀리서 0.35 m 간격은 물결무늬(모아레)가 생겨 약 1 m 간격으로 (계산은 실제 간격)
-    const step = Math.max(Math.ceil(1.0 / spacing), Math.ceil(total / MAX_BLADES));
+    // 멀리서는 솎아 그림 (0.35 m 간격은 물결무늬(모아레)가 생겨 약 1 m 간격), 가까이 가면 날을 모두 그린다 (lod)
+    // stepF = 가까이서 그리는 간격 배수 (날이 MAX_BLADES 보다 많을 때만 1 보다 큼), step = 멀리서 그리는 배수
+    const stepF = Math.max(1, Math.ceil(total / MAX_BLADES));
+    const step = Math.max(stepF, Math.round(Math.ceil(1.0 / spacing) / stepF) * stepF);
     const bladeMat = new THREE.MeshStandardMaterial({ color: '#E3E9F0', roughness: 0.5, metalness: 0.2 });
     for (const f of louvered) {
       const [a, b] = f.path.map(([lon, lat]) => [(lon - L.lon0) * L.mx, (lat - L.lat0) * L.my]);
       const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      const count = Math.max(1, Math.floor(len / (spacing * step)));
+      const count = Math.max(1, Math.floor(len / (spacing * stepF)));
       const az = f.azimuth_deg * RAD;
       const nE = Math.sin(az), nN = Math.cos(az);               // 바깥 법선 (동, 북)
       const g = new THREE.BoxGeometry(BLADE_T, height, depth);   // x = 두께, z = 깊이
       const mesh = new THREE.InstancedMesh(g, bladeMat, count);
       mesh.castShadow = true; mesh.receiveShadow = true;
-      const pts = [];
+      // 솎아 그리는 날을 앞에 두고 나머지를 뒤에: mesh.count 만 바꿔 멀리 · 가까이를 전환
+      const coarse = [], fine = [], r = step / stepF, off = BLADE_GAP + depth / 2;
       for (let i = 0; i < count; i++) {
         const k = (i + 0.5) / count, e = a[0] + (b[0] - a[0]) * k, n = a[1] + (b[1] - a[1]) * k;
-        const off = BLADE_GAP + depth / 2;
-        pts.push(new THREE.Vector3(e + nE * off, height / 2, -(n + nN * off)));
+        (i % r === 0 ? coarse : fine).push(new THREE.Vector3(e + nE * off, height / 2, -(n + nN * off)));
       }
-      blades.push({ id: f.id, az: f.azimuth_deg, mesh, pts });
+      const pts = coarse.concat(fine);
+      const bb = new THREE.Box3().setFromPoints(pts); bb.min.y = 0; bb.max.y = height;
+      mesh.count = coarse.length;
+      blades.push({ id: f.id, az: f.azimuth_deg, mesh, pts, nCoarse: coarse.length, box: bb });
       scene.add(mesh);
     }
-    model = { height, step, spacing, L };
+    model = { height, step, stepF, spacing, L };
     // 카메라: 남서쪽 위에서 건물 전체
     const r = Math.max(...L.pts.map(p => Math.hypot(p[0], p[1]))) + height * 0.6;
     const dist = Math.max(r, height) * 1.9;
@@ -115,7 +130,7 @@
     const sr = Math.max(r * 1.5, 160);   // 주변 건물 그림자가 들어오게
     sun.shadow.camera.left = sun.shadow.camera.bottom = -sr; sun.shadow.camera.right = sun.shadow.camera.top = sr;
     sun.shadow.camera.far = r * 6; sun.shadow.camera.updateProjectionMatrix();
-    note(`${opt.name || '선택한 건물'} · 지상 ${opt.floors}층 · 높이 ${height.toFixed(0)} m · 루버 면 ${louvered.length}개` + (step > 1 ? ` · 보기용으로 날 ${step}개 중 1개만 그림 (계산은 간격 ${Math.round(spacing * 1000)} mm)` : ''));
+    note(`${opt.name || '선택한 건물'} · 지상 ${opt.floors}층 · 높이 ${height.toFixed(0)} m · 루버 면 ${louvered.length}개` + (step > 1 ? ` · 멀리서는 날 ${step}개 중 1개만 그리고 가까이 가면 ${stepF > 1 ? stepF + '개 중 1개' : '모두'} 그림 (계산은 간격 ${Math.round(spacing * 1000)} mm)` : ''));
     if (lastInput && lastTime) update(lastInput, lastTime);
     loadTerrain().catch(e => { console.warn(e); if (opt.onTerrain) opt.onTerrain('지형을 불러오지 못했습니다'); });
     terrCb = opt.onTerrain || null;
