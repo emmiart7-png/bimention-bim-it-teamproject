@@ -303,8 +303,10 @@ svg text{font-family:inherit}
       return f;
     });
     const maint=Number($('maint').value)/100;
+    // 지도에서 고른 건물 외곽 (없으면 빈 배열). Unity JsonUtility 가 2차원 배열을 못 읽어 [x0, y0, x1, y1, …] 한 줄로 보낸다
+    const fp=window.SiteGeom||{lonlat:[],en:[]};
     return {
-      site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value)},
+      site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value),footprint_lonlat:fp.lonlat,footprint_en_m:fp.en},
       project_type:$('ptype').value, winter_mode:$('winter').checked, facades,
       louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
       assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('cop').value),heating_gain_utilization:Number($('util').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
@@ -336,7 +338,13 @@ svg text{font-family:inherit}
       this.view=mode;
       if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverBridge','SetView',mode); }catch(e){ console.warn(e); } }
     },
-    onUnityReady(){ if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); this.sendView(this.view); },
+    // 주변 건물 (그림자용). 주변 건물은 늦게 (최대 40초) 도착해서 site_input 과 따로 보낸다
+    context: null,
+    sendContext(ctx){
+      this.context=ctx;
+      if(window.unityInstance && ctx){ try{ window.unityInstance.SendMessage('LouverBridge','OnContext',JSON.stringify(ctx)); }catch(e){ console.warn(e); } }
+    },
+    onUnityReady(){ if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); this.sendView(this.view); if(this.context) this.sendContext(this.context); },
     receiveSolarResult(json){ const s=typeof json==='string'?json:JSON.stringify(json,null,1); $('unityJson').value=s; document.querySelector('input[name=src][value=unity]').checked=true; $('unityBox').classList.remove('hidden'); run(); }
   };
 
@@ -460,6 +468,14 @@ svg text{font-family:inherit}
   };
   $('searchAddr').addEventListener('keydown',e=>{ if(e.key==='Enter') $('searchBtn').click(); });
 
+  // 외곽 좌표 → Unity 로 보낼 한 줄 배열. en = 고른 건물 중심 기준 (동 +, 북 +, m), 마지막 닫는 점은 뺀다
+  let origin=null;
+  const ringCenter = r => { const p=r.slice(0,-1); return [p.reduce((s,q)=>s+q[0],0)/p.length, p.reduce((s,q)=>s+q[1],0)/p.length]; };
+  function flatRing(r){
+    const p=r.slice(0,-1), mx=111320*Math.cos(origin[1]*Math.PI/180), my=110540;
+    return { lonlat:p.flatMap(([x,y])=>[+x.toFixed(7),+y.toFixed(7)]), en:p.flatMap(([x,y])=>[+((x-origin[0])*mx).toFixed(2),+((y-origin[1])*my).toFixed(2)]) };
+  }
+
   // 3D 주변 건물: 고른 건물 중심 반경 약 250 m 의 브이월드 건물 (최대 100동)
   async function loadContext(b){
     $('ctxNote').textContent='· 불러오는 중…';
@@ -471,6 +487,8 @@ svg text{font-family:inherit}
       catch(e){ $('ctxNote').textContent='· 넓은 범위 실패, 좁혀서 다시…'; list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0012); }
       list=list.filter(x=>x.id!==b.id);
       const k=Model3D.setContext(list,{floorHeight:3.3});
+      // Unity 그림자용: 같은 기준점 (고른 건물 중심) 의 외곽 + 높이. 층수 없으면 3층, 층고 3.3 m (3D 보기와 같음)
+      window.LouverBridge.sendContext({origin_lat_deg:origin[1], origin_lon_deg:origin[0], buildings:list.map(x=>({id:String(x.id??''), floors:x.floors||0, height_m:+((x.floors||3)*3.3).toFixed(1), footprint_en_m:flatRing(x.ring).en}))});
       $('ctxNote').textContent=`· ${k}동 (층수 없는 건물은 3층으로)`;
     }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
@@ -496,6 +514,7 @@ svg text{font-family:inherit}
     edges=L.layerGroup(fs.map(f=>L.polyline(f.path.map(([x,y])=>[y,x]),f.louver?{color:'#0064E0',weight:7,opacity:0.9}:{color:'#8595A4',weight:4,dashArray:'6 6'})
       .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
+    origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
     $('simSrc').style.display=''; showSim('model');
     if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent='· '+t; }}); $('terNote').textContent='· 불러오는 중…'; loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
@@ -508,7 +527,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=24"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=25"></script>
-<script>window.UNITY_FILE_SUFFIX="?b=1012compass";</script>
+<script>window.UNITY_FILE_SUFFIX="?b=1013compass75";</script>
 <script src="unity.js?v=26"></script>
 </body>
 </html>
