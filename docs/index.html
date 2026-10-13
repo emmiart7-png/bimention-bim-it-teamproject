@@ -445,7 +445,7 @@ svg text{font-family:inherit}
       <tr><td style="text-align:left">${gc.life_yr}년 누적 순이익</td><td>${fmtEok(W.cum)}</td><td>${fmtEok(O.cum)}</td><td><b>${d(W.cum,O.cum)}</b></td></tr></tbody></table>
       <p class="muted" style="margin-top:6px">가정: 유지비 = 루버 시스템비 × 연 3%, 보호 유리 청소 · 점검 연 1%, 구동장치 교체 보호 10년 / 노출 5년 (제조사 모터 보증 실내 10년 · 실외 5년 참고). 강풍 때 멈추는 시간 · 고층 안전은 숫자에 넣지 않았습니다.</p>`; })() : '';
     const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
-    $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">선택한 일사량, 외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
+    $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${input.facades.map(f=>pf.find(p=>p.id===f.id)||{id:f.id,window_area_m2:Number(f.window_area_m2)||0,none:true}).map(p=>p.none?`<tr style="color:var(--muted)"><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td colspan="5">루버 없음</td></tr>`:`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">선택한 일사량, 외부 반응형 기준. 루버가 없는 입면은 '루버 없음'으로 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
     window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
   }
   $('run').onclick=run;
@@ -613,7 +613,7 @@ svg text{font-family:inherit}
     ['searchAddr','floors','floorH','bWwr','minEdge'].forEach(id=>$(id).value=$(id).defaultValue);
     for(const l of [outline,marker,edges]) if(l) map.removeLayer(l);
     outline=marker=edges=current=null; lastFs=null; shadeTok++;
-    window.SiteGeom=null; window.ShadeCorr=null; LouverEngine.shadeLookup=null; $('shadeNote').textContent='';
+    window.SiteGeom=null; window.SitePlan=null; window.ShadeCorr=null; LouverEngine.shadeLookup=null; $('shadeNote').textContent='';
     $('makeFacades').disabled=true; map.setView([37.35888,127.10518],17);
     status('주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.');
     document.querySelector('input[name=simsrc][value=model]').disabled=true; showSim('unity');
@@ -629,7 +629,7 @@ svg text{font-family:inherit}
     drawEdges(fs);
     if(!$('address').value && current.name) $('address').value=current.name;
     origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
-    window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
+    window.SitePlan={ring:current.ring, fs}; window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
     document.querySelector('input[name=simsrc][value=model]').disabled=false; showSim('model');
     if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent=/못/.test(t)?'· '+t:''; }}); $('terNote').textContent=''; loadContext(current); }catch(e){ console.warn(e); }
     status('');
@@ -654,7 +654,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=33"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=31"></script>
+<script src="features.js?v=32"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>
