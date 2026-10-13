@@ -20,6 +20,9 @@
 #facades th:nth-child(2),#facades th:nth-child(3),#facades th:nth-child(4),#facades th:nth-child(5),#facades th:nth-child(6),#facades th:nth-child(8),
 #facades td:nth-child(2),#facades td:nth-child(3),#facades td:nth-child(4),#facades td:nth-child(5),#facades td:nth-child(6),#facades td:nth-child(8){display:none}
 [hidden]{display:none!important}
+/* 숫자 칸: 위아래 화살표(스핀 버튼)를 숨겨 일반 입력칸처럼 (숫자는 그대로 직접 입력) */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .ctlrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin:8px 0 10px}
 .facebtn{height:34px;padding:0 10px 0 6px;display:inline-flex;align-items:center;gap:4px;font-size:14px}
@@ -160,10 +163,10 @@ svg text{font-family:inherit}
     <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
     <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
     <div class="row4">
-      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
-      <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" step="0.1" value="4"></div>
-      <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" step="0.05" value="0.6"></div>
-      <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" value="10"></div>
+      <div><label for="floors">지상층수</label><input id="floors" type="number" inputmode="decimal" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
+      <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" inputmode="decimal" step="0.1" value="4"></div>
+      <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" inputmode="decimal" step="0.05" value="0.6"></div>
+      <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" inputmode="decimal" value="10"></div>
     </div>
     <div class="btns" style="justify-content:flex-end"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
   </section>
