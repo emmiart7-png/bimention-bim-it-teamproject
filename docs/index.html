@@ -12,6 +12,11 @@
 .status{font-size:13px;margin-top:8px;color:var(--sub);min-height:20px}
 .status.err{color:#C4314B}
 .inline{display:flex;gap:8px;align-items:end}
+[hidden]{display:none!important}
+.row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.ctlrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin:8px 0 10px}
+.facebtn{height:34px;padding:0 10px 0 6px;display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.facebtn svg{display:block}
 .inline>*:first-child{flex:1}
 :root{--ink:#0A1317;--sub:#444950;--muted:#5D6C7B;--line:#DEE3E9;--soft:#F1F4F7;--blue:#0064E0;--blue2:#0091FF;--tint:#E8F3FF;--warn-bg:#FFF4D6;--warn:#7A5600;--bg:#FFFFFF;--card:#FFFFFF}
 @media (prefers-color-scheme:dark){:root{--ink:#F1F4F7;--sub:#CED0D4;--muted:#A3AFBC;--line:#2B3036;--soft:#1C1E21;--blue:#2E8BFF;--blue2:#5AAEFF;--tint:#12263F;--warn-bg:#3A2F12;--warn:#F7D27A;--bg:#0A1317;--card:#12171B}}
@@ -107,7 +112,7 @@ svg text{font-family:inherit}
 <body>
 <header>
   <h1>반응형외피 검토 도구 <span class="muted">v0.1 시제품</span></h1>
-  <p>사이트와 입면을 넣으면 루버를 자동으로 입혀 에너지 · 탄소 · 물량 · 공사비를 계산합니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
+  <p>사이트와 입면을 넣으면 루버를 자동으로 입혀 에너지 · 탄소 · 물량 · 공사비를 계산합니다.<br>숫자는 임시 단가 기준의 개략 검토입니다.</p>
   <div class="hdr-btns noprint"><button id="shareBtn">링크 복사</button><button id="printBtn">인쇄 / PDF</button></div>
   <div id="hdrMsg" class="warn noprint" hidden style="flex-basis:100%;margin:0"></div>
 </header>
@@ -126,15 +131,13 @@ svg text{font-family:inherit}
     </div>
     <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
     <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
-    <div class="row3">
-      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="직접 입력 (비우면 브이월드 값)"></div>
+    <div class="row4">
+      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
       <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" step="0.1" value="4"></div>
       <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" step="0.05" value="0.6"></div>
+      <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" value="30"></div>
     </div>
-    <div class="row">
-      <div><label for="minEdge">짧은 변 제외 (m 미만)</label><input id="minEdge" type="number" value="30"></div>
-    </div>
-    <div class="btns"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
+    <div class="btns" style="justify-content:flex-end"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
   </section>
 
   <section class="panel" style="display:none" aria-hidden="true">
@@ -245,10 +248,14 @@ svg text{font-family:inherit}
       <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1438" step="2" value="720"></div>
       <button id="simPlay">재생</button>
     </div>
-    <div class="btns noprint" style="margin:6px 0 12px"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
-    <div class="seg" id="simSrc" style="margin-bottom:8px;display:none"><label><input type="radio" name="simsrc" value="unity"><span>네이버 1784</span></label><label><input type="radio" name="simsrc" value="model" checked><span>선택한 건물</span></label></div>
-    <div class="seg" id="viewSeg" style="margin-bottom:10px"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
-    <div class="btns noprint" id="faceBtns" style="margin:-4px 0 10px"><span class="muted" style="align-self:center">입면 보기</span><button data-face="east">동면</button><button data-face="south">남면</button><button data-face="west">서면</button><button data-face="all">전체</button></div>
+    <div class="ctlrow noprint">
+      <div class="btns" style="margin:0"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
+      <div class="seg" id="simSrc" style="display:none"><label><input type="radio" name="simsrc" value="unity"><span>네이버 1784</span></label><label><input type="radio" name="simsrc" value="model" checked><span>선택한 건물</span></label></div>
+    </div>
+    <div class="ctlrow noprint">
+      <div class="seg" id="viewSeg"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
+      <div class="btns" id="faceBtns" style="margin:0" role="group" aria-label="입면 보기"><button class="facebtn" data-face="east" title="동면 보기" aria-label="동면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="22" y1="6" x2="22" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>동</span></button><button class="facebtn" data-face="south" title="남면 보기" aria-label="남면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="6" y1="22" x2="22" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>남</span></button><button class="facebtn" data-face="west" title="서면 보기" aria-label="서면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="6" y1="6" x2="6" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>서</span></button><button class="facebtn" data-face="all" title="전체 보기" aria-label="전체 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><rect x="6" y="6" width="16" height="16" fill="none"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>전체</span></button></div>
+    </div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
@@ -515,18 +522,18 @@ svg text{font-family:inherit}
 
   // 3D 주변 건물: 고른 건물 중심 반경 약 250 m 의 브이월드 건물 (최대 100동)
   async function loadContext(b){
-    $('ctxNote').textContent='· 불러오는 중…';
+    $('ctxNote').textContent='';
     try{
       const n=b.ring.length, lat=b.ring.reduce((s,p)=>s+p[1],0)/n, lon=b.ring.reduce((s,p)=>s+p[0],0)/n;
       // 넓게 먼저 (약 250 m, 응답이 커서 40초까지 기다림), 실패하면 좁게 (약 120 m)
       let list;
       try{ list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0025); }
-      catch(e){ $('ctxNote').textContent='· 넓은 범위 실패, 좁혀서 다시…'; list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0012); }
+      catch(e){ list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0012); }
       list=list.filter(x=>x.id!==b.id);
       const k=Model3D.setContext(list,{floorHeight:3.3});
       // Unity 그림자용: 같은 기준점 (고른 건물 중심) 의 외곽 + 높이. 층수 없으면 3층, 층고 3.3 m (3D 보기와 같음)
       window.LouverBridge.sendContext({origin_lat_deg:origin[1], origin_lon_deg:origin[0], buildings:list.map(x=>({id:String(x.id??''), floors:x.floors||0, height_m:+((x.floors||3)*3.3).toFixed(1), footprint_en_m:flatRing(x.ring).en}))});
-      $('ctxNote').textContent=`· ${k}동 (층수 없는 건물은 3층으로)`;
+      $('ctxNote').textContent='';
       computeShade(b, list);
     }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
@@ -535,11 +542,11 @@ svg text{font-family:inherit}
   async function computeShade(b, list){
     const tok=++shadeTok, note=t=>{ if(tok===shadeTok) $('shadeNote').textContent=t; };
     if(!window.Shade || !lastFs) return;
-    note('에너지 계산용 그림자 계산 중…');
+    note('');
     try{
       const sel=await Shade.forBuilding({ring:b.ring, floors:Number($('floors').value)||b.floors||5}, list, lastFs, {floorHeight:Number($('floorH').value)||4});
       if(tok!==shadeTok) return;
-      note('1784 기준값 불러오는 중 (처음 한 번만, 최대 40초)…');
+
       let ref=null; try{ ref=await Shade.reference(cfg()); }catch(e){ console.warn('[Shade] 1784 기준', e); }
       if(tok!==shadeTok) return;
       // 기준값이 없으면 Radiance 보정은 하지 않고 (배수 1), 간이식에만 보이는 비율을 쓴다
@@ -549,7 +556,7 @@ svg text{font-family:inherit}
       // 루버 입면 창 면적 가중 평균으로 한 줄 요약
       const lf=lastFs.filter(f=>f.louver&&window.ShadeCorr[f.id]), W=lf.reduce((t,f)=>t+(f.window_area_m2||1),0)||1;
       const avg=k=>lf.reduce((t,f)=>t+window.ShadeCorr[f.id][k]*(f.window_area_m2||1),0)/W;
-      note(ref ? `그림자 반영 (1784 9층 대비 일사량, 루버 입면 ${lf.length}개 평균): 냉방기 ${pct(avg('cool'))} · 난방기 ${pct(avg('heat'))}${sel.terrain?'':' · 지형 제외'}`
+      note(ref ? ''
                : '1784 기준값을 불러오지 못해 Radiance 값은 보정하지 않았습니다 (간이식에만 그림자 반영)');
       UI.run();
     }catch(e){ console.warn(e); note('그림자 계산 실패: '+e.message); }
@@ -593,7 +600,7 @@ svg text{font-family:inherit}
     origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
     window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
     $('simSrc').style.display=''; showSim('model');
-    if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent='· '+t; }}); $('terNote').textContent='· 불러오는 중…'; loadContext(current); }catch(e){ console.warn(e); }
+    if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent=/못/.test(t)?'· '+t:''; }}); $('terNote').textContent=''; loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
     UI.run();
   };
