@@ -126,7 +126,7 @@
   const ALT_COLOR = { internal_reactive: '#A121CE', external_fixed: '#8595A4', external_reactive: '#0064E0' };
   function renderChart() {
     if (!last) return;
-    const years = 60, g = last.input.assumptions.elec_escalation;
+    const years = 100, g = last.input.assumptions.elec_escalation;
     const series = Object.entries(last.out.result).map(([k, r]) => ({ k, name: r.name, v: E.cumulativeNet(r, g, years).map(x => x / 1e8), be: r.money.breakeven_year }));
     const all = series.flatMap(s => s.v).concat([0]);
     let lo = Math.min(...all), hi = Math.max(...all); if (hi - lo < 1) hi = lo + 1;
@@ -135,7 +135,7 @@
     const X = t => L + t / years * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
     let s = '';
     for (let v = lo; v <= hi + 1e-9; v += step) s += `<line x1="${L}" x2="${W - R}" y1="${r1(Y(v))}" y2="${r1(Y(v))}" stroke="#DEE3E9"/><text x="${L - 8}" y="${r1(Y(v) + 4)}" text-anchor="end" font-size="15" fill="#5D6C7B">${fmtNum(v)}억</text>`;
-    for (let t = 0; t <= years; t += 10) s += `<text x="${r1(X(t))}" y="${H - 12}" text-anchor="middle" font-size="15" fill="#5D6C7B">${t}년</text>`;
+    for (let t = 0; t <= years; t += 20) s += `<text x="${r1(X(t))}" y="${H - 12}" text-anchor="middle" font-size="15" fill="#5D6C7B">${t}년</text>`;
     s += `<line x1="${L}" x2="${W - R}" y1="${r1(Y(0))}" y2="${r1(Y(0))}" stroke="#0A1317" stroke-width="1.5"/>`;
     const ends = [{ y: Y(0), c: "#0A1317", t: "통유리 = 0" }];
     for (const se of series) {
