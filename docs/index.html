@@ -198,32 +198,6 @@ svg text{font-family:inherit}
     <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
   </section>
 
-  <section class="panel collapsible collapsed">
-    <h2>결과 <span class="muted" id="srcNote"></span></h2>
-    <div id="warnings"></div>
-    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
-    <div class="subblock">
-    <h3 class="subh">대안 비교</h3>
-    <div id="compare"></div>
-    <div id="glassCmp" style="margin-top:14px"></div>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">누적 순이익 (통유리 대비)</h3>
-    <div id="cumChart"></div>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">연간 운영 히트맵</h3>
-    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
-    <div id="heatmap"></div>
-    <div class="legend" id="hmLegend"></div>
-    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">입면별 (선택한 일사량 기준)</h3>
-    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
-    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
-    </div>
-  </section>
   <section class="panel" style="display:none" aria-hidden="true">
     <h2>4. 일사량 출처</h2>
     <div class="seg" role="radiogroup">
@@ -276,6 +250,32 @@ svg text{font-family:inherit}
     <div class="legend" style="align-items:center;justify-content:space-between"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
   </section>
 </div>
+  <section class="panel collapsible collapsed" id="resultPanel" style="grid-column:1 / -1">
+    <h2>결과 <span class="muted" id="srcNote"></span></h2>
+    <div id="warnings"></div>
+    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+    <div class="subblock">
+    <h3 class="subh">대안 비교</h3>
+    <div id="compare"></div>
+    <div id="glassCmp" style="margin-top:14px"></div>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">누적 순이익 (통유리 대비)</h3>
+    <div id="cumChart"></div>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">연간 운영 히트맵</h3>
+    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
+    <div id="heatmap"></div>
+    <div class="legend" id="hmLegend"></div>
+    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
+    </div>
+    <div class="subblock">
+    <h3 class="subh">입면별 (선택한 일사량 기준)</h3>
+    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
+    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
+    </div>
+  </section>
 </main>
 <script src="engine.js?v=32"></script>
 <script src="geo.js?v=26"></script>
