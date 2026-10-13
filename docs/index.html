@@ -9,46 +9,46 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 #map{height:340px;border-radius:12px;border:1px solid var(--line);margin-top:10px}
-.status{font-size:13px;margin-top:8px;color:var(--sub);min-height:20px}
+.status{font-size:14px;margin-top:8px;color:var(--sub);min-height:20px}
 .status.err{color:#C4314B}
 .inline{display:flex;gap:8px;align-items:end}
 [hidden]{display:none!important}
 .row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 .ctlrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;margin:8px 0 10px}
-.facebtn{height:34px;padding:0 10px 0 6px;display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.facebtn{height:34px;padding:0 10px 0 6px;display:inline-flex;align-items:center;gap:4px;font-size:14px}
 .facebtn svg{display:block}
 .inline>*:first-child{flex:1}
 :root{--ink:#0A1317;--sub:#444950;--muted:#5D6C7B;--line:#DEE3E9;--soft:#F1F4F7;--blue:#0064E0;--blue2:#0091FF;--tint:#E8F3FF;--warn-bg:#FFF4D6;--warn:#7A5600;--bg:#FFFFFF;--card:#FFFFFF}
 @media (prefers-color-scheme:dark){:root{--ink:#F1F4F7;--sub:#CED0D4;--muted:#A3AFBC;--line:#2B3036;--soft:#1C1E21;--blue:#2E8BFF;--blue2:#5AAEFF;--tint:#12263F;--warn-bg:#3A2F12;--warn:#F7D27A;--bg:#0A1317;--card:#12171B}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif;font-size:15px;line-height:1.5}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans KR',system-ui,-apple-system,'Malgun Gothic',sans-serif;font-size:14px;line-height:1.5}
 header{padding:20px 24px 12px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;justify-content:space-between}
-header h1{margin:0;font-size:22px;font-weight:700}
-header p{margin:0;color:var(--muted);font-size:13px}
+header h1{margin:0;font-size:24px;font-weight:700}
+header p{margin:0;color:var(--muted);font-size:14px}
 main{display:grid;grid-template-columns:minmax(380px,500px) 1fr;gap:24px;padding:20px 24px 40px;max-width:1500px;margin:0 auto}
 main>div{min-width:0}
 @media (max-width:900px){main{grid-template-columns:1fr;padding:16px}}
 section.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px}
-h2{font-size:15px;margin:0 0 10px;font-weight:700}
-label{display:block;font-size:13px;color:var(--sub);margin:8px 0 3px}
+h2{font-size:16px;margin:0 0 10px;font-weight:700}
+label{display:block;font-size:14px;color:var(--sub);margin:8px 0 3px}
 input,select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;font-size:14px}
 textarea{min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:4px 10px}
 .grid4 label{font-size:12px;margin:6px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.grid4 input{padding:5px 7px;font-size:13px}
+.grid4 input{padding:5px 7px;font-size:14px}
 .check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--ink)}
 .check input{width:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:center}
 th{color:var(--muted);font-weight:500;font-size:12px}
-td input{padding:4px 5px;font-size:13px;text-align:center;min-width:52px}
+td input{padding:4px 5px;font-size:14px;text-align:center;min-width:52px}
 .tablewrap{overflow-x:auto}
 td input[type=checkbox]{width:auto}
 .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}
-button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;padding:10px 22px;font-size:15px}
+button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
+button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;padding:10px 22px;font-size:16px}
 button.link{border:none;padding:4px 6px;color:var(--blue)}
 .seg{display:flex;flex-wrap:wrap;gap:6px}
 .seg label{margin:0;border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;color:var(--ink)}
@@ -58,26 +58,26 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .card{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--card)}
 .card.best{border:2px solid var(--blue);background:var(--tint)}
 .card h3{margin:0 0 8px;font-size:16px}
-.big{font-size:30px;font-weight:700;line-height:1.15}
+.big{font-size:24px;font-weight:700;line-height:1.15}
 .big small{font-size:14px;font-weight:500;color:var(--muted)}
-.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:14px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
 .kv b{font-weight:600}
 .neg{color:#C4314B}
-.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:12px}
 .muted{color:var(--muted);font-size:12px}
-#unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:16px;background:var(--soft)}
+#unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:14px;padding:16px;background:var(--soft)}
 .hidden{display:none}
 .hdr-btns{display:flex;gap:8px}
 .plans{display:block;margin-top:12px}
-.plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:13px}
+.plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:14px}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
 .siteplan{max-width:600px;margin:8px auto 0}
-.hmcap{font-weight:600;font-size:13px;margin:6px 0 2px}
+.hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
 .timebar{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
 .timebar>div{flex:1;min-width:140px}
 .timebar input[type=range]{padding:0}
-.sun{font-size:13px;color:var(--sub);margin-top:6px}
+.sun{font-size:14px;color:var(--sub);margin-top:6px}
 .sliders{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:6px 16px}
 .sliders input[type=range]{padding:0}
 .sliders output{font-weight:600;color:var(--ink)}
@@ -92,7 +92,7 @@ svg text{font-family:inherit}
 @media screen{.collapsible.collapsed>:not(h2){display:none!important}}
 @media print{
   @page{size:A4;margin:12mm}
-  body{background:#fff;color:#000;font-size:11px}
+  body{background:#fff;color:#000;font-size:12px}
   .noprint,.btns,#warnings{display:none!important}
   /* 두 열을 풀어 한 줄로: 검토 대상 → 결과 → 대안 비교 → 누적 → 히트맵 → 입면별 (접힌 패널도 펴서) */
   main{display:flex;flex-direction:column;padding:0;gap:0;max-width:none}
@@ -166,7 +166,7 @@ svg text{font-family:inherit}
   <section class="panel collapsible collapsed noprint">
     <h2 style="display:flex;align-items:center;gap:6px">3. 루버 사양 · 가정값<button id="resetVals" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
     <div class="grid4">
-      <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:13px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
+      <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:14px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
       <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
       <div><label for="spacing">날 간격 (mm)</label><input id="spacing" type="number" value="350"></div>
       <div><label for="ratio">루버 면적 / 창 면적</label><input id="ratio" type="number" step="0.05" value="0.9"></div>
