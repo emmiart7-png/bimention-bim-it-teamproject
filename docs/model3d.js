@@ -14,7 +14,7 @@
   let THREE, renderer, scene, camera, controls, sun, hemi, ground, building, slabs, blades = [], box, msg;
   let model = null, lastInput = null, lastTime = null, ready = false;
   let context = null, showCtx = true;   // 주변 건물 (브이월드 외곽선 · 층수)
-  let terrain = null, showTer = true, elevAt = null, terrToken = 0;   // 지형 (AWS Terrain Tiles)
+  let plinth = null, terrain = null, showTer = true, elevAt = null, terrToken = 0;   // 지형 (AWS Terrain Tiles)
 
   function el(id) { return document.getElementById(id); }
   function note(t) { if (msg) msg.textContent = t; }
@@ -163,6 +163,17 @@
     terrain = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
     terrain.receiveShadow = true; terrain.castShadow = true; terrain.visible = showTer; scene.add(terrain);
     model.terrainRange = [lo, hi];
+    // 비탈에서 건물이 뜨지 않게: 외곽선을 따라 (3 m 간격) 가장 낮은 땅까지 기단을 채운다
+    let low = 0;
+    const P = L.pts;
+    for (let i = 0; i < P.length; i++) { const a = P[i], b = P[(i + 1) % P.length], n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 3));
+      for (let j = 0; j < n; j++) low = Math.min(low, elevAt(a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n)); }
+    if (low < -0.2) {
+      const pg = new THREE.ExtrudeGeometry(new THREE.Shape(P.map(([e, n]) => new THREE.Vector2(e, n))), { depth: -low + 0.3, bevelEnabled: false });
+      pg.rotateX(-Math.PI / 2);
+      plinth = new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ color: '#9AA3AD' }));
+      plinth.position.y = low - 0.3; plinth.castShadow = plinth.receiveShadow = true; plinth.visible = showTer; scene.add(plinth);
+    }
     ground.position.y = showTer ? lo - 0.5 : 0;
     placeContext();
     if (terrCb) terrCb('지형 높이 차 ' + Math.round(hi - lo) + ' m');
@@ -170,10 +181,15 @@
   // 주변 건물을 땅 높이에 맞춰 올리거나 내린다
   function placeContext() {
     if (!context) return;
-    for (const m of context.children) m.position.y = (showTer && elevAt) ? elevAt(m.userData.c[0], m.userData.c[1]) : 0;
+    for (const m of context.children) {
+      if (!(showTer && elevAt)) { m.position.y = 0; m.scale.y = 1; continue; }
+      const top = elevAt(m.userData.c[0], m.userData.c[1]) + m.userData.h;
+      const low = Math.min(...m.userData.pts.map(([e, n]) => elevAt(e, n))) - 0.5;
+      m.position.y = low; m.scale.y = (top - low) / m.userData.h;
+    }
   }
   function showTerrain(on) {
-    showTer = on; if (terrain) terrain.visible = on;
+    showTer = on; if (terrain) terrain.visible = on; if (plinth) plinth.visible = on;
     if (ground) ground.position.y = (on && model && model.terrainRange) ? model.terrainRange[0] - 0.5 : 0;
     placeContext();
   }
@@ -194,7 +210,7 @@
       const h = (b.floors || 3) * fh;
       const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts.map(([e, nn]) => new THREE.Vector2(e, nn))), { depth: h, bevelEnabled: false });
       g.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; m.userData.c = c; context.add(m); n++;
+      const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true; m.userData.c = c; m.userData.pts = pts; m.userData.h = h; context.add(m); n++;
     }
     context.visible = showCtx; scene.add(context);
     placeContext();
@@ -214,6 +230,7 @@
   function clear() {
     terrToken++; elevAt = null;
     if (terrain) { scene.remove(terrain); terrain.geometry.dispose(); terrain = null; }
+    if (plinth) { scene.remove(plinth); plinth.geometry.dispose(); plinth = null; }
     if (ground) ground.position.y = 0;
     for (const o of [building, slabs]) if (o) { scene.remove(o); o.geometry.dispose(); }
     for (const b of blades) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
