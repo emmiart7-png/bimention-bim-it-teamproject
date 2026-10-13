@@ -17,7 +17,7 @@
   let last = null;
 
   // ---------------- 1. 하루 재생 ----------------
-  const STATE_TEXT = { night: '해 없음', back: '해가 입면 뒤', open: '열림', closed: '닫힘', winter: '겨울 모드 · 0° 고정' };
+  const STATE_TEXT = { night: '해 없음', back: '해가 입면 뒤', open: '열림', closed: '닫힘', winter: '겨울 모드 · 해와 나란히', shade: '그늘 · 열림' };
   // 건물 평면 하나 (위 = 북) 에 동 · 남 · 서 루버와 오늘 해가 지나는 길을 함께 그린다
   const SIDES = [{ key: '동', az: 90 }, { key: '남', az: 180 }, { key: '서', az: 270 }];
   const angDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
@@ -35,6 +35,7 @@
     if (f.state === 'night') return '해 없음 · 날 0°';
     if (f.state === 'back') return '해가 뒤 · 날 0°';
     if (f.state === 'winter') return `겨울 모드 · 날 ${Math.round(f.angle)}°`;
+    if (f.state === 'shade') return '그늘 · 날 0°';
     return `${f.state === 'closed' ? '닫힘' : '열림'} · 날 ${Math.round(f.angle || 0)}°`;
   }
   function sitePlanSVG(st, path, ds) {
@@ -163,7 +164,7 @@
   //  내부 반응형: 같은 규칙으로 닫지만 열은 이미 실내에 (보라). 겨울 모드 없음
   //  외부 고정 (날 0°): 움직이지 않음. 유리까지 들어오는 직달 비율 (노랑이 진할수록 많이 들어옴)
   const HM = {
-    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 날 0° 고정 (열림)']] },
+    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 난방일 해와 나란히 (눈부신 시각 0°)'], ['#C9D6E3', '주변 건물 그늘 · 열림']] },
     internal_reactive: { name: '내부 반응형', legend: [['#A121CE', '닫힘 (열은 이미 실내에)'], ['#FCE3A0', '열림 · 햇빛 들어옴']] },
     external_fixed: { name: '외부 고정 (날 0°)', legend: [['#F7B928', '유리까지 들어오는 직달 (진할수록 많음)']] }
   };
@@ -173,6 +174,7 @@
     if (alt === 'internal_reactive') return st.rule ? ['#A121CE', 0.3 + 0.7 * Math.min(1, st.rule_angle / 90)] : ['#FCE3A0', 1];
     if (st.state === 'closed') return ['#0064E0', 0.3 + 0.7 * Math.min(1, st.angle / 90)];
     if (st.state === 'winter') return ['#FA9A2A', 1];
+    if (st.state === 'shade') return ['#C9D6E3', 1];
     return ['#FCE3A0', 1];
   }
   function heatSVG(id, alt, grid) {
@@ -212,7 +214,7 @@
     if (!last) return;
     const i = last.input, src = ($('srcNote').textContent || '').replace(/^s*·s*/, ''), a = i.assumptions || {}, sp = i.louver_spec || {};
     const fs = i.facades.map(f => `${esc(f.id)} ${f.azimuth_deg}° ${r1(f.window_area_m2)}㎡${f.louver ? '' : ' (루버 없음)'}`).join(' · ');
-    $('printSite').innerHTML = `<p><b>${esc(i.site.address || '주소 미입력')}</b> · 위도 ${i.site.lat_deg} · 경도 ${i.site.lon_deg} · ${i.project_type === 'remodel' ? '리모델링' : '신축'} · 겨울 모드 ${i.winter_mode !== false ? '사용' : '안 함'}</p><p>입면: ${fs}</p><p>가정: 날 깊이 ${sp.blade_depth_mm} mm · 간격 ${sp.blade_spacing_mm} mm · 전기요금 ${a.elec_price_krw_kwh}원/kWh (연 ${r1((a.elec_escalation || 0) * 100)}% 인상) · COP ${a.cop_cooling} · 겨울 햇빛 열 활용률 ${a.heating_gain_utilization} · 배출계수 ${a.emission_t_mwh} tCO₂/MWh · 단가 배율 ${a.cost_multiplier}</p><p class="muted">일사량: ${src} · 출력 ${new Date().toLocaleDateString('ko-KR')} · 반응형외피 검토 도구 v0.1 · 임시 단가 기준 개략 검토</p>`;
+    $('printSite').innerHTML = `<p><b>${esc(i.site.address || '주소 미입력')}</b> · 위도 ${i.site.lat_deg} · 경도 ${i.site.lon_deg} · ${i.project_type === 'remodel' ? '리모델링' : '신축'} · 겨울 모드 ${i.winter_mode !== false ? '사용' : '안 함'}</p><p>입면: ${fs}</p><p>가정: 날 깊이 ${sp.blade_depth_mm} mm · 간격 ${sp.blade_spacing_mm} mm · 전기요금 ${a.elec_price_krw_kwh}원/kWh (연 ${r1((a.elec_escalation || 0) * 100)}% 인상) · COP 냉방 ${a.cop_cooling} / 난방 ${a.cop_heating} · 일사 1 kWh당 냉방 부하 ${a.cooling_load_per_kwh} / 난방 부하 ${a.heating_load_per_kwh} kWh (추정, 난방 ±20%) · 배출계수 ${a.emission_t_mwh} tCO₂/MWh · 단가 배율 ${a.cost_multiplier}</p><p class="muted">일사량: ${src} · 출력 ${new Date().toLocaleDateString('ko-KR')} · 반응형외피 검토 도구 v0.1 · 임시 단가 기준 개략 검토</p>`;
   }
   function note(html) { const m = $('hdrMsg'); m.innerHTML = html; m.hidden = false; }
   const framed = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();

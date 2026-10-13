@@ -170,13 +170,15 @@ svg text{font-family:inherit}
       <div><label for="unitArea">유닛 1개당 루버 ㎡</label><input id="unitArea" type="number" value="6"></div>
       <div><label for="price">전기요금 (원/kWh)</label><input id="price" type="number" value="150"></div>
       <div><label for="esc">요금 인상률 (%/년)</label><input id="esc" type="number" step="0.5" value="4"></div>
-      <div><label for="cop">냉난방 COP</label><input id="cop" type="number" step="0.1" value="3"></div>
-      <div><label for="util" title="창으로 들어온 겨울 햇빛 열 중 실제로 난방을 줄이는 비율 (나머지는 과열 · 환기로 버려짐)">겨울 햇빛 열 활용률</label><input id="util" type="number" step="0.05" min="0" max="1" value="0.7"></div>
+      <div><label for="cop">냉방 COP</label><input id="cop" type="number" step="0.1" value="3.5"></div>
+      <div><label for="copH">난방 COP</label><input id="copH" type="number" step="0.1" value="3"></div>
+      <div><label for="coolK" title="창에 닿는 일사가 1 kWh 줄 때 줄어드는 냉방 부하 (팀 EnergyPlus 민감도, 1784 9층 서남 모서리 방)">냉방 부하 / 일사</label><input id="coolK" type="number" step="0.01" value="1.13"></div>
+      <div><label for="heatK" title="창에 닿는 일사가 1 kWh 줄 때 늘어나는 난방 부하 (팀 EnergyPlus, 0.48~0.65 중간값)">난방 부하 / 일사</label><input id="heatK" type="number" step="0.01" value="0.56"></div>
       <div><label for="emis">배출계수 (tCO₂/MWh)</label><input id="emis" type="number" step="0.01" value="0.46"></div>
       <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="winter" checked> 겨울 모드 (12~2월 날 0°)</label><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="winter" checked> 겨울 모드 (난방일 해와 나란히)</label><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
@@ -263,7 +265,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=26"></script>
+<script src="engine.js?v=27"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -316,7 +318,7 @@ svg text{font-family:inherit}
       site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value),footprint_lonlat:fp.lonlat,footprint_en_m:fp.en},
       project_type:$('ptype').value, winter_mode:$('winter').checked, facades,
       louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
-      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('cop').value),heating_gain_utilization:Number($('util').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
+      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('copH').value),cooling_load_per_kwh:Number($('coolK').value),heating_load_per_kwh:Number($('heatK').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
     };
   }
 
@@ -381,6 +383,7 @@ svg text{font-family:inherit}
     if(mode==='solar') solarCache={k:solarKey,s:out.solar};
     last={input,out,mode};
     $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?(window.ShadeCorr?'· 팀 Radiance + 선택한 건물 주변 그림자 보정':'· 팀 Radiance (1784 9층, 그림자 반영)'):'· 맑은 날 간이식';
+    if(window.SiteGeom && window.SiteGeom.en && window.SiteGeom.en.length) out.warnings.unshift('지도에서 고른 건물: 1784 규칙을 적용한 간이 추정입니다. 1784 검증값(Radiance)과 같은 표에 나란히 두지 마세요.');
     $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
     const alts=Object.keys(out.result);
     const best=alts.reduce((a,b)=>out.result[b].carbon.saved_t_yr>out.result[a].carbon.saved_t_yr?b:a);
@@ -407,7 +410,7 @@ svg text{font-family:inherit}
     if(s.blade_depth_mm) $('depth').value=s.blade_depth_mm; if(s.blade_spacing_mm) $('spacing').value=s.blade_spacing_mm;
     if(s.louver_to_window_ratio) $('ratio').value=s.louver_to_window_ratio; if(s.area_per_unit_m2) $('unitArea').value=s.area_per_unit_m2;
     if(a.elec_price_krw_kwh) $('price').value=a.elec_price_krw_kwh; if(a.elec_escalation!=null) $('esc').value=+(a.elec_escalation*100).toFixed(2);
-    if(a.cop_cooling) $('cop').value=a.cop_cooling; if(a.heating_gain_utilization!=null) $('util').value=a.heating_gain_utilization; if(a.emission_t_mwh) $('emis').value=a.emission_t_mwh;
+    if(a.cop_cooling) $('cop').value=a.cop_cooling; if(a.cop_heating) $('copH').value=a.cop_heating; if(a.cooling_load_per_kwh) $('coolK').value=a.cooling_load_per_kwh; if(a.heating_load_per_kwh) $('heatK').value=a.heating_load_per_kwh; if(a.emission_t_mwh) $('emis').value=a.emission_t_mwh;
     if(a.cost_multiplier) $('costMul').value=a.cost_multiplier;
     if(a.maintenance_rate&&a.maintenance_rate.external_reactive!=null) $('maint').value=+(a.maintenance_rate.external_reactive*100).toFixed(2);
     if(a.protective_glass) $('glass').checked=!!a.protective_glass.external_reactive;
@@ -513,6 +516,7 @@ svg text{font-family:inherit}
       let ref=null; try{ ref=await Shade.reference(cfg()); }catch(e){ console.warn('[Shade] 1784 기준', e); }
       if(tok!==shadeTok) return;
       // 기준값이 없으면 Radiance 보정은 하지 않고 (배수 1), 간이식에만 보이는 비율을 쓴다
+      LouverEngine.shadeLookup = sel.blocked ? (id,m,hh,mm)=>{ const t=sel.blocked[id]; return t ? t[m-1][Math.round((hh*60+mm)/30)%48]||0 : 0; } : null;
       window.ShadeCorr = ref ? Shade.factors(sel, ref) : Object.fromEntries(Object.entries(sel.k).map(([id,v])=>[id,{cool:1,heat:1,k_cool:v.cool,k_heat:v.heat}]));
       const pct=v=>{ const p=Math.round((v-1)*100); return (p>0?'+':p<0?'−':'±')+Math.abs(p)+'%'; };
       const rows=lastFs.filter(f=>f.louver).map(f=>{ const c=window.ShadeCorr[f.id]; return c ? `${f.id} 냉방 ${pct(c.cool)} · 난방 ${pct(c.heat)}` : ''; }).filter(Boolean);
@@ -545,7 +549,7 @@ svg text{font-family:inherit}
       .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
     origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
-    window.ShadeCorr=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
+    window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
     $('simSrc').style.display=''; showSim('model');
     if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent='· '+t; }}); $('terNote').textContent='· 불러오는 중…'; loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
@@ -556,9 +560,9 @@ svg text{font-family:inherit}
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="model3d.js?v=25"></script>
-<script src="shade.js?v=1"></script>
+<script src="shade.js?v=2"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=26"></script>
+<script src="features.js?v=27"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013compass75";</script>
 <script src="unity.js?v=26"></script>
 </body>

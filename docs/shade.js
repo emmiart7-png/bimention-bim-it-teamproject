@@ -12,7 +12,7 @@
 (function (root) {
   const RAD = Math.PI / 180;
   const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const COOL = [6, 7, 8, 9], HEAT = [12, 1, 2];
+  const COOL = [6, 7, 8, 9], HEAT = [11, 12, 1, 2, 3];   // 팀 v9 난방기
 
   // ---- 지형: AWS Terrain Tiles (model3d.js 와 같은 타일 · 같은 기준) ----
   const TZ = 15, TR = 450;
@@ -111,12 +111,13 @@
   // 입면마다 보이는 비율 k = {cool, heat} (맑은 날 직달 일사량 가중)
   function visibility(S, facades, pointsOf, lat, lon) {
     const sunPosition = root.LouverEngine.sunPosition;
-    const out = {};
+    const out = {}, blockedTab = {};
     for (const f of facades) {
       const pts = pointsOf(f);
       const acc = { cool: [0, 0], heat: [0, 0] };
+      const tab = blockedTab[f.id] = Array.from({ length: 12 }, () => new Float32Array(48));
       for (let m = 1; m <= 12; m++) {
-        const season = COOL.includes(m) ? 'cool' : HEAT.includes(m) ? 'heat' : null; if (!season) continue;
+        const season = COOL.includes(m) ? 'cool' : HEAT.includes(m) ? 'heat' : null;
         for (let hm = 5 * 60; hm <= 20 * 60; hm += 30) {
           const sp = sunPosition(lat, lon, 2026, m, 15, Math.floor(hm / 60), hm % 60);
           if (sp.alt <= 0.5) continue;
@@ -125,11 +126,13 @@
           const w = 1353 * Math.pow(0.7, Math.pow(AM, 0.678)) * Math.cos(sp.alt * RAD) * Math.cos(tilt * RAD) * MONTH_DAYS[m - 1];
           const dE = Math.sin(sp.az * RAD), dN = Math.cos(sp.az * RAD), slope = Math.tan(sp.alt * RAD);
           let vis = 0; for (const P of pts) if (!blocked(S, P, dE, dN, slope)) vis++;
-          acc[season][0] += w * vis / pts.length; acc[season][1] += w;
+          tab[m - 1][hm / 30] = 1 - vis / pts.length;
+          if (season) { acc[season][0] += w * vis / pts.length; acc[season][1] += w; }
         }
       }
       out[f.id] = { azimuth_deg: f.azimuth_deg, cool: acc.cool[1] ? acc.cool[0] / acc.cool[1] : 1, heat: acc.heat[1] ? acc.heat[0] / acc.heat[1] : 1 };
     }
+    out._blocked = blockedTab;
     return out;
   }
 
@@ -140,12 +143,14 @@
     const elev = await terrain(c[1], c[0]);
     const S = scene(b, list, { floorHeight: opt.floorHeight, ctxFloorHeight: opt.ctxFloorHeight || 3.3, lat0: c[1], lon0: c[0], elev });
     const H = (b.floors || 5) * opt.floorHeight;
-    return { k: visibility(S, facades, f => facadePoints(S, f, c[1], c[0], [H / 6, H / 2, H * 5 / 6], [1 / 6, 1 / 2, 5 / 6]), c[1], c[0]), terrain: !!elev, count: list.length };
+    const k = visibility(S, facades, f => facadePoints(S, f, c[1], c[0], [H / 6, H / 2, H * 5 / 6], [1 / 6, 1 / 2, 5 / 6]), c[1], c[0]);
+    const blockedTab = k._blocked; delete k._blocked;
+    return { k, blocked: blockedTab, terrain: !!elev, count: list.length };
   }
 
   // ---- 1784 9층 기준값 (팀 Radiance 와 같은 자리: 9층 입면 중앙) ----
   // 브라우저에 한 번 계산해 저장해 둔다 (주변 건물을 다시 불러오지 않게)
-  const REF_KEY = 'shade_ref_1784_v1', REF_LAT = 37.3595, REF_LON = 127.1052, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
+  const REF_KEY = 'shade_ref_1784_v2', REF_LAT = 37.3595, REF_LON = 127.1052, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
   let refPromise = null;
   function reference(cfg) {
     if (refPromise) return refPromise;
@@ -161,7 +166,7 @@
       const elev = await terrain(c[1], c[0]);
       const S = scene(b, others, { floorHeight: REF_FLOOR_H, ctxFloorHeight: 3.3, lat0: c[1], lon0: c[0], elev });
       const z = (REF_FLOOR - 0.5) * REF_FLOOR_H;
-      const k = visibility(S, fs, f => facadePoints(S, f, c[1], c[0], [z], [1 / 2]), c[1], c[0]);
+      const k = visibility(S, fs, f => facadePoints(S, f, c[1], c[0], [z], [1 / 2]), c[1], c[0]); delete k._blocked;
       // 팀 Radiance 입면 (E · S · W · N) 마다 방위가 가장 가까운 1784 입면 값
       const ref = {};
       for (const [id, az] of [['E', 90], ['S', 180], ['W', 270], ['N', 0]]) {

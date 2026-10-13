@@ -39,19 +39,27 @@
     elec_price_multiplier: 1,
     elec_escalation: 0.04,
     life_yr: 30,
-    cop_cooling: 3,
+    // 에너지 (팀 v9, Handoff_Web_Engine_Updates 5번): 창에 닿는 일사가 1 kWh 줄면
+    //   냉방 부하 1.13 kWh 감소 (냉방 COP 3.5), 난방 부하 0.56 kWh 증가 (0.48~0.65 중간값)
+    //   서남 모서리 방 (1784 9층) EnergyPlus 민감도라서 다른 건물에는 간이 추정
+    cooling_load_per_kwh: 1.13,
+    heating_load_per_kwh: 0.56,
+    cop_cooling: 3.5,
     cop_heating: 3,
-    heating_gain_utilization: 0.7, // 겨울 햇빛 열 중 실제로 난방을 줄이는 비율 (가정, 엑셀 13번 B12)
+    // 엑셀 검증 모드 전용 (엑셀 13번: 일사 × SHGC × 활용률 ÷ COP 3)
+    heating_gain_utilization: 0.7,
     shgc: 0.6,
     emission_t_mwh: 0.46,
     // 조명 사용량 (kWh/년, 루버 단 창 1,000㎡ 기준 → 창 면적에 비례)
     lighting_kwh_per_1000m2: { bare: 38000, internal_reactive: 42000, external_fixed: 52000, external_reactive: 43000 },
     // 간이 일사 계산
     clear_fraction: 0.6,             // 맑은 날 비율
-    // 겨울 모드 = 12~2월 날 0° 고정 (팀 solar_result_winter_on (1).json, Unity v6.1). 간이식에서는 열린 날의 투과율을 그대로 쓴다
+    // 겨울 모드 v9: 난방일에만 "해와 나란히" (눈부신 시각 · 비스듬한 해는 0°). 난방일 = 7일 평균 기온 12°C 미만
+    // (팀 winter_calendar.csv, 성남 약 10/30~4/17). 날짜표 파일이 없어 이 날짜 범위로 둔다
+    winter_calendar: { start: [10, 30], end: [4, 17] },
     internal_shading_coef: 0.55,     // 내부 루버가 닫혔을 때 실내에 남는 열 비율
     cooling_months: [6, 7, 8, 9],
-    heating_months: [12, 1, 2],
+    heating_months: [11, 12, 1, 2, 3],   // 난방기 (팀 v9 solar_result 와 같음)
     // 엑셀 검증 모드 전용 (8_시공전후 · 13_탄소)
     // 엑셀 검증 모드: 엑셀 1·8·13·14번 시트와 같은 값 (팀 Radiance, 9층, 동·남·서 면적 가중)
     excel_mode: {
@@ -59,20 +67,28 @@
       winter_kwh_m2_day: 2.56501,     // 난방기 통유리 합계 ÷ 90일 (solar_result 동·남·서 가중)
       winter_days: 90,
       weather_factor: 1,              // Radiance 는 실제 날씨 반영
-      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.52234, external_reactive_rule: 0.27813, external_reactive_winter: 0.52234 }
+      winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.52234, external_reactive_rule: 0.27813, external_reactive_winter: 0.52234 },
+      cop: 3                          // 엑셀은 냉난방 COP 3
     }
   };
-  // 팀 Radiance solar_result (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 월별 15일 × 일수 적분,
-  // 날 폭 300 / 간격 350, 날짜별 컷오프 + 그늘이면 열림). 겨울 모드 켬(12~2월 날 0° 고정) / 끔 두 가지. internal_reactive 는 팀 값이 없어 아래에서 외부 반응형과 같은 시간에 닫히고 막은 햇빛의 55%가 실내에 남는다고 둔다
+  // 팀 Radiance solar_result v9 (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 날 폭 300 / 간격 350 / 반사율 0.5)
+  // 냉방기 6~9월 · 난방기 11~3월. Handoff_Web_Engine_Updates 4번의 "시공 전 대비 감소율"로 만든 값:
+  //   냉방기 (고정 / 반응형): 남 48/65 · 동 43/66 · 서 32/70 · 북 52/52
+  //   난방기 (고정 / 규칙대로 / 겨울 모드 켬): 남 40/78/17 · 동 60/67/32 · 서 56/62/34 · 북 40/40/40
+  // ※ 난방기 통유리 값 (11~3월) 은 v9 JSON 이 없어 옛 12~2월 Radiance 값 × 맑은 날 직달 비 (북은 일수 비 151/90) 로 추정.
+  //   닫힘 시간 · 날 회전량도 옛 값. solar_result_winter_on / off.json (v9) 을 받으면 이 표를 그대로 바꾼다.
+  // internal_reactive 는 팀 값이 없어 아래에서 외부 반응형과 같은 시간에 닫히고 막은 햇빛의 55%가 실내에 남는다고 둔다
   const RADIANCE_9F = {
-    winter_on: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":60.1}, closed_hours_yr: 586, blade_rotation_deg_yr: 52176 },
-      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":229.3}, closed_hours_yr: 926, blade_rotation_deg_yr: 49500 },
-      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":140.6,"internal_reactive_kwh_m2_yr":140.6,"external_fixed_kwh_m2_yr":55.6,"external_reactive_kwh_m2_yr":55.6}, closed_hours_yr: 1106, blade_rotation_deg_yr: 46273 },
-      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":80.6,"internal_reactive_kwh_m2_yr":80.6,"external_fixed_kwh_m2_yr":49,"external_reactive_kwh_m2_yr":49}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } },
-    winter_off: { E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":161.9,"internal_reactive_kwh_m2_yr":161.9,"external_fixed_kwh_m2_yr":60.1,"external_reactive_kwh_m2_yr":52.8}, closed_hours_yr: 614, blade_rotation_deg_yr: 56015 },
-      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":368.8,"internal_reactive_kwh_m2_yr":368.8,"external_fixed_kwh_m2_yr":229.3,"external_reactive_kwh_m2_yr":82.5}, closed_hours_yr: 1268, blade_rotation_deg_yr: 65700 },
-      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":140.6,"internal_reactive_kwh_m2_yr":140.6,"external_fixed_kwh_m2_yr":55.6,"external_reactive_kwh_m2_yr":54.5}, closed_hours_yr: 1134, blade_rotation_deg_yr: 50194 },
-      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":80.6,"internal_reactive_kwh_m2_yr":80.6,"external_fixed_kwh_m2_yr":49,"external_reactive_kwh_m2_yr":49}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } }
+    winter_on: {
+      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":310.6,"internal_reactive_kwh_m2_yr":310.6,"external_fixed_kwh_m2_yr":124.2,"external_reactive_kwh_m2_yr":211.2}, closed_hours_yr: 586, blade_rotation_deg_yr: 52176 },
+      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":608.3,"internal_reactive_kwh_m2_yr":608.3,"external_fixed_kwh_m2_yr":365,"external_reactive_kwh_m2_yr":504.9}, closed_hours_yr: 926, blade_rotation_deg_yr: 49500 },
+      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":269.8,"internal_reactive_kwh_m2_yr":269.8,"external_fixed_kwh_m2_yr":118.7,"external_reactive_kwh_m2_yr":178.1}, closed_hours_yr: 1106, blade_rotation_deg_yr: 46273 },
+      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":135.2,"internal_reactive_kwh_m2_yr":135.2,"external_fixed_kwh_m2_yr":81.1,"external_reactive_kwh_m2_yr":81.1}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } },
+    winter_off: {
+      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":310.6,"internal_reactive_kwh_m2_yr":310.6,"external_fixed_kwh_m2_yr":124.2,"external_reactive_kwh_m2_yr":102.5}, closed_hours_yr: 614, blade_rotation_deg_yr: 56015 },
+      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":608.3,"internal_reactive_kwh_m2_yr":608.3,"external_fixed_kwh_m2_yr":365,"external_reactive_kwh_m2_yr":133.8}, closed_hours_yr: 1268, blade_rotation_deg_yr: 65700 },
+      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":269.8,"internal_reactive_kwh_m2_yr":269.8,"external_fixed_kwh_m2_yr":118.7,"external_reactive_kwh_m2_yr":102.5}, closed_hours_yr: 1134, blade_rotation_deg_yr: 50194 },
+      N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":135.2,"internal_reactive_kwh_m2_yr":135.2,"external_fixed_kwh_m2_yr":81.1,"external_reactive_kwh_m2_yr":81.1}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } }
   };
   // 입면마다 방위가 가장 가까운 Radiance 값을 쓴다 (같은 지역 · 비슷한 높이일 때의 근사). 겨울 모드 체크에 따라 켬 / 끔 결과를 고른다
   function radianceSolar(input) {
@@ -81,7 +97,7 @@
     const dist = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
     const near = az => Object.values(set).reduce((b, v) => dist(v.az, az) < dist(b.az, az) ? v : b);
     return {
-      meta: { weather_source: 'KOR_KG_Seoul-Seongnam TMYx (month-average hourly)', shading_included: true, timestep_min: 60, version: 'radiance-9F-0.1' },
+      meta: { weather_source: 'KOR_KG_Seoul-Seongnam TMYx (month-average hourly)', shading_included: true, timestep_min: 60, version: 'radiance-9F-v9 (감소율 기반 추정)' },
       facades: input.facades.map(f => { const v = near(f.azimuth_deg); return {
         id: f.id,
         cooling_season: Object.assign({}, v.cooling_season, { internal_reactive_kwh_m2_yr: v.cooling_season.bare_kwh_m2_yr - (1 - A.internal_shading_coef) * (v.cooling_season.bare_kwh_m2_yr - v.cooling_season.external_reactive_kwh_m2_yr) }),
@@ -120,8 +136,21 @@
 
   // 기운 각도 = 태양 방위와 입면 정면 방위의 차 (0~180)
   const tiltOf = (sunAz, facadeAz) => Math.abs(((sunAz - facadeAz + 540) % 360) - 180);
-  // 월 → 컷오프 (춘분 3~5월, 하지 6~8월, 추분 9~11월, 동지 12~2월)
-  const cutoffOf = (month, c) => [c[3], c[3], c[0], c[0], c[0], c[1], c[1], c[1], c[2], c[2], c[2], c[3]][month - 1];
+  // 날짜 → 컷오프: 대표일 (춘분 3/21 · 하지 6/21 · 추분 9/23 · 동지 12/21) 사이를 직선으로 (팀 LouverRule.CutoffForDate 와 같음)
+  const CUM = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  function cutoffForDate(c, month, day) {
+    let n = CUM[month - 1] + day;
+    const anchor = [80, 172, 266, 355, 80 + 365], val = [c[0], c[1], c[2], c[3], c[0]];
+    if (n < anchor[0]) n += 365;
+    for (let i = 0; i < 4; i++) if (n >= anchor[i] && n <= anchor[i + 1]) return val[i] + (val[i + 1] - val[i]) * (n - anchor[i]) / (anchor[i + 1] - anchor[i]);
+    return c[3];
+  }
+  // 난방일 (겨울 모드가 켜지는 날): winter_calendar 의 시작일 ~ 다음 해 종료일
+  function isHeatingDay(A, month, day) {
+    const w = A.winter_calendar, n = CUM[month - 1] + day, st = CUM[w.start[0] - 1] + w.start[1], en = CUM[w.end[0] - 1] + w.end[1];
+    return st <= en ? (n >= st && n <= en) : (n >= st || n <= en);
+  }
+  const wrap180 = d => ((d + 180) % 360 + 360) % 360 - 180;
   // 날 깊이 d, 간격 s일 때 열린 날(정면에 수직)의 직달 투과율
   const openTransmission = (tilt, ds) => Math.max(0, 1 - ds * Math.tan(tilt * RAD));
   // 닫힘일 때 햇빛이 막히는 최소 날 각도 (d = s 이면 90 − 2·기운 각도)
@@ -130,36 +159,46 @@
   // ---- 한 시각, 한 입면의 루버 상태 (애니메이션 · 히트맵 · 연간 계산이 모두 이 식을 쓴다) ----
   // state: 'night'(해 없음) · 'back'(해가 입면 뒤) · 'open' · 'closed' · 'winter'(겨울 모드, 12~2월 날 0° 고정)
   // angle: 날 회전 각도(0 = 정면에 수직), side: 해가 정면의 오른쪽(+1)/왼쪽(−1) (밖에서 실내를 볼 때가 아니라 실내에서 밖을 볼 때)
-  function louverState(sp, month, facadeAz, spec, A, winterOn) {
+  // day: 날짜 (없으면 15일). shaded: 이 시각 입면 점 중 주변 건물에 가린 비율 (0~1, 없으면 0) → 절반 이상이면 연다 (팀 6번)
+  function louverState(sp, month, facadeAz, spec, A, winterOn, day, shaded) {
     const ds = spec.blade_depth_mm / spec.blade_spacing_mm;
-    const heat = A.heating_months.includes(month);
+    day = day || 15;
     if (sp.alt <= 0.5) return { state: 'night', angle: 0, side: 1, tilt: null, tr: null };
     const tilt = tiltOf(sp.az, facadeAz);
     const signed = ((sp.az - facadeAz + 540) % 360) - 180;
     const side = signed >= 0 ? 1 : -1;
-    const closedRule = tilt <= cutoffOf(month, spec.cutoff_deg) && sp.alt >= spec.min_sun_alt_deg;
-    const winterNow = winterOn && heat;
+    const inShade = (shaded || 0) >= 0.5;
+    const closedRule = tilt <= cutoffForDate(spec.cutoff_deg, month, day) && sp.alt >= spec.min_sun_alt_deg && !inShade;
+    const winterNow = winterOn && isHeatingDay(A, month, day);
     const closed = closedRule && !winterNow;
-    let angle = 0;
+    let angle = 0, s = side, winterAngle = 0;
     if (closed) angle = closedAngle(tilt, ds);
-    // 겨울 모드: 날을 면과 수직(0°)으로 고정해 열어 둔다 (팀 Unity v6.1 · solar_result 와 같음)
-    if (tilt >= 90) return { state: 'back', angle, side, tilt, closed: false, tr: null };
+    // 겨울 모드 v9 (팀 LouverRule.WinterVertical): 날을 해와 나란히 (−θ) 돌려 햇빛을 들인다.
+    // 해 고도 20° 미만이면서 |θ| ≤ 60° (눈부심) 또는 |θ| > 75° (비스듬함) 이면 0°, 북쪽 ±45° 입면은 항상 0°
+    if (winterNow) {
+      const th = wrap180(sp.az - facadeAz), north = Math.abs(wrap180(facadeAz)) <= 45;
+      const zero = north || Math.abs(th) > 75 || (sp.alt < 20 && Math.abs(th) <= 60);
+      if (!zero) { winterAngle = Math.abs(th); angle = winterAngle; s = -side; }
+    }
+    if (tilt >= 90) return { state: 'back', angle: 0, side, tilt, closed: false, tr: null };
     const open = openTransmission(tilt, ds);
     const tr = {
       bare: 1,
       internal_reactive: closed ? A.internal_shading_coef : 1,
       external_fixed: open,
-      external_reactive: winterNow ? open : (closed ? 0 : open)
+      // 겨울 모드에서 해와 나란히면 날이 햇빛을 거의 막지 않는다 (1), 0° 이면 열린 날 투과율
+      external_reactive: winterNow ? (winterAngle ? 1 : open) : (closed ? 0 : open)
     };
     // rule / rule_angle: 겨울 모드와 상관없이 규칙만 따를 때 (내부 반응형은 겨울 모드가 없다)
-    return { state: winterNow ? 'winter' : closed ? 'closed' : 'open', angle, side, tilt, closed, rule: closedRule, rule_angle: closedRule ? closedAngle(tilt, ds) : 0, tr };
+    return { state: winterNow ? 'winter' : closed ? 'closed' : inShade ? 'shade' : 'open', angle, side: s, tilt, closed, shaded: inShade, rule: closedRule, rule_angle: closedRule ? closedAngle(tilt, ds) : 0, tr };
   }
 
   // 편의 함수: 입력과 날짜 · 시각으로 모든 입면 상태
   function stateAt(input, y, m, d, hh, mm) {
     const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions), spec = merge(DEFAULT_SPEC, input.louver_spec);
     const sp = sunPosition(input.site.lat_deg, input.site.lon_deg, y, m, d, hh, mm);
-    return { sun: sp, facades: input.facades.map(f => ({ id: f.id, louver: f.louver, azimuth_deg: f.azimuth_deg, ...louverState(sp, m, f.azimuth_deg, spec, A, input.winter_mode !== false) })) };
+    const sh = api.shadeLookup;   // 선택한 건물 그림자 (index.html 이 넣는다): (입면 id, 월, 시, 분) → 가린 비율
+    return { sun: sp, facades: input.facades.map(f => ({ id: f.id, louver: f.louver, azimuth_deg: f.azimuth_deg, ...louverState(sp, m, f.azimuth_deg, spec, A, input.winter_mode !== false, d, sh ? sh(f.id, m, hh, mm) : 0) })) };
   }
 
   // ---- 간이식: Unity 값이 없을 때 solar_result 를 직접 만든다 ----
@@ -178,7 +217,7 @@
       const cool = A.cooling_months.includes(m), heat = A.heating_months.includes(m);
       input.facades.forEach((f, i) => {
         const r = facades[i];
-        const s = louverState(sp, m, f.azimuth_deg, spec, A, winter);
+        const s = louverState(sp, m, f.azimuth_deg, spec, A, winter, d, api.shadeLookup ? api.shadeLookup(f.id, m, Math.floor(mins / 60), mins % 60) : 0);
         if (s.closed) r.closed_hours_yr += dt;
         if (s.tr) {
           const AM = 1 / Math.sin(sp.alt * RAD);
@@ -249,6 +288,7 @@
     if (mode === 'radiance') { solar = radianceSolar(input); }
     if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
     if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터' + (opts.shade ? ' 미반영)' : ' · 주변 그림자 미반영)'));
+    if (mode !== 'excel') warnings.push('에너지: 팀 EnergyPlus 민감도 (1784 9층 서남 모서리 방) 로 환산한 추정 · 난방 ±20%');
     if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
     if (mode === 'radiance') warnings.push('일사량: 팀 Radiance solar_result(1784 9층, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물 · 층에서는 근사값');
     // 선택한 건물 주변 그림자 (shade.js, opts.shade = 입면 id → 배수). Radiance 는 1784 대비 배수, 간이식은 보이는 비율을 곱한다
@@ -274,16 +314,17 @@
       const per_facade = [];
       if (mode === 'excel') {
         const X = A.excel_mode;
-        coolSaved = q.window_area_m2 * A.shgc * (X.cooling_irradiance_kwh_m2.bare - X.cooling_irradiance_kwh_m2[alt]) / A.cop_cooling / 1000;
+        coolSaved = q.window_area_m2 * A.shgc * (X.cooling_irradiance_kwh_m2.bare - X.cooling_irradiance_kwh_m2[alt]) / X.cop / 1000;
         const tw = alt === 'external_reactive' ? (winterMode ? X.winter_transmission.external_reactive_winter : X.winter_transmission.external_reactive_rule) : X.winter_transmission[alt];
-        heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor * A.heating_gain_utilization / A.cop_heating / 1000;
+        heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor * A.heating_gain_utilization / X.cop / 1000;
       } else {
         for (const f of lf) {
           const s = used.facades.find(x => x.id === f.id);
           if (!s) { warnings.push(`입면 ${f.id}: 일사량 값 없음`); continue; }
           const Aw = windowArea(f);
-          const c = Aw * A.shgc * (s.cooling_season.bare_kwh_m2_yr - s.cooling_season[alt + '_kwh_m2_yr']) / A.cop_cooling / 1000;
-          const h = Aw * A.shgc * (s.heating_season.bare_kwh_m2_yr - s.heating_season[alt + '_kwh_m2_yr']) * A.heating_gain_utilization / A.cop_heating / 1000;
+          // 팀 v9: 창에 닿는 일사 (solar_result 값) 1 kWh 감소 → 냉방 부하 1.13 kWh 감소 · 난방 부하 0.56 kWh 증가, 각각 COP 로 전기
+          const c = Aw * A.cooling_load_per_kwh * (s.cooling_season.bare_kwh_m2_yr - s.cooling_season[alt + '_kwh_m2_yr']) / A.cop_cooling / 1000;
+          const h = Aw * A.heating_load_per_kwh * (s.heating_season.bare_kwh_m2_yr - s.heating_season[alt + '_kwh_m2_yr']) / A.cop_heating / 1000;
           coolSaved += c; heatAdded += h;
           per_facade.push({ id: f.id, window_area_m2: Aw, louver_area_m2: Aw * merge(DEFAULT_SPEC, input.louver_spec).louver_to_window_ratio, cooling_saved_mwh_yr: c, heating_added_mwh_yr: h, closed_hours_yr: s.closed_hours_yr, blade_rotation_deg_yr: s.blade_rotation_deg_yr });
         }
@@ -316,6 +357,6 @@
     return out;
   }
 
-  const api = { compute, clearSkySolar, radianceSolar, RADIANCE_9F, sunPosition, quantities, stateAt, louverState, cumulativeNet, merge, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
+  const api = { shadeLookup: null, cutoffForDate, isHeatingDay, compute, clearSkySolar, radianceSolar, RADIANCE_9F, sunPosition, quantities, stateAt, louverState, cumulativeNet, merge, DEFAULT_ASSUMPTIONS, DEFAULT_SPEC, ALT_NAMES, version: '0.1' };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.LouverEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);
