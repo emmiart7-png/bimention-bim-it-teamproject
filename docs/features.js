@@ -162,8 +162,10 @@
     if (st.sun.alt > 0) {
       const [sx, sy] = P(st.sun.az);
       let rays = '';
-      for (let i = 0; i < 12; i++) { const t = i * Math.PI / 6, c = Math.cos(t), s2 = Math.sin(t); rays += `<line x1="${r1(sx + c * 18.9)}" y1="${r1(sy + s2 * 18.9)}" x2="${r1(sx + c * (i % 2 ? 25.2 : 28.8))}" y2="${r1(sy + s2 * (i % 2 ? 25.2 : 28.8))}"/>`; }
-      g += `<g stroke="#F2A20C" stroke-width="1.75" stroke-linecap="round">${rays}</g><circle cx="${r1(sx)}" cy="${r1(sy)}" r="14.4" fill="#FFC93C" stroke="#F2A20C" stroke-width="2.7"/>`;
+      for (let i = 0; i < 12; i++) { const t = i * Math.PI / 6, c = Math.cos(t), s2 = Math.sin(t); // 빛살 = 물결(~) 모양: 반지름 방향으로 나아가며 옆으로 흔들리는 짧은 곡선
+        const R0 = 18.9, L = i % 2 ? 8 : 10.5, A = 2, pt = (r, o) => `${r1(sx + c * r - s2 * o)},${r1(sy + s2 * r + c * o)}`;
+        rays += `<path d="M${pt(R0, 0)} Q${pt(R0 + L / 4, A)} ${pt(R0 + L / 2, 0)} T${pt(R0 + L, 0)}" fill="none"/>`; }
+      g += `<g stroke="#F2A20C" stroke-width="1.75" stroke-linecap="round" fill="none">${rays}</g><circle cx="${r1(sx)}" cy="${r1(sy)}" r="14.4" fill="#FFC93C" stroke="#F2A20C" stroke-width="2.7"/>`;
     }
     // 위쪽 빈 곳 (여름엔 북쪽 해 길이 비어 있음) 을 잘라 시뮬레이션과 간격을 줄인다
     const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - 15), ...path.map(az => P(az)[1])];
