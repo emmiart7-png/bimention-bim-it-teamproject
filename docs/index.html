@@ -306,7 +306,7 @@ svg text{font-family:inherit}
   </section>
 </main>
 <script src="engine.js?v=32"></script>
-<script src="geo.js?v=26"></script>
+<script src="geo.js?v=27"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -513,7 +513,7 @@ svg text{font-family:inherit}
   let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
   $('vwKey').value=key;
   $('vwKeyToggle').onchange=()=>{ $('vwKeyRow').hidden=!$('vwKeyToggle').checked; };
-  const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY, domain: location.origin });
+  const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY });
   // 이 브라우저에 저장된 다른 키가 틀렸으면 (인증키 오류) 저장된 키를 지우고 기본 키로 한 번 더
   async function withKey(fn){
     try{ return await fn(cfg()); }

@@ -25,7 +25,9 @@
   }
   const isLocal = () => ['localhost', '127.0.0.1'].includes(location.hostname);
   async function vworld(path, params, cfg) {
-    const q = new URLSearchParams({ ...params, key: cfg.key || '', domain: cfg.domain || location.origin, format: 'json' }); // cfg.timeoutMs: JSONP 기다리는 시간
+    // domain 은 보내지 않는다: 키에 등록한 서비스 URL 과 다르면 (예: 깃허브 페이지 주소) 데이터 API 가 INCORRECT_KEY 를 돌려준다. 빼면 통과
+    const q = new URLSearchParams({ ...params, key: cfg.key || '', format: 'json' }); // cfg.timeoutMs: JSONP 기다리는 시간
+    if (cfg.domain) q.set('domain', cfg.domain);
     if (isLocal()) {
       // serve.js 프록시: 키를 비워 두면 서버의 VWORLD_KEY 환경변수를 쓴다
       const r = await fetch('/vworld/' + path + '?' + q.toString());
