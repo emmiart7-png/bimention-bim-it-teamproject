@@ -103,7 +103,7 @@
     const ring = plan.ring.slice(0, -1), lat0 = ring.reduce((t, p) => t + p[1], 0) / ring.length, lon0 = ring.reduce((t, p) => t + p[0], 0) / ring.length;
     const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540, en = ([lon, lat]) => [(lon - lon0) * mx, (lat - lat0) * my];
     const pts = ring.map(en), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-    const k = Math.min(230 / (Math.max(...xs) - Math.min(...xs) || 1), 230 / (Math.max(...ys) - Math.min(...ys) || 1));
+    const k = Math.min(253 / (Math.max(...xs) - Math.min(...xs) || 1), 253 / (Math.max(...ys) - Math.min(...ys) || 1));   // 건물 크기 (230 의 1.1배)
     const ox = (Math.max(...xs) + Math.min(...xs)) / 2, oy = (Math.max(...ys) + Math.min(...ys)) / 2;
     const S = ([e, n]) => [cx + (e - ox) * k, cy - (n - oy) * k];
     const sp = pts.map(S), rB = Math.max(...sp.map(p => Math.hypot(p[0] - cx, p[1] - cy)));   // 건물이 차지하는 반지름
