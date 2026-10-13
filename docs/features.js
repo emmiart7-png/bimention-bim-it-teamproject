@@ -116,9 +116,10 @@
 
   // ---------------- 2. 누적 순이익 + 민감도 ----------------
   const SL = [['sCost', 'costMul', 'oCost', v => '×' + Number(v).toFixed(2)], ['sPrice', 'price', 'oPrice', v => v + '원'], ['sEsc', 'esc', 'oEsc', v => v + '%'], ['sMaint', 'maint', 'oMaint', v => v + '%']];
-  function syncSliders() { for (const [s, f, o, fmt] of SL) { $(s).value = $(f).value; $(o).textContent = fmt($(f).value); } }
+  // 민감도 슬라이더는 화면에서 뺐다 (없으면 건너뜀)
+  function syncSliders() { for (const [s, f, o, fmt] of SL) { if (!$(s)) continue; $(s).value = $(f).value; $(o).textContent = fmt($(f).value); } }
   let pending = null;
-  for (const [s, f, o, fmt] of SL) $(s).addEventListener('input', () => {
+  for (const [s, f, o, fmt] of SL) if ($(s)) $(s).addEventListener('input', () => {
     $(f).value = $(s).value; $(o).textContent = fmt($(s).value);
     clearTimeout(pending); pending = setTimeout(() => window.UI.run(), 60);
   });

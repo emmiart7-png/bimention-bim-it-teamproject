@@ -207,13 +207,7 @@ svg text{font-family:inherit}
     <div id="glassCmp" style="margin-top:14px"></div>
   </section>
   <section class="panel collapsible collapsed">
-    <h2 style="display:flex;align-items:center;gap:6px">누적 순이익 · 민감도 (통유리 대비)<button id="resetSliders" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
-    <div class="sliders noprint">
-      <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
-      <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
-      <div><label for="sEsc">요금 인상률 (%/년) <output id="oEsc"></output></label><input id="sEsc" type="range" min="0" max="8" step="0.5"></div>
-      <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
-    </div>
+    <h2>누적 순이익 (통유리 대비)</h2>
     <div id="cumChart"></div>
   </section>
   <section class="panel collapsible collapsed">
@@ -432,7 +426,6 @@ svg text{font-family:inherit}
   }
   $('run').onclick=run;
   // 민감도 슬라이더 기본값: 단가 배율 · 전기요금 · 인상률 · 유지비율을 처음 값으로
-  $('resetSliders').onclick=e=>{ e.stopPropagation(); ['costMul','price','esc','maint'].forEach(id=>$(id).value=$(id).defaultValue); run(); };
   // 값 초기화: 루버 사양 · 가정값을 처음 값 (HTML 기본값) 으로 되돌린다. 입면은 그대로
   $('resetVals').onclick=e=>{ e.stopPropagation();
     $('run').closest('section').querySelectorAll('input,select').forEach(el=>{
@@ -635,7 +628,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=33"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=29"></script>
+<script src="features.js?v=30"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>
