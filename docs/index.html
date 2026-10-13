@@ -119,7 +119,7 @@ svg text{font-family:inherit}
 <main>
 <div id="leftCol">
   <section class="panel noprint">
-    <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 (브이월드) <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
     <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
     <div class="inline" id="vwKeyRow" hidden>
       <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
@@ -258,15 +258,14 @@ svg text{font-family:inherit}
     </div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
       <div class="muted" id="shadeNote" style="margin:-4px 0 8px;font-size:12px"></div>
       <div id="model3d" style="border-radius:12px;overflow:hidden;background:#DCE8F5"></div>
       <p class="muted" id="model3dMsg" style="margin-top:6px"></p>
       <p class="muted">외곽선 · 층수 · 층고값으로 만든 단순 모형입니다. 마우스 끌어서 돌리기, 휠로 확대 · 축소 가능합니다.</p>
     </div>
-    <div class="sun" id="sunInfo"></div>
     <div class="plans" id="plans"></div>
-    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></div>
+    <div class="legend" style="align-items:center"><span class="sun" id="sunInfo" style="margin:0"></span><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></div>
   </section>
 </div>
 </main>
@@ -599,7 +598,7 @@ svg text{font-family:inherit}
     window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
     $('simSrc').style.display=''; showSim('model');
     if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent=/못/.test(t)?'· '+t:''; }}); $('terNote').textContent=''; loadContext(current); }catch(e){ console.warn(e); }
-    status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
+    status('');
     UI.run();
   };
   function drawEdges(fs){
@@ -618,10 +617,10 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=30"></script>
+<script src="model3d.js?v=32"></script>
 <script src="shade.js?v=4"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=28"></script>
+<script src="features.js?v=29"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>

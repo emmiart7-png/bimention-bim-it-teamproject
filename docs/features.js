@@ -83,7 +83,6 @@
       const [sx, sy] = P(st.sun.az);
       g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="26" fill="#FFF8EC" stroke="#F2B544" stroke-width="9"/>`;
     }
-    g += `<text x="${W - 16}" y="28" text-anchor="end" font-size="15" fill="#8595A4">북 ↑</text>`;
     const desc = sides.map(sd => `${sd.key} ${sideText(sd.f)}`).join(', ');
     return { svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 동 · 남 · 서 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`, sides };
   }

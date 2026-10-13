@@ -253,7 +253,7 @@
     const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
     let lo = Infinity, hi = -Infinity; const ys = [];
     for (let i = 0; i < pos.count; i++) { const y = elevAt(pos.getX(i), -pos.getZ(i)); ys.push(y); lo = Math.min(lo, y); hi = Math.max(hi, y); }
-    const c0 = new THREE.Color('#9AAE86'), c1 = new THREE.Color('#3F6531'), c = new THREE.Color();
+    const c0 = new THREE.Color('#5E7A4C'), c1 = new THREE.Color('#2B4722'), c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) { pos.setY(i, ys[i]); c.copy(c0).lerp(c1, hi - lo > 1 ? (ys[i] - lo) / (hi - lo) : 0); col.set([c.r, c.g, c.b], i * 3); }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
     terrain = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
