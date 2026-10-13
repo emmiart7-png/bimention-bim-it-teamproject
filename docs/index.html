@@ -162,7 +162,7 @@ svg text{font-family:inherit}
   </section>
 
   <section class="panel collapsible collapsed noprint">
-    <h2>3. 루버 사양 · 가정값</h2>
+    <h2 style="display:flex;align-items:center;gap:6px">3. 루버 사양 · 가정값<button id="resetVals" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
     <div class="grid4">
       <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:13px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
       <div><label for="depth">날 깊이 (mm)</label><input id="depth" type="number" value="300"></div>
@@ -179,7 +179,7 @@ svg text{font-family:inherit}
       <div><label for="maint" title="날 · 프레임 · 구동장치 · 설치비에 곱하는 연 비율. 일반 건물 연 유지비 2~4% 의 중간">반응형 유지비율 (%/년)</label><input id="maint" type="number" step="0.5" value="3"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><div style="display:flex;gap:8px"><button id="resetVals">기본값</button><button class="primary" id="run">계산하기</button></div></div>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
   </section>
 
   <section class="panel collapsible collapsed">
@@ -418,7 +418,7 @@ svg text{font-family:inherit}
   // 민감도 슬라이더 기본값: 단가 배율 · 전기요금 · 인상률 · 유지비율을 처음 값으로
   $('resetSliders').onclick=e=>{ e.stopPropagation(); ['costMul','price','esc','maint'].forEach(id=>$(id).value=$(id).defaultValue); run(); };
   // 값 초기화: 루버 사양 · 가정값을 처음 값 (HTML 기본값) 으로 되돌린다. 입면은 그대로
-  $('resetVals').onclick=()=>{
+  $('resetVals').onclick=e=>{ e.stopPropagation();
     $('run').closest('section').querySelectorAll('input,select').forEach(el=>{
       if(el.type==='checkbox') el.checked=el.defaultChecked;
       else if(el.tagName==='SELECT') [...el.options].forEach(o=>o.selected=o.defaultSelected);
