@@ -158,12 +158,14 @@
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
-  function renderPlans() {
+  // minsF: 재생 중에는 분 단위 소수 (해가 같은 빠르기로 움직이도록 시간 간격을 바꾼다), 아니면 슬라이더 값
+  function renderPlans(minsF) {
     if (!last) return;
     const [y, m, d] = $('simDate').value.split('-').map(Number);
-    const mins = Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins % 60;
-    $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-        if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00+09:00`);
+    const mins = typeof minsF === 'number' ? minsF : Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins - hh * 60;
+    const mi = Math.floor(mm), sec = Math.floor((mm - mi) * 60);
+    $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+        if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(sec).padStart(2, '0')}+09:00`);
     const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
     if (window.Model3D) window.Model3D.update(last.input, { y: y || 2026, m: m || 6, d: d || 21, hh, mm });
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
@@ -178,14 +180,33 @@
     $('plans').innerHTML = `<div class="siteplan">${svg}</div>` + (many.length ? `<p class="muted">입면이 여러 개인 방위는 대표 입면으로 그렸습니다: ${esc(many.join(' · '))}</p>` : '');
   }
   let timer = null;
-  $('simTime').addEventListener('input', renderPlans);
+  $('simTime').addEventListener('input', () => { simMin = Number($('simTime').value); renderPlans(); });
+  let simMin = null;
   $('simDate').addEventListener('change', renderPlans);
   document.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { $('simDate').value = b.dataset.day; renderPlans(); });
   $('simPlay').onclick = () => {
-    if (timer) { clearInterval(timer); timer = null; $('simPlay').textContent = '재생'; return; }
+    if (timer) { cancelAnimationFrame(timer); timer = null; $('simPlay').textContent = '재생'; return; }
     $('simPlay').textContent = '멈춤';
-    // 2분씩 18ms 마다 (예전과 같은 빠르기: 1시간 ≈ 0.5초). 10분씩 건너뛰면 한여름 정오 남면 날이 한 번에 20° 넘게 튄다
-    timer = setInterval(() => { const t = $('simTime'); t.value = (Number(t.value) + 2) % 1440; renderPlans(); }, 18);
+    // 해가 평면도에서 같은 빠르기로 움직이게: 실제 흐른 시간(초) × 27°/초 만큼 해 방위가 움직이도록 시간 간격을 정한다.
+    // 화면이 느려져도 (한낮에 날이 돌면 Unity 가 무거워짐) 흐른 시간만큼 움직여 빠르기가 같다. 밤은 하루 재생이 빨리 지나가게 분당 300분
+    if (simMin === null) simMin = Number($('simTime').value);
+    let prevT = performance.now();
+    const tick = now => {
+      if (!timer) return;
+      const dt = Math.min(0.1, (now - prevT) / 1000); prevT = now;
+      if (last) {
+        const [y, m, d] = $('simDate').value.split('-').map(Number), lat = last.input.site.lat_deg, lon = last.input.site.lon_deg;
+        const at = t => { t = ((t % 1440) + 1440) % 1440; return E.sunPosition(lat, lon, y || 2026, m || 6, d || 21, Math.floor(t / 60), t % 60); };
+        const p0 = at(simMin), p1 = at(simMin + 1);
+        let step = 300 * dt;
+        if (p0.alt > 0) { const rate = Math.abs(((p1.az - p0.az + 540) % 360) - 180); step = Math.min(220 * dt, 27 * dt / Math.max(rate, 1e-3)); }
+        simMin = (simMin + step) % 1440;
+        $('simTime').value = Math.round(simMin / 2) * 2;
+        renderPlans(simMin);
+      }
+      timer = requestAnimationFrame(tick);
+    };
+    timer = requestAnimationFrame(tick);
   };
 
   // ---------------- 2. 누적 순이익 + 민감도 ----------------

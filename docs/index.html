@@ -12,6 +12,10 @@
 .status{font-size:14px;margin-top:8px;color:var(--sub);min-height:20px}
 .status.err{color:#C4314B}
 .inline{display:flex;gap:8px;align-items:end}
+.faceToggles{display:flex;flex-wrap:wrap;gap:8px}
+.faceToggles button{min-width:64px}
+.faceToggles button[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.faceToggles button[aria-pressed="false"]{color:var(--muted)}
 /* 2. 입면 표는 이름 · 루버 열만 보인다 (방위 · 폭 · 높이 · 창면적비 · 창 ㎡ 는 지도에서 만든 값 그대로) */
 #facades th:nth-child(2),#facades th:nth-child(3),#facades th:nth-child(4),#facades th:nth-child(5),#facades th:nth-child(6),#facades th:nth-child(8),
 #facades td:nth-child(2),#facades td:nth-child(3),#facades td:nth-child(4),#facades td:nth-child(5),#facades td:nth-child(6),#facades td:nth-child(8){display:none}
@@ -177,9 +181,11 @@ svg text{font-family:inherit}
     <p class="muted">지도에서 건물을 고르면 위도 · 경도 · 주소가 자동으로 채워집니다.</p>
   </section>
 
-  <section class="panel collapsible collapsed noprint">
+  <section class="panel noprint">
     <h2 style="display:flex;align-items:center;gap:6px">2. 입면<button id="resetFacades" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
-    <div class="tablewrap"><table id="facades">
+    <div class="faceToggles" id="faceToggles" role="group" aria-label="입면별 루버 설치"></div>
+    <p class="muted" style="margin-top:8px">입면을 누르면 루버를 달거나 뗍니다 (파랑 = 루버 있음)</p>
+    <div class="tablewrap" style="display:none"><table id="facades">
       <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
       <tbody></tbody>
     </table></div>
@@ -328,6 +334,18 @@ svg text{font-family:inherit}
   }
   const defaults=[{id:'E',az:90,area:300,louver:true},{id:'S',az:180,area:400,louver:true},{id:'W',az:270,area:300,louver:true},{id:'N',az:0,area:300,louver:false}];
   defaults.forEach(addRow);
+  // 2. 입면: 입면 이름 버튼 = 루버 켜고 끄기 (숨긴 표의 루버 체크와 연결)
+  function renderFaceToggles(){
+    const box=$('faceToggles'); box.innerHTML='';
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      const id=tr.querySelector('.f-id').value, az=tr.querySelector('.f-az').value, cb=tr.querySelector('.f-lv');
+      const b=document.createElement('button'); b.type='button'; b.textContent=id; b.setAttribute('aria-pressed',cb.checked); b.title=`${id} · 방위 ${az}° · ${cb.checked?'루버 있음':'루버 없음'}`;
+      b.onclick=()=>{ cb.checked=!cb.checked; cb.dispatchEvent(new Event('change',{bubbles:true})); renderFaceToggles(); };
+      box.appendChild(b);
+    });
+  }
+  new MutationObserver(renderFaceToggles).observe(tbody,{childList:true});
+  renderFaceToggles();
   tbody.addEventListener('change',e=>{ if(!e.target.classList.contains('f-lv')) run(); });
   const resetFacades=()=>{ tbody.innerHTML=''; defaults.forEach(addRow); };
   $('resetFacades').onclick=e=>{ e.stopPropagation(); resetFacades(); run(); };
@@ -654,7 +672,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=33"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=33"></script>
+<script src="features.js?v=35"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>
