@@ -291,12 +291,14 @@
     opts = opts || {};
     const solarArg = solar;
     const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
-    const mode = opts.mode || 'solar'; // 'solar' | 'excel'
+    // 엑셀 (10/14 개편) 은 웹과 같은 방식 (팀 Radiance 1784 1~28층 평균 · EnergyPlus 환산 · 유지비) → 엑셀 검증 모드 = Radiance 모드
+    const asked = opts.mode || 'solar'; // 'solar' | 'radiance' | 'excel'
+    const mode = asked === 'excel' ? 'radiance' : asked;
     const warnings = [];
     if (mode === 'radiance') { solar = radianceSolar(input); }
     if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
     if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터' + (opts.shade ? ' 미반영)' : ' · 주변 그림자 미반영)'));
-    if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
+    if (asked === 'excel') warnings.push('엑셀 검증 모드: 엑셀 (팀 Radiance 1784 1~28층 평균) 과 같은 방식으로 계산');
     if (mode === 'radiance') warnings.push('일사량: 팀 Radiance 층별 solar_result (1784 전체 층 평균, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물에서는 근사값');
     // 선택한 건물 주변 그림자 (shade.js, opts.shade = 입면 id → 배수). Radiance 는 1784 대비 배수, 간이식은 보이는 비율을 곱한다
     let used = solar;
