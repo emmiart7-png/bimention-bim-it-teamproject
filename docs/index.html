@@ -133,7 +133,6 @@ svg text{font-family:inherit}
     </div>
     <div class="row">
       <div><label for="minEdge">짧은 변 제외 (m 미만)</label><input id="minEdge" type="number" value="30"></div>
-      <div><label class="check"><input type="checkbox" id="noNorth" checked> 북쪽 ±45° 입면은 루버 없음</label></div>
     </div>
     <div class="btns"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
   </section>
@@ -265,7 +264,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=29"></script>
+<script src="engine.js?v=30"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -574,7 +573,6 @@ svg text{font-family:inherit}
   // 1번 값 초기화: 고른 건물 · 입력값을 지우고 처음 (네이버 1784) 으로
   $('resetMap').onclick=()=>{
     ['searchAddr','floors','floorH','bWwr','minEdge'].forEach(id=>$(id).value=$(id).defaultValue);
-    $('noNorth').checked=$('noNorth').defaultChecked;
     for(const l of [outline,marker,edges]) if(l) map.removeLayer(l);
     outline=marker=edges=current=null; lastFs=null; shadeTok++;
     window.SiteGeom=null; window.ShadeCorr=null; LouverEngine.shadeLookup=null; $('shadeNote').textContent='';
@@ -585,14 +583,12 @@ svg text{font-family:inherit}
   };
   $('makeFacades').onclick=()=>{
     if(!current) return;
-    const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||30, northNoLouverDeg:$('noNorth').checked?45:-1});
+    const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||30, northNoLouverDeg:45 /* 북쪽 ±45° 입면은 처음엔 루버 없음 → 2. 입면에서 체크하면 생김 */});
     if(!fs.length){ status('입면을 만들지 못했습니다. 짧은 변 제외 값을 줄여 보세요.', true); return; }
     UI.clearFacades();
     fs.forEach(f=>UI.addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:'',louver:f.louver}));
     // 지도에 입면 표시: 루버 면 = 파란 굵은 선, 루버 없는 면 = 회색 점선
-    if(edges) map.removeLayer(edges);
-    edges=L.layerGroup(fs.map(f=>L.polyline(f.path.map(([x,y])=>[y,x]),f.louver?{color:'#0064E0',weight:7,opacity:0.9}:{color:'#8595A4',weight:4,dashArray:'6 6'})
-      .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
+    drawEdges(fs);
     if(!$('address').value && current.name) $('address').value=current.name;
     origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
     window.ShadeCorr=null; LouverEngine.shadeLookup=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
@@ -601,11 +597,23 @@ svg text{font-family:inherit}
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
     UI.run();
   };
+  function drawEdges(fs){
+    if(edges) map.removeLayer(edges);
+    edges=L.layerGroup(fs.map(f=>L.polyline(f.path.map(([x,y])=>[y,x]),f.louver?{color:'#0064E0',weight:7,opacity:0.9}:{color:'#8595A4',weight:4,dashArray:'6 6'})
+      .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
+  }
+  // 2. 입면 표의 "루버" 체크 → 지도 표시 · 3D 날 · 계산에 바로 반영 (북면도 체크하면 루버가 생긴다)
+  document.querySelector('#facades tbody').addEventListener('change',e=>{
+    if(!e.target.classList.contains('f-lv')) return;
+    const on={}; document.querySelectorAll('#facades tbody tr').forEach(tr=>{ on[tr.querySelector('.f-id').value.trim()]=tr.querySelector('.f-lv').checked; });
+    if(lastFs && current){ lastFs.forEach(f=>{ if(f.id in on) f.louver=on[f.id]; }); drawEdges(lastFs); if(window.Model3D) Model3D.setLouvers(on); }
+    UI.run();
+  });
 })();
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=27"></script>
+<script src="model3d.js?v=28"></script>
 <script src="shade.js?v=4"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=28"></script>

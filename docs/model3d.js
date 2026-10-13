@@ -165,7 +165,7 @@
     slabs = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#C9D6E3', transparent: true, opacity: 0.7 })); scene.add(slabs);
     // 루버: 입면마다 InstancedMesh 하나
     const spacing = (opt.spacingMm || 350) / 1000, depth = (opt.depthMm || 300) / 1000;
-    const louvered = opt.facades.filter(f => f.louver);
+    const louvered = opt.facades;   // 루버 없는 입면도 만들어 두고 숨긴다 (setLouvers 로 켜고 끔)
     const total = louvered.reduce((s, f) => s + f.width_m / spacing, 0);
     // 멀리서는 솎아 그림 (0.35 m 간격은 물결무늬(모아레)가 생겨 약 1 m 간격), 가까이 가면 날을 모두 그린다 (lod)
     // stepF = 가까이서 그리는 간격 배수 (날이 MAX_BLADES 보다 많을 때만 1 보다 큼), step = 멀리서 그리는 배수
@@ -190,6 +190,7 @@
       const pts = coarse.concat(fine);
       const bb = new THREE.Box3().setFromPoints(pts); bb.min.y = 0; bb.max.y = height;
       mesh.count = coarse.length;
+      mesh.visible = !!f.louver;
       blades.push({ id: f.id, az: f.azimuth_deg, mesh, pts, nCoarse: coarse.length, box: bb });
       scene.add(mesh);
     }
@@ -366,5 +367,7 @@
   // 상자의 깊이 축(로컬 +z)을 수평 방향 (동 vE, 북 vN) 으로 돌리는 y 회전. three 좌표의 방향은 (x = vE, z = -vN)
   function yawFor(vE, vN) { return Math.atan2(vE, -vN); }
 
-  window.Model3D = { setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, get hasModel() { return !!model; } };
+  // 입면별 루버 켜고 끄기: on = {입면 id: true/false}
+  function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; }
+  window.Model3D = { setLouvers, setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, get hasModel() { return !!model; } };
 })();

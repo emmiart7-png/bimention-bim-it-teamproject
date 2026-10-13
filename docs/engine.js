@@ -174,7 +174,9 @@
     const signed = ((sp.az - facadeAz + 540) % 360) - 180;
     const side = signed >= 0 ? 1 : -1;
     const inShade = (shaded || 0) >= 0.5;
-    const closedRule = tilt <= cutoffForDate(spec.cutoff_deg, month, day) && sp.alt >= spec.min_sun_alt_deg && !inShade;
+    // 북쪽 ±45° 입면은 해가 거의 안 들어 닫지 않는다 (팀 LouverRule.IsNorthFacing)
+    const northFace = Math.abs(wrap180(facadeAz)) <= 45;
+    const closedRule = tilt <= cutoffForDate(spec.cutoff_deg, month, day) && sp.alt >= spec.min_sun_alt_deg && !inShade && !northFace;
     const winterNow = winterOn && isHeatingDay(A, month, day);
     const closed = closedRule && !winterNow;
     let angle = 0, s = side, winterAngle = 0;
