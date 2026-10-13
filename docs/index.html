@@ -84,12 +84,18 @@ svg text{font-family:inherit}
 .collapsible>h2::before{content:"▾";color:var(--muted);font-size:12px}
 .collapsible.collapsed>h2::before{content:"▸"}
 .collapsible.collapsed>h2{margin:0}
-.collapsible.collapsed>:not(h2){display:none!important}
+@media screen{.collapsible.collapsed>:not(h2){display:none!important}}
 @media print{
   @page{size:A4;margin:12mm}
   body{background:#fff;color:#000;font-size:11px}
   .noprint,.btns,#warnings{display:none!important}
-  main{display:block;padding:0}
+  /* 두 열을 풀어 한 줄로: 검토 대상 → 결과 → 대안 비교 → 누적 → 히트맵 → 입면별 (접힌 패널도 펴서) */
+  main{display:flex;flex-direction:column;padding:0;gap:0;max-width:none}
+  #leftCol,#rightCol{display:contents}
+  #printSummary{order:-1}
+  .collapsible>h2::before{display:none}
+  .collapsible.collapsed>h2{margin:0 0 8px}
+  svg{max-width:100%;height:auto}
   section.panel{break-inside:avoid;border:1px solid #ccc;margin-bottom:8px;padding:8px 10px}
   #printSummary{display:block}
   .cards{grid-template-columns:repeat(3,1fr)}
@@ -106,8 +112,8 @@ svg text{font-family:inherit}
   <div id="hdrMsg" class="warn noprint" hidden style="flex-basis:100%;margin:0"></div>
 </header>
 <main>
-<div class="noprint">
-  <section class="panel">
+<div id="leftCol">
+  <section class="panel noprint">
     <h2>1. 지도에서 건물 고르기 (브이월드)</h2>
     <div class="inline">
       <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="발급받은 키 (이 브라우저에만 저장)" autocomplete="off"></div>
@@ -144,7 +150,7 @@ svg text{font-family:inherit}
     <p class="muted">지도에서 건물을 고르면 위도 · 경도 · 주소가 자동으로 채워집니다.</p>
   </section>
 
-  <section class="panel collapsible collapsed">
+  <section class="panel collapsible collapsed noprint">
     <h2>2. 입면 <span class="muted" style="font-weight:400">· 눌러서 펴기</span></h2>
     <div class="tablewrap"><table id="facades">
       <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
@@ -154,7 +160,7 @@ svg text{font-family:inherit}
     <p class="muted">방위: 입면이 바라보는 방향 (북 0 · 동 90 · 남 180 · 서 270). 창 ㎡를 비우면 폭 × 높이 × 창면적비로 계산합니다.</p>
   </section>
 
-  <section class="panel collapsible collapsed">
+  <section class="panel collapsible collapsed noprint">
     <h2>3. 루버 사양 · 가정값</h2>
     <div class="grid4">
       <div><label for="ptype">사업 유형</label><select id="ptype" style="padding:5px 7px;font-size:13px"><option value="new">신축</option><option value="remodel">리모델링</option></select></div>
@@ -226,7 +232,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 
-<div>
+<div id="rightCol">
   <section class="panel" id="printSummary">
     <h2>검토 대상</h2>
     <div id="printSite"></div>
@@ -552,7 +558,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=25"></script>
 <script src="shade.js?v=1"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=25"></script>
+<script src="features.js?v=26"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013compass75";</script>
 <script src="unity.js?v=26"></script>
 </body>
