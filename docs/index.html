@@ -75,6 +75,11 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .siteplan{max-width:600px;margin:8px auto 0}
 .subh{font-size:16px;font-weight:700;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
 .subblock{break-inside:avoid;min-width:0}
+.topRow{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:24px;align-items:start}
+.topRow .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cumBlock .sliders{grid-template-columns:1fr 1fr}
+@media (max-width:900px){.topRow{grid-template-columns:1fr}}
+@media print{.topRow{display:block}}
 .resultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
 @media (max-width:900px){.resultGrid{grid-template-columns:1fr}}
 @media print{.resultGrid{display:block}}
@@ -256,29 +261,39 @@ svg text{font-family:inherit}
   <section class="panel collapsible collapsed" id="resultPanel" style="grid-column:1 / -1">
     <h2>결과 <span class="muted" id="srcNote"></span></h2>
     <div id="warnings"></div>
-    <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+    <div class="topRow">
+      <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+      <div class="subblock cumBlock">
+        <h3 class="subh" style="display:flex;align-items:center;gap:6px;margin-top:0;padding-top:0;border-top:0">누적 순이익<button id="resetSliders" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h3>
+        <div id="cumChart"></div>
+        <div class="sliders noprint">
+          <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
+          <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
+          <div><label for="sEsc">요금 인상률 (%/년) <output id="oEsc"></output></label><input id="sEsc" type="range" min="0" max="8" step="0.5"></div>
+          <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
+        </div>
+      </div>
+    </div>
     <div class="resultGrid">
-    <div class="subblock">
-    <h3 class="subh">대안 비교</h3>
-    <div id="compare"></div>
-    <div id="glassCmp" style="margin-top:14px"></div>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">누적 순이익 (통유리 대비)</h3>
-    <div id="cumChart"></div>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">연간 운영 히트맵</h3>
-    <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
-    <div id="heatmap"></div>
-    <div class="legend" id="hmLegend"></div>
-    <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
-    </div>
-    <div class="subblock">
-    <h3 class="subh">입면별 (선택한 일사량 기준)</h3>
-    <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
-    <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
-    </div>
+      <div class="subblock">
+        <h3 class="subh">대안 비교</h3>
+        <div id="compare"></div>
+        <div id="glassCmp" style="margin-top:14px"></div>
+      </div>
+      <div>
+        <div class="subblock">
+          <h3 class="subh">입면별</h3>
+          <div id="perFacade"><p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p></div>
+          <div class="btns"><button id="dlInput">site_input.json 내려받기</button><button id="dlResult">result.json 내려받기</button></div>
+        </div>
+        <div class="subblock">
+          <h3 class="subh">연간 운영 히트맵</h3>
+          <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
+          <div id="heatmap"></div>
+          <div class="legend" id="hmLegend"></div>
+          <p class="muted">각 달 15일 기준, 30분 간격. 가로 = 시각, 세로 = 월.</p>
+        </div>
+      </div>
     </div>
   </section>
 </main>
@@ -428,10 +443,12 @@ svg text{font-family:inherit}
       <tr><td style="text-align:left">${gc.life_yr}년 누적 순이익</td><td>${fmtEok(W.cum)}</td><td>${fmtEok(O.cum)}</td><td><b>${d(W.cum,O.cum)}</b></td></tr></tbody></table>
       <p class="muted" style="margin-top:6px">가정: 유지비 = 루버 시스템비 × 연 3%, 보호 유리 청소 · 점검 연 1%, 구동장치 교체 보호 10년 / 노출 5년 (제조사 모터 보증 실내 10년 · 실외 5년 참고). 강풍 때 멈추는 시간 · 고층 안전은 숫자에 넣지 않았습니다.</p>`; })() : '';
     const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
-    $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
+    $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">선택한 일사량, 외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
     window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
   }
   $('run').onclick=run;
+  // 누적 순이익 슬라이더 기본값: 단가 배율 · 전기요금 · 인상률 · 유지비율을 처음 값으로
+  $('resetSliders').onclick=e=>{ e.stopPropagation(); ['costMul','price','esc','maint'].forEach(id=>$(id).value=$(id).defaultValue); run(); };
   // 민감도 슬라이더 기본값: 단가 배율 · 전기요금 · 인상률 · 유지비율을 처음 값으로
   // 값 초기화: 루버 사양 · 가정값을 처음 값 (HTML 기본값) 으로 되돌린다. 입면은 그대로
   $('resetVals').onclick=e=>{ e.stopPropagation();
