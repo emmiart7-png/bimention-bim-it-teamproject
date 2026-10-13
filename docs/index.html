@@ -269,7 +269,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=30"></script>
+<script src="engine.js?v=31"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -390,7 +390,7 @@ svg text{font-family:inherit}
     const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':mode==='radiance'?'radiance':'solar', shade: window.ShadeCorr||null});
     if(mode==='solar') solarCache={k:solarKey,s:out.solar};
     last={input,out,mode};
-    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?(window.ShadeCorr?'· 팀 Radiance + 선택한 건물 주변 그림자 보정':'· 팀 Radiance (1784 9층, 그림자 반영)'):'· 맑은 날 간이식';
+    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?(window.ShadeCorr?'· 팀 Radiance + 선택한 건물 주변 그림자 보정':'· 팀 Radiance (1784 전체 층 평균, 그림자 반영)'):'· 맑은 날 간이식';
     if(window.SiteGeom && window.SiteGeom.en && window.SiteGeom.en.length) out.warnings.unshift('지도에서 고른 건물: 1784 규칙을 적용한 간이 추정입니다. 1784 검증값(Radiance)과 같은 표에 나란히 두지 마세요.');
     $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
     const alts=Object.keys(out.result);
@@ -535,7 +535,7 @@ svg text{font-family:inherit}
       computeShade(b, list);
     }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
-  // 에너지 계산에 주변 건물 · 지형 그림자 넣기 (shade.js). Radiance 값은 1784 9층 기준이라 "가려지는 정도의 차이"만큼 입면별로 보정
+  // 에너지 계산에 주변 건물 · 지형 그림자 넣기 (shade.js). Radiance 값은 1784 전체 층 평균이라 "가려지는 정도의 차이"만큼 입면별로 보정
   let shadeTok=0, lastFs=null;
   async function computeShade(b, list){
     const tok=++shadeTok, note=t=>{ if(tok===shadeTok) $('shadeNote').textContent=t; };
@@ -621,7 +621,7 @@ svg text{font-family:inherit}
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="model3d.js?v=32"></script>
-<script src="shade.js?v=4"></script>
+<script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=29"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>

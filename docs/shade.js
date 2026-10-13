@@ -3,8 +3,8 @@
  * 입면마다 점 여러 개에서 해 쪽으로 광선을 쏴, 주변 건물(외곽 × 높이)이나 지형에 가리는지 본다.
  * 매월 15일, 30분 간격으로 보고, 맑은 날 직달 일사량으로 가중 평균해 "보이는 비율" k (0~1)를 냉방기 · 난방기별로 낸다.
  *
- * 팀 Radiance 값은 1784 9층 (1784 주변 그림자 포함) 이라서, 선택한 건물에는
- *   보정 배수 = k(선택한 건물) ÷ k(1784 9층, 같은 방위 입면)
+ * 팀 Radiance 값은 1784 전체 층 평균 (1784 주변 그림자 포함) 이라서, 선택한 건물에는
+ *   보정 배수 = k(선택한 건물) ÷ k(1784 전체 높이, 같은 방위 입면)
  * 를 곱한다. 확산광도 직달과 같은 비율로 가린다고 보는 근사다.
  *
  * 좌표: e = 동쪽 (m), n = 북쪽 (m), z = 위 (m, 고른 건물 중심의 땅 높이 = 0)
@@ -162,10 +162,10 @@
     return { k, blocked: blockedTab, terrain: !!elev, count: list.length };
   }
 
-  // ---- 1784 9층 기준값 (팀 Radiance 와 같은 자리: 9층 입면 중앙) ----
+  // ---- 1784 기준값 (팀 Radiance 층별 자료와 같은 높이: 3 · 9 · 15 · 20 · 25층 입면 중앙) ----
   // 브라우저에 한 번 계산해 저장해 둔다 (주변 건물을 다시 불러오지 않게)
   // 1784 좌표 = 팀 정답표 (LouverRule_TestVectors). 37.3595, 127.1052 는 바로 북쪽의 그린팩토리라서 쓰지 않는다
-  const REF_KEY = 'shade_ref_1784_v4', REF_LAT = 37.35888, REF_LON = 127.10518, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
+  const REF_KEY = 'shade_ref_1784_v5', REF_LAT = 37.35888, REF_LON = 127.10518, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
   let refPromise = null;
   function reference(cfg) {
     if (refPromise) return refPromise;
@@ -180,8 +180,8 @@
       const c = centroid(b.ring);
       const elev = await terrain(c[1], c[0]);
       const S = scene(b, others, { floorHeight: REF_FLOOR_H, ctxFloorHeight: 3.3, lat0: c[1], lon0: c[0], elev });
-      const z = (REF_FLOOR - 0.5) * REF_FLOOR_H;
-      const k = visibility(S, fs, f => facadePoints(S, f, c[1], c[0], [z], [1 / 2]), c[1], c[0]); delete k._blocked;
+      const zs = [3, 9, 15, 20, 25].map(n => (n - 0.5) * REF_FLOOR_H);
+      const k = visibility(S, fs, f => facadePoints(S, f, c[1], c[0], zs, [1 / 2]), c[1], c[0]); delete k._blocked;
       // 팀 Radiance 입면 (E · S · W · N) 마다 방위가 가장 가까운 1784 입면 값
       const ref = {};
       for (const [id, az] of [['E', 90], ['S', 180], ['W', 270], ['N', 0]]) {

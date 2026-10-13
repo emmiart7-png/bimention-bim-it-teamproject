@@ -77,23 +77,22 @@
       maintenance_rate: { internal_reactive: 0.05, external_fixed: 0.02, external_reactive: 0.05 }   // 엑셀 9번: 총 공사비 × 비율
     }
   };
-  // 팀 Radiance solar_result v9 (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 날 폭 300 / 간격 350 / 반사율 0.5)
-  // 냉방기 6~9월 · 난방기 11~3월. Handoff_Web_Engine_Updates 4번의 "시공 전 대비 감소율"로 만든 값:
-  //   냉방기 (고정 / 반응형): 남 48/65 · 동 43/66 · 서 32/70 · 북 52/52
-  //   난방기 (고정 / 규칙대로 / 겨울 모드 켬): 남 40/78/17 · 동 60/67/32 · 서 56/62/34 · 북 40/40/40
-  // ※ 난방기 통유리 값 (11~3월) 은 v9 JSON 이 없어 옛 12~2월 Radiance 값 × 맑은 날 직달 비 (북은 일수 비 151/90) 로 추정.
-  //   닫힘 시간 · 날 회전량도 옛 값. solar_result_winter_on / off.json (v9) 을 받으면 이 표를 그대로 바꾼다.
+  // 팀 Radiance 층별 solar_result (혜연, Floor_Solar_Result.json): 1784 타워 3 · 5 · 9 · 15 · 20 · 25층 면 중앙 1㎡,
+  // 주변 건물 325개 그림자 (층마다 다시 적용, 그늘이면 날 열림), 서울(성남) TMY 월평균, 날 폭 300 / 간격 350 / 반사율 0.5, 냉방기 6~9월 · 난방기 11~3월.
+  // 아래 값 = 1~28층 평균 (사이 층은 직선 보간, 1~2층은 3층 값, 26~28층은 25층 값). 9층 값만 쓸 때보다 동면 냉방 절감이 약 33% 크다 (저층 그늘 때문에 9층이 낮음)
+  // winter_on: 난방기 반응형 = 겨울 모드 켬 (난방일 해와 나란히), winter_off: 겨울에도 규칙대로
+  // closed_hours_yr = 냉방기 닫힌 시간. 날 회전량 · 북면 (층별 자료에 없음) 은 예전 값
   // internal_reactive 는 팀 값이 없어 아래에서 외부 반응형과 같은 시간에 닫히고 막은 햇빛의 55%가 실내에 남는다고 둔다
   const RADIANCE_9F = {
     winter_on: {
-      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":310.6,"internal_reactive_kwh_m2_yr":310.6,"external_fixed_kwh_m2_yr":124.2,"external_reactive_kwh_m2_yr":211.2}, closed_hours_yr: 586, blade_rotation_deg_yr: 52176 },
-      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":608.3,"internal_reactive_kwh_m2_yr":608.3,"external_fixed_kwh_m2_yr":365,"external_reactive_kwh_m2_yr":504.9}, closed_hours_yr: 926, blade_rotation_deg_yr: 49500 },
-      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":269.8,"internal_reactive_kwh_m2_yr":269.8,"external_fixed_kwh_m2_yr":118.7,"external_reactive_kwh_m2_yr":178.1}, closed_hours_yr: 1106, blade_rotation_deg_yr: 46273 },
+      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":242.8,"internal_reactive_kwh_m2_yr":242.8,"external_fixed_kwh_m2_yr":152.9,"external_reactive_kwh_m2_yr":74.2}, heating_season: {"bare_kwh_m2_yr":287.6,"internal_reactive_kwh_m2_yr":287.6,"external_fixed_kwh_m2_yr":120.4,"external_reactive_kwh_m2_yr":196.9}, closed_hours_yr: 451, blade_rotation_deg_yr: 52176 },
+      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":277.5,"internal_reactive_kwh_m2_yr":277.5,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":95.7}, heating_season: {"bare_kwh_m2_yr":609.6,"internal_reactive_kwh_m2_yr":609.6,"external_fixed_kwh_m2_yr":363.6,"external_reactive_kwh_m2_yr":501.7}, closed_hours_yr: 396, blade_rotation_deg_yr: 49500 },
+      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":301.2,"internal_reactive_kwh_m2_yr":301.2,"external_fixed_kwh_m2_yr":204.2,"external_reactive_kwh_m2_yr":92.6}, heating_season: {"bare_kwh_m2_yr":261,"internal_reactive_kwh_m2_yr":261,"external_fixed_kwh_m2_yr":115.2,"external_reactive_kwh_m2_yr":172.5}, closed_hours_yr: 641, blade_rotation_deg_yr: 46273 },
       N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":135.2,"internal_reactive_kwh_m2_yr":135.2,"external_fixed_kwh_m2_yr":81.1,"external_reactive_kwh_m2_yr":81.1}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } },
     winter_off: {
-      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":192.5,"internal_reactive_kwh_m2_yr":192.5,"external_fixed_kwh_m2_yr":109.3,"external_reactive_kwh_m2_yr":65.1}, heating_season: {"bare_kwh_m2_yr":310.6,"internal_reactive_kwh_m2_yr":310.6,"external_fixed_kwh_m2_yr":124.2,"external_reactive_kwh_m2_yr":102.5}, closed_hours_yr: 614, blade_rotation_deg_yr: 56015 },
-      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":276.7,"internal_reactive_kwh_m2_yr":276.7,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":96.7}, heating_season: {"bare_kwh_m2_yr":608.3,"internal_reactive_kwh_m2_yr":608.3,"external_fixed_kwh_m2_yr":365,"external_reactive_kwh_m2_yr":133.8}, closed_hours_yr: 1268, blade_rotation_deg_yr: 65700 },
-      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":300.5,"internal_reactive_kwh_m2_yr":300.5,"external_fixed_kwh_m2_yr":204,"external_reactive_kwh_m2_yr":91.4}, heating_season: {"bare_kwh_m2_yr":269.8,"internal_reactive_kwh_m2_yr":269.8,"external_fixed_kwh_m2_yr":118.7,"external_reactive_kwh_m2_yr":102.5}, closed_hours_yr: 1134, blade_rotation_deg_yr: 50194 },
+      E: { az: 90, cooling_season: {"bare_kwh_m2_yr":242.8,"internal_reactive_kwh_m2_yr":242.8,"external_fixed_kwh_m2_yr":152.9,"external_reactive_kwh_m2_yr":74.2}, heating_season: {"bare_kwh_m2_yr":287.6,"internal_reactive_kwh_m2_yr":287.6,"external_fixed_kwh_m2_yr":120.4,"external_reactive_kwh_m2_yr":102.8}, closed_hours_yr: 451, blade_rotation_deg_yr: 56015 },
+      S: { az: 180, cooling_season: {"bare_kwh_m2_yr":277.5,"internal_reactive_kwh_m2_yr":277.5,"external_fixed_kwh_m2_yr":143.4,"external_reactive_kwh_m2_yr":95.7}, heating_season: {"bare_kwh_m2_yr":609.6,"internal_reactive_kwh_m2_yr":609.6,"external_fixed_kwh_m2_yr":363.6,"external_reactive_kwh_m2_yr":134.8}, closed_hours_yr: 396, blade_rotation_deg_yr: 65700 },
+      W: { az: 270, cooling_season: {"bare_kwh_m2_yr":301.2,"internal_reactive_kwh_m2_yr":301.2,"external_fixed_kwh_m2_yr":204.2,"external_reactive_kwh_m2_yr":92.6}, heating_season: {"bare_kwh_m2_yr":261,"internal_reactive_kwh_m2_yr":261,"external_fixed_kwh_m2_yr":115.2,"external_reactive_kwh_m2_yr":98.8}, closed_hours_yr: 641, blade_rotation_deg_yr: 50194 },
       N: { az: 0, cooling_season: {"bare_kwh_m2_yr":103.1,"internal_reactive_kwh_m2_yr":103.1,"external_fixed_kwh_m2_yr":49.2,"external_reactive_kwh_m2_yr":49.2}, heating_season: {"bare_kwh_m2_yr":135.2,"internal_reactive_kwh_m2_yr":135.2,"external_fixed_kwh_m2_yr":81.1,"external_reactive_kwh_m2_yr":81.1}, closed_hours_yr: 0, blade_rotation_deg_yr: 0 } }
   };
   // 입면마다 방위가 가장 가까운 Radiance 값을 쓴다 (같은 지역 · 비슷한 높이일 때의 근사). 겨울 모드 체크에 따라 켬 / 끔 결과를 고른다
@@ -103,7 +102,7 @@
     const dist = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
     const near = az => Object.values(set).reduce((b, v) => dist(v.az, az) < dist(b.az, az) ? v : b);
     return {
-      meta: { weather_source: 'KOR_KG_Seoul-Seongnam TMYx (month-average hourly)', shading_included: true, timestep_min: 60, version: 'radiance-9F-v9 (감소율 기반 추정)' },
+      meta: { weather_source: 'KOR_KG_Seoul-Seongnam TMYx (month-average hourly)', shading_included: true, timestep_min: 60, version: 'radiance-1784-floor-avg-v9' },
       facades: input.facades.map(f => { const v = near(f.azimuth_deg); return {
         id: f.id,
         cooling_season: Object.assign({}, v.cooling_season, { internal_reactive_kwh_m2_yr: v.cooling_season.bare_kwh_m2_yr - (1 - A.internal_shading_coef) * (v.cooling_season.bare_kwh_m2_yr - v.cooling_season.external_reactive_kwh_m2_yr) }),
@@ -298,7 +297,7 @@
     if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
     if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터' + (opts.shade ? ' 미반영)' : ' · 주변 그림자 미반영)'));
     if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
-    if (mode === 'radiance') warnings.push('일사량: 팀 Radiance solar_result(1784 9층, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물 · 층에서는 근사값');
+    if (mode === 'radiance') warnings.push('일사량: 팀 Radiance 층별 solar_result (1784 전체 층 평균, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물에서는 근사값');
     // 선택한 건물 주변 그림자 (shade.js, opts.shade = 입면 id → 배수). Radiance 는 1784 대비 배수, 간이식은 보이는 비율을 곱한다
     let used = solar;
     const shadeOn = opts.shade && solar && (mode === 'radiance' || (solar.meta && solar.meta.weather_source === 'clear_sky'));
@@ -308,7 +307,7 @@
       used = { meta: Object.assign({}, solar.meta, { shading_included: true, version: solar.meta.version + '+web-shade' }),
         facades: solar.facades.map(f => { const k = opts.shade[f.id]; if (!k) return f;
           return Object.assign({}, f, { cooling_season: scale(f.cooling_season, rel ? k.cool : k.k_cool), heating_season: scale(f.heating_season, rel ? k.heat : k.k_heat) }); }) };
-      warnings.push(rel ? '선택한 건물 주변 그림자 반영 (웹 계산): 1784 9층 대비 가려지는 정도만큼 입면별로 보정' : '선택한 건물 주변 그림자 반영 (웹 계산)');
+      warnings.push(rel ? '선택한 건물 주변 그림자 반영 (웹 계산): 1784 대비 가려지는 정도만큼 입면별로 보정' : '선택한 건물 주변 그림자 반영 (웹 계산)');
     }
     const q = quantities(input);
     const price = A.elec_price_krw_kwh * A.elec_price_multiplier; // 원/kWh
