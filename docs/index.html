@@ -242,7 +242,7 @@ svg text{font-family:inherit}
     <div id="printSite"></div>
   </section>
   <section class="panel noprint">
-    <h2>루버 시뮬레이션 <span class="muted" id="simTitle">· 네이버 1784</span></h2>
+    <h2>루버 시뮬레이션 / 평면도</h2>
     <div class="timebar noprint">
       <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
       <div style="flex:3"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1438" step="2" value="720"></div>
@@ -265,7 +265,6 @@ svg text{font-family:inherit}
       <p class="muted">외곽선 · 층수 · 층고값으로 만든 단순 모형입니다. 마우스 끌어서 돌리기, 휠로 확대 · 축소 가능합니다.</p>
     </div>
     <div class="sun" id="sunInfo"></div>
-    <h3 style="font-size:14px;margin:14px 0 0">루버 평면도 <span class="muted">· 외부 반응형</span></h3>
     <div class="plans" id="plans"></div>
     <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></div>
   </section>
@@ -571,7 +570,6 @@ svg text{font-family:inherit}
     window.simMode=which;
     const v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior';
     if(m){ if(window.Model3D) Model3D.setView(v); } else window.LouverBridge.sendView(v);
-    $('simTitle').textContent=m?'· 선택한 건물':'· 네이버 1784';
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
     window.dispatchEvent(new Event('resize'));
   }
@@ -620,11 +618,11 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=28"></script>
+<script src="model3d.js?v=30"></script>
 <script src="shade.js?v=4"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=28"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
-<script src="unity.js?v=27"></script>
+<script src="unity.js?v=28"></script>
 </body>
 </html>

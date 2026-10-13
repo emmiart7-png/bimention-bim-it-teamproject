@@ -126,7 +126,8 @@
   }
   function resize() {
     if (!renderer) return;
-    const w = box.clientWidth || 640, h = Math.round(w * 9 / 16);
+    // 높이 = 지도 높이 (가로는 칸 너비 그대로)
+    const mapEl = el('map'), w = box.clientWidth || 640, h = (mapEl && mapEl.offsetHeight) || 340;
     renderer.setSize(w, h);
     camera.aspect = (viewMode === 'split' ? w / 2 : w) / h; camera.updateProjectionMatrix();
     if (icam) { icam.aspect = (viewMode === 'split' ? w / 2 : w) / h; icam.updateProjectionMatrix(); }
