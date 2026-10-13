@@ -514,6 +514,16 @@ svg text{font-family:inherit}
   $('vwKey').value=key;
   $('vwKeyToggle').onchange=()=>{ $('vwKeyRow').hidden=!$('vwKeyToggle').checked; };
   const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY, domain: location.origin });
+  // 이 브라우저에 저장된 다른 키가 틀렸으면 (인증키 오류) 저장된 키를 지우고 기본 키로 한 번 더
+  async function withKey(fn){
+    try{ return await fn(cfg()); }
+    catch(e){
+      if(!$('vwKey').value.trim() || $('vwKey').value.trim()===DEFAULT_VW_KEY || !/인증키|KEY/i.test(e.message)) throw e;
+      try{ localStorage.removeItem('vworldKey'); }catch(_){}
+      $('vwKey').value=''; setBase();
+      return await fn(cfg());
+    }
+  }
   if(typeof L==='undefined'){ status('지도 라이브러리를 불러오지 못했습니다 (인터넷 연결 확인). 아래 1단계 입력은 그대로 쓸 수 있습니다.', true); return; }
   const map=L.map('map').setView([37.35888,127.10518],17);
   let base=null;
@@ -534,7 +544,7 @@ svg text{font-family:inherit}
     if(!cfg().key && !VWorld.isLocal()){ status('브이월드 인증키를 넣어야 건물을 불러올 수 있습니다.', true); return; }
     status('건물 외곽선을 불러오는 중…');
     try{
-      const list=await VWorld.buildingsNear(lat,lon,cfg());
+      const list=await withKey(c=>VWorld.buildingsNear(lat,lon,c));
       if(!list.length){ status('이 근처에서 건물을 찾지 못했습니다. 건물 위를 클릭해 보세요.', true); return; }
       current=VWorld.pickBuilding(list,lat,lon);
       if(outline) map.removeLayer(outline);
@@ -552,7 +562,7 @@ svg text{font-family:inherit}
     if(!cfg().key && !VWorld.isLocal()){ status('주소 검색에는 브이월드 인증키가 필요합니다.', true); return; }
     status('주소를 찾는 중…');
     try{
-      const p=await VWorld.geocode(q,cfg());
+      const p=await withKey(c=>VWorld.geocode(q,c));
       if(!p){ status('찾지 못했습니다. 도로명 주소(예: 정자일로 95)나 건물 이름으로 다시 입력해 보세요.', true); return; }
       status(`찾음: ${p.label}${p.address&&p.address!==p.label?' ('+p.address+')':''} · 건물 외곽선을 불러오는 중…`);
       $('address').value=p.address||q; map.setView([p.lat,p.lon],18); pickAt(p.lat,p.lon);
@@ -575,8 +585,8 @@ svg text{font-family:inherit}
       const n=b.ring.length, lat=b.ring.reduce((s,p)=>s+p[1],0)/n, lon=b.ring.reduce((s,p)=>s+p[0],0)/n;
       // 넓게 먼저 (약 250 m, 응답이 커서 40초까지 기다림), 실패하면 좁게 (약 120 m)
       let list;
-      try{ list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0025); }
-      catch(e){ list=await VWorld.buildingsNear(lat,lon,{...cfg(),timeoutMs:40000},0.0012); }
+      try{ list=await withKey(c=>VWorld.buildingsNear(lat,lon,{...c,timeoutMs:40000},0.0025)); }
+      catch(e){ list=await withKey(c=>VWorld.buildingsNear(lat,lon,{...c,timeoutMs:40000},0.0012)); }
       list=list.filter(x=>x.id!==b.id);
       const k=Model3D.setContext(list,{floorHeight:3.3});
       // Unity 그림자용: 같은 기준점 (고른 건물 중심) 의 외곽 + 높이. 층수 없으면 3층, 층고 3.3 m (3D 보기와 같음)
@@ -595,7 +605,7 @@ svg text{font-family:inherit}
       const sel=await Shade.forBuilding({ring:b.ring, floors:Number($('floors').value)||b.floors||5}, list, lastFs, {floorHeight:Number($('floorH').value)||4});
       if(tok!==shadeTok) return;
 
-      let ref=null; try{ ref=await Shade.reference(cfg()); }catch(e){ console.warn('[Shade] 1784 기준', e); }
+      let ref=null; try{ ref=await withKey(c=>Shade.reference(c)); }catch(e){ console.warn('[Shade] 1784 기준', e); }
       if(tok!==shadeTok) return;
       // 기준값이 없으면 Radiance 보정은 하지 않고 (배수 1), 간이식에만 보이는 비율을 쓴다
       LouverEngine.shadeLookup = sel.blocked ? (id,m,hh,mm)=>{ const t=sel.blocked[id]; return t ? t[m-1][Math.round((hh*60+mm)/30)%48]||0 : 0; } : null;
