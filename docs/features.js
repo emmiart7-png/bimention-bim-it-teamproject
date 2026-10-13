@@ -116,7 +116,12 @@
       const s0 = st.facades.find(x => x.id === f.id); if (!s0) continue;
       const [a, b] = f.path.map(p => S(en(p))), az = f.azimuth_deg * Math.PI / 180;
       const n = [Math.sin(az), -Math.cos(az)], t = [Math.cos(az), Math.sin(az)];   // 화면: 바깥 법선 · 방위가 커지는 쪽
-      if (!s0.louver) { edges += `<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="#8595A4" stroke-width="3" stroke-dasharray="6 6"/>`; continue; }
+      if (!s0.louver) {
+        edges += `<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="#8595A4" stroke-width="3" stroke-dasharray="6 6"/>`;
+        const m0 = [(a[0] + b[0]) / 2 + n[0] * 6, (a[1] + b[1]) / 2 + n[1] * 6];
+        labels.push({ m: m0, phi: Math.atan2(m0[0] - cx, -(m0[1] - cy)), f: s0, w: Math.max(44, String(s0.id).length * 10 + 22) });
+        continue;
+      }
       const sgn = s0.side || 1, ang = (s0.angle || 0) * Math.PI / 180, ux = sgn * Math.sin(ang), uy = Math.cos(ang);
       const vx = ux * t[0] - uy * n[0], vy = ux * t[1] - uy * n[1], h = len / 2, off = gap + len / 2;
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]), count = Math.max(2, Math.round(L / 18));
@@ -144,18 +149,29 @@
     }
     labels.forEach(l => { l.x = cx + RL * Math.sin(l.a); l.y = cy - RL * Math.cos(l.a); });
     let lab = '';
+    // 이름표를 누르면 그 입면의 루버를 달거나 뗀다 (실선 테두리 = 루버 있음, 점선 = 없음, 하늘색 = 지금 닫힘)
     for (const l of labels) {
-      const active = l.f.state === 'closed' || l.f.state === 'winter';
-      lab += `<line x1="${r1(l.m[0])}" y1="${r1(l.m[1])}" x2="${r1(l.x)}" y2="${r1(l.y)}" stroke="#AEB8C2" stroke-width="1.5"/>`;
-      lab += `<rect x="${r1(l.x - l.w / 2)}" y="${r1(l.y - LH / 2)}" width="${l.w}" height="${LH}" rx="8" fill="${active ? '#E8F3FF' : '#F1F4F7'}" stroke="#FFFFFF" stroke-width="2"/>`;
-      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 5)}" text-anchor="middle" font-size="15" font-weight="700" fill="${active ? '#0064E0' : '#0A1317'}">${esc(l.f.id)}</text>`;
+      const on = !!l.f.louver, active = on && (l.f.state === 'closed' || l.f.state === 'winter');
+      lab += `<line x1="${r1(l.m[0])}" y1="${r1(l.m[1])}" x2="${r1(l.x)}" y2="${r1(l.y)}" stroke="#AEB8C2" stroke-width="1.5"${on ? '' : ' stroke-dasharray="4 4"'}/>`;
+      lab += `<g class="facelab" data-fid="${esc(l.f.id)}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(l.f.id)} 입면 루버 ${on ? '있음 (누르면 뗌)' : '없음 (누르면 닮)'}" style="cursor:pointer">`;
+      lab += `<title>${esc(l.f.id)} · ${l.f.azimuth_deg}° · 루버 ${on ? '있음' : '없음'} (누르면 바뀜)</title>`;
+      lab += `<rect x="${r1(l.x - l.w / 2)}" y="${r1(l.y - LH / 2)}" width="${l.w}" height="${LH}" rx="8" fill="${on ? (active ? '#E8F3FF' : '#FFFFFF') : '#F7F8FA'}" stroke="${on ? '#1E4E8C' : '#AEB8C2'}" stroke-width="${on ? 2 : 1.5}"${on ? '' : ' stroke-dasharray="4 3"'}/>`;
+      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 5)}" text-anchor="middle" font-size="15" font-weight="700" fill="${on ? (active ? '#0064E0' : '#0A1317') : '#8595A4'}">${esc(l.f.id)}</text></g>`;
     }
     g += edges + blades + lab;
-    if (st.sun.alt > 0) { const [sx, sy] = P(st.sun.az); g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="22" fill="#FFF8EC" stroke="#F2B544" stroke-width="8"/>`; }
+    if (st.sun.alt > 0) {
+      const [sx, sy] = P(st.sun.az);
+      let rays = '';
+      for (let i = 0; i < 12; i++) { const t = i * Math.PI / 6, c = Math.cos(t), s2 = Math.sin(t); rays += `<line x1="${r1(sx + c * 21)}" y1="${r1(sy + s2 * 21)}" x2="${r1(sx + c * (i % 2 ? 28 : 32))}" y2="${r1(sy + s2 * (i % 2 ? 28 : 32))}"/>`; }
+      g += `<g stroke="#F2A20C" stroke-width="3.5" stroke-linecap="round">${rays}</g><circle cx="${r1(sx)}" cy="${r1(sy)}" r="16" fill="#FFC93C" stroke="#F2A20C" stroke-width="3"/>`;
+    }
     // 위쪽 빈 곳 (여름엔 북쪽 해 길이 비어 있음) 을 잘라 시뮬레이션과 간격을 줄인다
     const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - 15), ...path.map(az => P(az)[1])];
-    if (st.sun.alt > 0) ysAll.push(P(st.sun.az)[1] - 30);
-    const y0 = Math.max(0, Math.floor(Math.min(...ysAll) - 14));
+    if (st.sun.alt > 0) ysAll.push(P(st.sun.az)[1] - 36);
+    const y0 = Math.max(0, Math.floor(Math.min(...ysAll) - 14), 0);
+    ysAll.length = 0;
+    const nx = W - 40, ny = y0 + 44;
+    g += `<g aria-hidden="true"><circle cx="${nx}" cy="${ny}" r="26" fill="#FFFFFF" stroke="#CED0D4" stroke-width="1.5"/><path d="M${nx} ${ny - 19} L${nx + 7} ${ny + 3} L${nx} ${ny - 2} L${nx - 7} ${ny + 3} Z" fill="#DC2E29"/><path d="M${nx} ${ny + 19} L${nx + 7} ${ny + 3} L${nx} ${ny - 2} L${nx - 7} ${ny + 3} Z" fill="#AEB8C2"/><text x="${nx}" y="${ny - 30}" text-anchor="middle" font-size="15" font-weight="700" fill="#DC2E29">N</text></g>`;
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
     return `<svg viewBox="0 ${y0} ${W} ${H - y0}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
@@ -181,6 +197,13 @@
     $('plans').innerHTML = `<div class="siteplan">${svg}</div>` + (many.length ? `<p class="muted">입면이 여러 개인 방위는 대표 입면으로 그렸습니다: ${esc(many.join(' · '))}</p>` : '');
   }
   let timer = null;
+  // 평면도 이름표를 누르면 그 입면의 루버를 달거나 뗀다 (숨긴 2. 입면 표의 체크와 연결)
+  const toggleFace = fid => {
+    const tr = [...document.querySelectorAll('#facades tbody tr')].find(r => r.querySelector('.f-id').value === fid); if (!tr) return;
+    const cb = tr.querySelector('.f-lv'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  $('plans').addEventListener('click', e => { const g = e.target.closest('[data-fid]'); if (g) toggleFace(g.dataset.fid); });
+  $('plans').addEventListener('keydown', e => { const g = e.target.closest('[data-fid]'); if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleFace(g.dataset.fid); } });
   $('simTime').addEventListener('input', () => { simMin = Number($('simTime').value); renderPlans(); });
   let simMin = null;
   $('simDate').addEventListener('change', renderPlans);

@@ -137,7 +137,7 @@ svg text{font-family:inherit}
       <p style="margin-top:6px">다른 건물을 검토하려면</p>
       <ol style="list-style:none;margin:4px 0 6px 8px;padding:0">
         <li><b>1. 지도에서 건물 고르기</b>: 주소를 검색하거나 지도에서 건물을 누른 뒤 "이 건물로 입면 만들기"를 누릅니다.</li>
-        <li><b>2. 입면</b>: 입면마다 루버를 달지 정합니다.</li>
+        <li><b>2. 루버 달 입면 고르기</b>: 오른쪽 평면도에서 입면 이름을 누르면 루버를 달거나 뗍니다.</li>
       </ol>
       <p>루버가 움직이는 모습은 오른쪽 <b>루버 시뮬레이션 / 평면도</b>에서 날짜와 시각을 바꿔 가며 확인할 수 있습니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
     </div>
@@ -181,7 +181,7 @@ svg text{font-family:inherit}
     <p class="muted">지도에서 건물을 고르면 위도 · 경도 · 주소가 자동으로 채워집니다.</p>
   </section>
 
-  <section class="panel noprint">
+  <section class="panel noprint" style="display:none" aria-hidden="true">
     <h2 style="display:flex;align-items:center;gap:6px">2. 입면<button id="resetFacades" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
     <div class="faceToggles" id="faceToggles" role="group" aria-label="입면별 루버 설치"></div>
     <p class="muted" style="margin-top:8px">입면을 누르면 루버를 달거나 뗍니다 (파랑 = 루버 있음)</p>
@@ -263,6 +263,7 @@ svg text{font-family:inherit}
     </div>
     <div class="plans" id="plans"></div>
     <div class="legend" style="align-items:center;justify-content:space-between"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
+    <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
   </section>
 </div>
   <section class="panel collapsible collapsed" id="resultPanel" style="grid-column:1 / -1">
@@ -672,7 +673,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=33"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=37"></script>
+<script src="features.js?v=38"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>
