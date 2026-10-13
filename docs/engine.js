@@ -248,9 +248,20 @@
     const warnings = [];
     if (mode === 'radiance') { solar = radianceSolar(input); }
     if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
-    if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터 · 주변 그림자 미반영)');
+    if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터' + (opts.shade ? ' 미반영)' : ' · 주변 그림자 미반영)'));
     if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
     if (mode === 'radiance') warnings.push('일사량: 팀 Radiance solar_result(1784 9층, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물 · 층에서는 근사값');
+    // 선택한 건물 주변 그림자 (shade.js, opts.shade = 입면 id → 배수). Radiance 는 1784 대비 배수, 간이식은 보이는 비율을 곱한다
+    let used = solar;
+    const shadeOn = opts.shade && solar && (mode === 'radiance' || (solar.meta && solar.meta.weather_source === 'clear_sky'));
+    if (shadeOn) {
+      const rel = mode === 'radiance';
+      const scale = (o, k) => { const r = {}; for (const a in o) r[a] = Math.round(o[a] * k * 10) / 10; return r; };
+      used = { meta: Object.assign({}, solar.meta, { shading_included: true, version: solar.meta.version + '+web-shade' }),
+        facades: solar.facades.map(f => { const k = opts.shade[f.id]; if (!k) return f;
+          return Object.assign({}, f, { cooling_season: scale(f.cooling_season, rel ? k.cool : k.k_cool), heating_season: scale(f.heating_season, rel ? k.heat : k.k_heat) }); }) };
+      warnings.push(rel ? '선택한 건물 주변 그림자 반영 (웹 계산): 1784 9층 대비 가려지는 정도만큼 입면별로 보정' : '선택한 건물 주변 그림자 반영 (웹 계산)');
+    }
     const q = quantities(input);
     const price = A.elec_price_krw_kwh * A.elec_price_multiplier; // 원/kWh
     const lightScale = q.window_area_m2 / 1000;
@@ -268,7 +279,7 @@
         heatAdded = X.winter_kwh_m2_day * q.window_area_m2 * (1 - tw) * A.shgc * X.winter_days * X.weather_factor * A.heating_gain_utilization / A.cop_heating / 1000;
       } else {
         for (const f of lf) {
-          const s = solar.facades.find(x => x.id === f.id);
+          const s = used.facades.find(x => x.id === f.id);
           if (!s) { warnings.push(`입면 ${f.id}: 일사량 값 없음`); continue; }
           const Aw = windowArea(f);
           const c = Aw * A.shgc * (s.cooling_season.bare_kwh_m2_yr - s.cooling_season[alt + '_kwh_m2_yr']) / A.cop_cooling / 1000;
@@ -295,7 +306,7 @@
         per_facade
       };
     }
-    return { result, warnings, solar };
+    return { result, warnings, solar, solar_used: used };
   }
 
   // 통유리 대비 누적 순이익 (원): 전기요금 절감 × 인상 반영 누적 − 공사비 − 유지관리비 × 연수

@@ -245,6 +245,7 @@ svg text{font-family:inherit}
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
       <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
+      <div class="muted" id="shadeNote" style="margin:-4px 0 8px;font-size:12px"></div>
       <div id="model3d" style="border-radius:12px;overflow:hidden;background:#DCE8F5"></div>
       <p class="muted" id="model3dMsg" style="margin-top:6px"></p>
       <p class="muted">브이월드 외곽선 · 층수 · 층고 · 날 간격으로 만든 단순 모형입니다. 마우스 끌기 = 돌리기, 휠 = 확대 · 축소</p>
@@ -256,7 +257,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=25"></script>
+<script src="engine.js?v=26"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -370,10 +371,10 @@ svg text{font-family:inherit}
     // 간이식 일사량은 사이트 · 입면 · 루버 사양이 같으면 다시 계산하지 않는다 (슬라이더가 빠르게 반응하도록)
     const solarKey=JSON.stringify([input.site.lat_deg,input.site.lon_deg,input.facades,input.louver_spec,input.winter_mode]);
     if(mode==='solar' && solarCache.k===solarKey) solar=solarCache.s;
-    const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':mode==='radiance'?'radiance':'solar'});
+    const out=LouverEngine.compute(input, solar, {mode: mode==='excel'?'excel':mode==='radiance'?'radiance':'solar', shade: window.ShadeCorr||null});
     if(mode==='solar') solarCache={k:solarKey,s:out.solar};
     last={input,out,mode};
-    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?'· 팀 Radiance (1784 9층, 그림자 반영)':'· 맑은 날 간이식';
+    $('srcNote').textContent = mode==='excel'?'· 엑셀 검증 모드':mode==='unity'?'· Unity 일사량':mode==='radiance'?(window.ShadeCorr?'· 팀 Radiance + 선택한 건물 주변 그림자 보정':'· 팀 Radiance (1784 9층, 그림자 반영)'):'· 맑은 날 간이식';
     $('warnings').innerHTML=out.warnings.map(w=>`<div class="warn">${w}</div>`).join('');
     const alts=Object.keys(out.result);
     const best=alts.reduce((a,b)=>out.result[b].carbon.saved_t_yr>out.result[a].carbon.saved_t_yr?b:a);
@@ -490,8 +491,31 @@ svg text{font-family:inherit}
       // Unity 그림자용: 같은 기준점 (고른 건물 중심) 의 외곽 + 높이. 층수 없으면 3층, 층고 3.3 m (3D 보기와 같음)
       window.LouverBridge.sendContext({origin_lat_deg:origin[1], origin_lon_deg:origin[0], buildings:list.map(x=>({id:String(x.id??''), floors:x.floors||0, height_m:+((x.floors||3)*3.3).toFixed(1), footprint_en_m:flatRing(x.ring).en}))});
       $('ctxNote').textContent=`· ${k}동 (층수 없는 건물은 3층으로)`;
+      computeShade(b, list);
     }catch(e){ $('ctxNote').textContent='· 주변 건물을 불러오지 못했습니다 ('+e.message+')'; console.warn(e); }
   }
+  // 에너지 계산에 주변 건물 · 지형 그림자 넣기 (shade.js). Radiance 값은 1784 9층 기준이라 "가려지는 정도의 차이"만큼 입면별로 보정
+  let shadeTok=0, lastFs=null;
+  async function computeShade(b, list){
+    const tok=++shadeTok, note=t=>{ if(tok===shadeTok) $('shadeNote').textContent=t; };
+    if(!window.Shade || !lastFs) return;
+    note('에너지 계산용 그림자 계산 중…');
+    try{
+      const sel=await Shade.forBuilding({ring:b.ring, floors:Number($('floors').value)||b.floors||5}, list, lastFs, {floorHeight:Number($('floorH').value)||4});
+      if(tok!==shadeTok) return;
+      note('1784 기준값 불러오는 중 (처음 한 번만, 최대 40초)…');
+      let ref=null; try{ ref=await Shade.reference(cfg()); }catch(e){ console.warn('[Shade] 1784 기준', e); }
+      if(tok!==shadeTok) return;
+      // 기준값이 없으면 Radiance 보정은 하지 않고 (배수 1), 간이식에만 보이는 비율을 쓴다
+      window.ShadeCorr = ref ? Shade.factors(sel, ref) : Object.fromEntries(Object.entries(sel.k).map(([id,v])=>[id,{cool:1,heat:1,k_cool:v.cool,k_heat:v.heat}]));
+      const pct=v=>{ const p=Math.round((v-1)*100); return (p>0?'+':p<0?'−':'±')+Math.abs(p)+'%'; };
+      const rows=lastFs.filter(f=>f.louver).map(f=>{ const c=window.ShadeCorr[f.id]; return c ? `${f.id} 냉방 ${pct(c.cool)} · 난방 ${pct(c.heat)}` : ''; }).filter(Boolean);
+      note(ref ? `그림자 반영 (1784 9층 대비 일사량): ${rows.join(' / ')}${sel.terrain?'':' · 지형 제외'}`
+               : '1784 기준값을 불러오지 못해 Radiance 값은 보정하지 않았습니다 (간이식에만 그림자 반영)');
+      UI.run();
+    }catch(e){ console.warn(e); note('그림자 계산 실패: '+e.message); }
+  }
+
   $('ctxToggle').onchange=()=>{ if(window.Model3D) Model3D.showContext($('ctxToggle').checked); };
   $('terToggle').onchange=()=>{ if(window.Model3D) Model3D.showTerrain($('terToggle').checked); };
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
@@ -515,6 +539,7 @@ svg text{font-family:inherit}
       .bindTooltip(`${f.id} · ${f.azimuth_deg}°${f.louver?'':' · 루버 없음'}`,{permanent:true,direction:'center'}))).addTo(map);
     if(!$('address').value && current.name) $('address').value=current.name;
     origin=ringCenter(current.ring); window.SiteGeom=flatRing(current.ring);
+    window.ShadeCorr=null; lastFs=fs; shadeTok++; $('shadeNote').textContent='';
     $('simSrc').style.display=''; showSim('model');
     if(window.Model3D) try{ Model3D.setBuilding({ring:current.ring, floors:Number($('floors').value)||current.floors||5, floorHeight:Number($('floorH').value)||4, facades:fs, spacingMm:Number($('spacing').value)||350, depthMm:Number($('depth').value)||300, name:current.name, onTerrain:t=>{ $('terNote').textContent='· '+t; }}); $('terNote').textContent='· 불러오는 중…'; loadContext(current); }catch(e){ console.warn(e); }
     status(`입면 ${fs.length}개를 만들었습니다 (루버 ${fs.filter(f=>f.louver).length}개 면). 계산 결과를 확인하세요.`);
@@ -525,6 +550,7 @@ svg text{font-family:inherit}
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="model3d.js?v=24"></script>
+<script src="shade.js?v=1"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=25"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013compass75";</script>
