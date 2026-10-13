@@ -28,7 +28,7 @@
     };
     if (window.UNITY_FILE_SUFFIX) for (const k of ['dataUrl', 'frameworkUrl', 'codeUrl']) config[k] += window.UNITY_FILE_SUFFIX;
     window.createUnityInstance(canvas, config, p => { const el = document.getElementById('unity-progress'); if (el) el.textContent = `Unity 불러오는 중… ${Math.round(p * 100)}%`; })
-      .then(inst => { window.unityInstance = inst; const el = document.getElementById('unity-progress'); if (el) el.textContent = 'Unity 연결됨 · 웹의 건물 · 하루 재생 시각이 함께 반영됩니다'; })
+      .then(inst => { window.unityInstance = inst; const el = document.getElementById('unity-progress'); if (el) el.style.display = 'none'; /* 다 뜨면 진행 문구를 숨긴다 */ })
       .catch(err => { box.innerHTML = `<div class="warn">Unity를 불러오지 못했습니다: ${String(err).replace(/</g, '&lt;')}<br>빌드 이름(unity.js의 NAME)과 압축 설정(Disabled 또는 Decompression Fallback)을 확인하세요.</div>`; });
   };
   s.onerror = () => { /* 빌드가 아직 없음: 자리 표시 문구 유지 */ };
