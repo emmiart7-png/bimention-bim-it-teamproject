@@ -55,7 +55,7 @@
     // 간이 일사 계산
     clear_fraction: 0.6,             // 맑은 날 비율
     // 겨울 모드 v9: 난방일에만 "해와 나란히" (눈부신 시각 · 비스듬한 해는 0°). 난방일 = 7일 평균 기온 12°C 미만
-    // (팀 winter_calendar.csv, 성남 약 10/30~4/17). 날짜표 파일이 없어 이 날짜 범위로 둔다
+    // (팀 v9 winter_calendar.csv, 성남: 1/1~4/17 · 10/30~12/31 이 겨울. 날짜표와 같은 범위)
     winter_calendar: { start: [10, 30], end: [4, 17] },
     internal_shading_coef: 0.55,     // 내부 루버가 닫혔을 때 실내에 남는 열 비율
     cooling_months: [6, 7, 8, 9],
