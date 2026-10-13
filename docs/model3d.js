@@ -107,7 +107,7 @@
     if (!model) return;
     const az = { east: 90, south: 180, west: 270, north: 0 }[side];
     if (az === undefined) { controls.target.copy(model.home.target); camera.position.copy(model.home.pos); controls.update(); return; }
-    const f = nearestFace(az, true);
+    const f = nearestFace(az, false);   // 루버가 없는 면 (북면 등) 도 그 방향 면을 본다
     const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2, y = model.height * 0.5;
     const t = (f.az + 20) * RAD, dist = Math.max(40, Math.min(90, f.len * 0.9));
     controls.target.set(mE, y, -mN);
