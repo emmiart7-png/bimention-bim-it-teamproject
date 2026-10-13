@@ -125,38 +125,35 @@
         blades += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="5" stroke-linecap="round"/>`;
       }
       const m = [(a[0] + b[0]) / 2 + n[0] * (gap + len), (a[1] + b[1]) / 2 + n[1] * (gap + len)];
-      labels.push({ m, x: cx + n[0] * (rB + 78), y: cy + n[1] * (rB + 78), f: s0 });
+      labels.push({ m, phi: Math.atan2(m[0] - cx, -(m[1] - cy)), f: s0, w: Math.max(44, String(s0.id).length * 10 + 22) });
     }
-    // 이름표끼리 겹치지 않게: 겹치면 서로 밀어내고, 건물 원 밖 · 그림 안에 둔다
-    const LW = 128, LH = 48, R0 = rB + 52;
-    for (let it = 0; it < 120; it++) {
+    // 이름표: 해 궤도와 같은 중심의 원 위에 입면 순서대로 늘어놓는다 (순서를 지켜 이음선이 엉키지 않게, 겹치면 원을 따라 벌린다)
+    const LH = 30, RL = rs - 38;
+    labels.sort((p, q) => p.phi - q.phi);
+    labels.forEach(l => { l.a = l.phi; });
+    const ext = l => Math.abs(Math.cos(l.a)) * l.w + Math.abs(Math.sin(l.a)) * LH;   // 원을 따라가는 방향으로 차지하는 길이
+    for (let it = 0; it < 300 && labels.length > 1; it++) {
       let moved = false;
-      for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
-        const A = labels[i], B = labels[j], dx = B.x - A.x, dy = B.y - A.y, ox2 = LW + 8 - Math.abs(dx), oy2 = LH + 8 - Math.abs(dy);
-        if (ox2 > 0 && oy2 > 0) {
-          moved = true;
-          if (ox2 < oy2) { const d = ox2 / 2 * (dx >= 0 ? 1 : -1); A.x -= d; B.x += d; } else { const d = oy2 / 2 * (dy >= 0 ? 1 : -1); A.y -= d; B.y += d; }
-        }
+      for (let i = 0; i < labels.length; i++) {
+        const A = labels[i], B = labels[(i + 1) % labels.length];
+        const gapA = (i + 1 === labels.length ? B.a + 2 * Math.PI : B.a) - A.a, need = ((ext(A) + ext(B)) / 2 + 8) / RL;
+        if (gapA < need) { const d = (need - gapA) / 2; A.a -= d; B.a += d; moved = true; }
       }
-      for (const l of labels) {
-        const dx = l.x - cx, dy = l.y - cy, d = Math.hypot(dx, dy) || 1;
-        if (d < R0) { l.x = cx + dx / d * R0; l.y = cy + dy / d * R0; }
-        l.x = Math.max(LW / 2 + 4, Math.min(W - LW / 2 - 4, l.x)); l.y = Math.max(LH / 2 + 4, Math.min(H - LH / 2 - 4, l.y));
-      }
+      labels.forEach(l => { l.a += (l.phi - l.a) * 0.02; });
       if (!moved) break;
     }
+    labels.forEach(l => { l.x = cx + RL * Math.sin(l.a); l.y = cy - RL * Math.cos(l.a); });
     let lab = '';
     for (const l of labels) {
       const active = l.f.state === 'closed' || l.f.state === 'winter';
       lab += `<line x1="${r1(l.m[0])}" y1="${r1(l.m[1])}" x2="${r1(l.x)}" y2="${r1(l.y)}" stroke="#AEB8C2" stroke-width="1.5"/>`;
-      lab += `<rect x="${r1(l.x - LW / 2)}" y="${r1(l.y - LH / 2)}" width="${LW}" height="${LH}" rx="9" fill="${active ? '#E8F3FF' : '#F1F4F7'}" stroke="#FFFFFF" stroke-width="2"/>`;
-      lab += `<text x="${r1(l.x)}" y="${r1(l.y - 4)}" text-anchor="middle" font-size="15" font-weight="700" fill="#0A1317">${esc(l.f.id + ' · ' + l.f.azimuth_deg + '°')}</text>`;
-      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 15)}" text-anchor="middle" font-size="13" fill="${active ? '#0064E0' : '#5D6C7B'}">${esc(sideText(l.f))}</text>`;
+      lab += `<rect x="${r1(l.x - l.w / 2)}" y="${r1(l.y - LH / 2)}" width="${l.w}" height="${LH}" rx="8" fill="${active ? '#E8F3FF' : '#F1F4F7'}" stroke="#FFFFFF" stroke-width="2"/>`;
+      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 5)}" text-anchor="middle" font-size="15" font-weight="700" fill="${active ? '#0064E0' : '#0A1317'}">${esc(l.f.id)}</text>`;
     }
     g += edges + blades + lab;
     if (st.sun.alt > 0) { const [sx, sy] = P(st.sun.az); g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="22" fill="#FFF8EC" stroke="#F2B544" stroke-width="8"/>`; }
     // 위쪽 빈 곳 (여름엔 북쪽 해 길이 비어 있음) 을 잘라 시뮬레이션과 간격을 줄인다
-    const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - LH / 2), ...path.map(az => P(az)[1])];
+    const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - 15), ...path.map(az => P(az)[1])];
     if (st.sun.alt > 0) ysAll.push(P(st.sun.az)[1] - 30);
     const y0 = Math.max(0, Math.floor(Math.min(...ysAll) - 14));
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
