@@ -33,7 +33,12 @@
     contingency_rate: 0.05,
     cost_multiplier: 1,
     protective_glass: { external_reactive: true, external_fixed: false },
-    maintenance_rate: { internal_reactive: 0.05, external_fixed: 0.02, external_reactive: 0.05 },
+    // 연 유지관리비 = 루버 시스템 (날 · 프레임 · 구동장치 · 설치) 비용 × 비율. 일반 건물 연 유지비 2~4% (재조달가 대비) 의 중간 3% 를
+    // 움직이는 루버에, 움직이는 부분이 없는 고정 루버는 낮은 쪽 1% 로 둔다 (가정, 민감도 2~4%). 보호 유리 · 설계비 · 비계 · 소프트웨어 개발비에는 곱하지 않는다
+    maintenance_rate: { internal_reactive: 0.03, external_fixed: 0.01, external_reactive: 0.03 },
+    glass_maintenance_rate: 0.01,    // 보호 유리 청소 · 점검 (유리값의 연 1%, 가정)
+    // 구동장치 교체 주기 (년): 실내 · 보호 유리 안쪽 10년, 바깥 노출 5년 (제조사 모터 보증 실내 10년 / 실외 5년 참고, 가정)
+    drive_life_yr: { protected: 10, exposed: 5 },
     maintenance_multiplier: 1,
     elec_price_krw_kwh: 150,
     elec_price_multiplier: 1,
@@ -68,7 +73,8 @@
       winter_days: 90,
       weather_factor: 1,              // Radiance 는 실제 날씨 반영
       winter_transmission: { bare: 1, internal_reactive: 1, external_fixed: 0.52234, external_reactive_rule: 0.27813, external_reactive_winter: 0.52234 },
-      cop: 3                          // 엑셀은 냉난방 COP 3
+      cop: 3,                         // 엑셀은 냉난방 COP 3
+      maintenance_rate: { internal_reactive: 0.05, external_fixed: 0.02, external_reactive: 0.05 }   // 엑셀 9번: 총 공사비 × 비율
     }
   };
   // 팀 Radiance solar_result v9 (1784 타워 9층 면 중앙 1㎡, 주변 건물 325개 그림자, 서울(성남) TMY 월평균, 날 폭 300 / 간격 350 / 반사율 0.5)
@@ -282,6 +288,7 @@
   // ---- 본 계산 ----
   function compute(input, solar, opts) {
     opts = opts || {};
+    const solarArg = solar;
     const A = merge(DEFAULT_ASSUMPTIONS, input.assumptions);
     const mode = opts.mode || 'solar'; // 'solar' | 'excel'
     const warnings = [];
@@ -332,7 +339,20 @@
       const lightAdded = (A.lighting_kwh_per_1000m2[alt] - A.lighting_kwh_per_1000m2.bare) * lightScale / 1000;
       const net = coolSaved - lightAdded - heatAdded;
       const cst = cost(alt, q, A);
-      const maint = cst.total_krw * A.maintenance_rate[alt] * A.maintenance_multiplier + (alt !== 'external_fixed' ? A.unit_price.software_run_krw_yr * A.maintenance_multiplier : 0);
+      // 유지관리비 (연): 엑셀 검증 모드는 엑셀 9번 그대로 (총 공사비 × 비율)
+      let maint, mb = null;
+      const software = alt !== 'external_fixed' ? A.unit_price.software_run_krw_yr * A.maintenance_multiplier : 0;
+      if (mode === 'excel') maint = cst.total_krw * A.excel_mode.maintenance_rate[alt] * A.maintenance_multiplier + software;
+      else {
+        const it = cst.items_krw, system = it.louver + it.frame + it.drive + it.install;
+        const protectedDrive = alt === 'internal_reactive' || !!A.protective_glass[alt];
+        const driveLife = protectedDrive ? A.drive_life_yr.protected : A.drive_life_yr.exposed;
+        const replacements = alt === 'external_fixed' ? 0 : Math.floor((A.life_yr - 1) / driveLife);   // 수명 안에서 교체 횟수
+        const replaceCost = q.drive_units * A.unit_price.drive_unit_krw * A.cost_multiplier;            // 구동 유닛 전체 1회
+        mb = { system: system * A.maintenance_rate[alt] * A.maintenance_multiplier, glass: it.protective_glass * A.glass_maintenance_rate * A.maintenance_multiplier,
+               drive_replacement: replacements * replaceCost / A.life_yr, software, drive_life_yr: alt === 'external_fixed' ? null : driveLife, replacements, replace_cost_krw: replaceCost };
+        maint = mb.system + mb.glass + mb.drive_replacement + mb.software;
+      }
       // 엑셀 8·9·10번 시트는 전기요금에 난방을 넣지 않음 → 검증 모드에서만 제외
       const moneyMwh = mode === 'excel' ? coolSaved - lightAdded : net;
       const energySavedKrw = moneyMwh * 1000 * price;
@@ -343,9 +363,19 @@
         cost: cst,
         energy: { cooling_saved_mwh_yr: coolSaved, lighting_added_mwh_yr: lightAdded, heating_added_mwh_yr: heatAdded, net_saved_mwh_yr: net },
         carbon: { saved_t_yr: net * A.emission_t_mwh, saved_t_life: net * A.emission_t_mwh * A.life_yr, cost_per_t_krw: net > 0 ? cst.total_krw / (net * A.emission_t_mwh * A.life_yr) : null },
-        money: { energy_saved_krw_yr: energySavedKrw, maintenance_krw_yr: maint, breakeven_year: be },
+        money: { energy_saved_krw_yr: energySavedKrw, maintenance_krw_yr: maint, maintenance_breakdown: mb, breakeven_year: be },
         per_facade
       };
+    }
+    // 보호 유리 비교 (외부 반응형): 같은 입력에서 유리만 바꿔 다시 계산
+    if (!opts._inner && mode !== 'excel' && result.external_reactive) {
+      const on = !!A.protective_glass.external_reactive;
+      const other = compute(Object.assign({}, input, { assumptions: Object.assign({}, input.assumptions || {}, { protective_glass: Object.assign({}, A.protective_glass, { external_reactive: !on }) }) }), solarArg, Object.assign({}, opts, { _inner: true })).result.external_reactive;
+      const withG = on ? result.external_reactive : other, without = on ? other : result.external_reactive;
+      const cum = r => cumulativeNet(r, A.elec_escalation, A.life_yr)[A.life_yr];
+      result.external_reactive.glass_compare = { life_yr: A.life_yr, selected: on,
+        with: { cost: withG.cost.total_krw, maint: withG.money.maintenance_krw_yr, replacements: withG.money.maintenance_breakdown.replacements, drive_life_yr: withG.money.maintenance_breakdown.drive_life_yr, cum: cum(withG) },
+        without: { cost: without.cost.total_krw, maint: without.money.maintenance_krw_yr, replacements: without.money.maintenance_breakdown.replacements, drive_life_yr: without.money.maintenance_breakdown.drive_life_yr, cum: cum(without) } };
     }
     return { result, warnings, solar, solar_used: used };
   }

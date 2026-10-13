@@ -175,10 +175,10 @@ svg text{font-family:inherit}
       <div><label for="coolK" title="창에 닿는 일사가 1 kWh 줄 때 줄어드는 냉방 부하 (팀 EnergyPlus 민감도, 1784 9층 서남 모서리 방)">냉방 부하 / 일사</label><input id="coolK" type="number" step="0.01" value="1.13"></div>
       <div><label for="heatK" title="창에 닿는 일사가 1 kWh 줄 때 늘어나는 난방 부하 (팀 EnergyPlus, 0.48~0.65 중간값)">난방 부하 / 일사</label><input id="heatK" type="number" step="0.01" value="0.56"></div>
       <div><label for="emis">배출계수 (tCO₂/MWh)</label><input id="emis" type="number" step="0.01" value="0.46"></div>
-      <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
+      <div><label for="maint" title="날 · 프레임 · 구동장치 · 설치비에 곱하는 연 비율. 일반 건물 연 유지비 2~4% 의 중간">반응형 유지비율 (%/년)</label><input id="maint" type="number" step="0.5" value="3"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
@@ -190,6 +190,7 @@ svg text{font-family:inherit}
   <section class="panel collapsible collapsed">
     <h2>대안 비교</h2>
     <div id="compare"></div>
+    <div id="glassCmp" style="margin-top:14px"></div>
   </section>
   <section class="panel collapsible collapsed">
     <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
@@ -265,7 +266,7 @@ svg text{font-family:inherit}
   </section>
 </div>
 </main>
-<script src="engine.js?v=27"></script>
+<script src="engine.js?v=28"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -318,7 +319,7 @@ svg text{font-family:inherit}
       site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value),footprint_lonlat:fp.lonlat,footprint_en_m:fp.en},
       project_type:$('ptype').value, winter_mode:true, /* 겨울 모드 (난방일 해와 나란히) 는 항상 켬 */ facades,
       louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
-      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('copH').value),cooling_load_per_kwh:Number($('coolK').value),heating_load_per_kwh:Number($('heatK').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
+      assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('copH').value),cooling_load_per_kwh:Number($('coolK').value),heating_load_per_kwh:Number($('heatK').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.01,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
     };
   }
 
@@ -395,6 +396,17 @@ svg text{font-family:inherit}
       <div class="kv"><span>루버 · 구동 유닛</span><b>${f1(r.quantity.louver_area_m2)}㎡ · ${r.quantity.drive_units}개</b></div></div>`;}).join('');
     const rows=[['냉방 전력 절감 (MWh/년)',r=>f1(r.energy.cooling_saved_mwh_yr)],['조명 전력 증가 (MWh/년)',r=>f1(r.energy.lighting_added_mwh_yr)],['겨울 난방 증가 (MWh/년)',r=>f1(r.energy.heating_added_mwh_yr)],['순 전력 절감 (MWh/년)',r=>f1(r.energy.net_saved_mwh_yr)],['탄소 감축 (tCO₂/년)',r=>f1(r.carbon.saved_t_yr)],['수명 기간 탄소 (tCO₂)',r=>f1(r.carbon.saved_t_life)],['연 전기요금 절감',r=>fmtMan(r.money.energy_saved_krw_yr)],['연 유지관리비',r=>fmtMan(r.money.maintenance_krw_yr)],['총 공사비',r=>fmtEok(r.cost.total_krw)],['보호 유리 (㎡)',r=>f1(r.quantity.protective_glass_m2)],['탄소 1톤당 공사비',r=>r.carbon.cost_per_t_krw?fmtMan(r.carbon.cost_per_t_krw):'—']];
     $('compare').innerHTML=`<table><thead><tr><th style="text-align:left">통유리 대비</th>${alts.map(k=>`<th>${out.result[k].name}</th>`).join('')}</tr></thead><tbody>${rows.map(([n,fn])=>`<tr><td style="text-align:left">${n}</td>${alts.map(k=>`<td>${fn(out.result[k])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+    // 보호 유리 비교 (외부 반응형)
+    const gc=out.result.external_reactive&&out.result.external_reactive.glass_compare;
+    $('glassCmp').innerHTML = gc ? (()=>{ const W=gc.with, O=gc.without, d=(a,b)=>{const v=a-b; return (v>0?'+':v<0?'−':'')+fmtEok(Math.abs(v)).replace('-','');};
+      const dm=(a,b)=>{const v=a-b; return (v>0?'+':v<0?'−':'')+fmtMan(Math.abs(v));};
+      return `<h3 style="font-size:14px;margin:0 0 6px">보호 유리 비교 <span class="muted" style="font-weight:400">· 외부 반응형, ${gc.life_yr}년 · 지금 선택: ${gc.selected?'있음':'없음'}</span></h3>
+      <table><thead><tr><th style="text-align:left"></th><th>보호 유리 있음</th><th>없음</th><th>차이 (있음 − 없음)</th></tr></thead><tbody>
+      <tr><td style="text-align:left">총 공사비</td><td>${fmtEok(W.cost)}</td><td>${fmtEok(O.cost)}</td><td>${d(W.cost,O.cost)}</td></tr>
+      <tr><td style="text-align:left">구동장치 교체</td><td>${W.drive_life_yr}년마다 · ${W.replacements}회</td><td>${O.drive_life_yr}년마다 · ${O.replacements}회</td><td>${W.replacements-O.replacements}회</td></tr>
+      <tr><td style="text-align:left">연 유지관리비 (교체비 포함)</td><td>${fmtMan(W.maint)}</td><td>${fmtMan(O.maint)}</td><td>${dm(W.maint,O.maint)}</td></tr>
+      <tr><td style="text-align:left">${gc.life_yr}년 누적 순이익</td><td>${fmtEok(W.cum)}</td><td>${fmtEok(O.cum)}</td><td><b>${d(W.cum,O.cum)}</b></td></tr></tbody></table>
+      <p class="muted" style="margin-top:6px">가정: 유지비 = 루버 시스템비 × 연 3% (일반 건물 2~4% 의 중간), 보호 유리 청소 · 점검 연 1%, 구동장치 교체 보호 10년 / 노출 5년 (제조사 모터 보증 실내 10년 · 실외 5년 참고). 강풍 때 멈추는 시간 · 고층 안전은 숫자에 넣지 않았습니다.</p>`; })() : '';
     const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
     $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
     window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
