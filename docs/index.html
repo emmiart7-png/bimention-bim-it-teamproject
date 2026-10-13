@@ -114,9 +114,10 @@ svg text{font-family:inherit}
 <main>
 <div id="leftCol">
   <section class="panel noprint">
-    <h2>1. 지도에서 건물 고르기 (브이월드)</h2>
-    <div class="inline">
-      <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="발급받은 키 (이 브라우저에만 저장)" autocomplete="off"></div>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 (브이월드) <button id="resetMap" style="font-size:12px;padding:4px 10px">값 초기화</button></h2>
+    <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
+    <div class="inline" id="vwKeyRow" hidden>
+      <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
       <button id="vwSave">저장</button>
     </div>
     <div class="inline">
@@ -126,12 +127,12 @@ svg text{font-family:inherit}
     <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
     <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
     <div class="row3">
-      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="자동"></div>
+      <div><label for="floors">지상층수</label><input id="floors" type="number" min="1" placeholder="직접 입력 (비우면 브이월드 값)"></div>
       <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" step="0.1" value="4"></div>
       <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" step="0.05" value="0.6"></div>
     </div>
     <div class="row">
-      <div><label for="minEdge">짧은 변 제외 (m 미만)</label><input id="minEdge" type="number" value="5"></div>
+      <div><label for="minEdge">짧은 변 제외 (m 미만)</label><input id="minEdge" type="number" value="30"></div>
       <div><label class="check"><input type="checkbox" id="noNorth" checked> 북쪽 ±45° 입면은 루버 없음</label></div>
     </div>
     <div class="btns"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
@@ -151,7 +152,7 @@ svg text{font-family:inherit}
   </section>
 
   <section class="panel collapsible collapsed noprint">
-    <h2>2. 입면 <span class="muted" style="font-weight:400">· 눌러서 펴기</span></h2>
+    <h2 style="display:flex;align-items:center;gap:6px">2. 입면 <span class="muted" style="font-weight:400">· 눌러서 펴기</span><button id="resetFacades" style="margin-left:auto;font-size:12px;padding:4px 10px">값 초기화</button></h2>
     <div class="tablewrap"><table id="facades">
       <thead><tr><th>이름</th><th>방위°</th><th>폭 m</th><th>높이 m</th><th>창면적비</th><th>창 ㎡</th><th>루버</th><th></th></tr></thead>
       <tbody></tbody>
@@ -192,7 +193,7 @@ svg text{font-family:inherit}
     <div id="glassCmp" style="margin-top:14px"></div>
   </section>
   <section class="panel collapsible collapsed">
-    <h2>누적 순이익 · 민감도 (통유리 대비)</h2>
+    <h2 style="display:flex;align-items:center;gap:6px">누적 순이익 · 민감도 (통유리 대비)<button id="resetSliders" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h2>
     <div class="sliders noprint">
       <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
       <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
@@ -272,7 +273,7 @@ svg text{font-family:inherit}
   if(typeof window.LouverEngine==='undefined'){ const d=document.createElement('div'); d.className='warn'; d.style.margin='16px 24px'; d.innerHTML='계산 파일(engine.js)을 불러오지 못했습니다. 이 화면은 앱의 파일 미리보기라서 HTML 한 장만 열립니다. <b>크롬 · 엣지에서 깃허브 페이지 주소</b>로 열거나, 이 폴더에서 <b>node serve.js</b>를 실행한 뒤 http://localhost:8080 으로 여세요.'; document.body.prepend(d); window.UI=null; return; }
   const $ = id => document.getElementById(id);
   const PRESETS = [
-    {name:'네이버 1784 · 그린팩토리 (성남 정자동)', address:'경기 성남시 분당구 정자동', lat:37.3595, lon:127.1052},
+    {name:'네이버 1784 (성남 정자동)', address:'경기 성남시 분당구 정자동', lat:37.35888, lon:127.10518},
     {name:'서울 시청', address:'서울 중구 세종대로 110', lat:37.5663, lon:126.9779},
     {name:'세종 정부청사', address:'세종 도움6로 11', lat:36.5040, lon:127.2650},
     {name:'대전 시청', address:'대전 서구 둔산로 100', lat:36.3504, lon:127.3845},
@@ -294,6 +295,8 @@ svg text{font-family:inherit}
   }
   const defaults=[{id:'E',az:90,area:300,louver:true},{id:'S',az:180,area:400,louver:true},{id:'W',az:270,area:300,louver:true},{id:'N',az:0,area:300,louver:false}];
   defaults.forEach(addRow);
+  const resetFacades=()=>{ tbody.innerHTML=''; defaults.forEach(addRow); };
+  $('resetFacades').onclick=e=>{ e.stopPropagation(); resetFacades(); run(); };
   $('addFacade').onclick=()=>addRow({id:'F'+(tbody.children.length+1),az:180,w:20,h:30,wwr:0.6,louver:true});
   $('box4').onclick=()=>{
     const w=Number(prompt('건물 폭 (동서 방향, m)', '40')), d=Number(prompt('건물 깊이 (남북 방향, m)', '30')), h=Number(prompt('건물 높이 (m)', '60')), r=Number(prompt('창면적비 (0~1)', '0.6'));
@@ -358,10 +361,12 @@ svg text{font-family:inherit}
 
   // 입면 보기: Unity 외관 카메라를 그 입면 정면으로
   document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{
-    const ext=document.querySelector('input[name=uview][value=exterior]'); if(ext && !ext.checked){ ext.checked=true; window.LouverBridge.sendView('exterior'); }
+    const model=window.simMode==='model';
+    const ext=document.querySelector('input[name=uview][value=exterior]'); if(ext && !ext.checked){ ext.checked=true; if(model) Model3D.setView('exterior'); else window.LouverBridge.sendView('exterior'); }
+    if(model){ if(window.Model3D) Model3D.lookAtFacade(b.dataset.face); return; }
     if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverViewSetup','LookAtFacade',b.dataset.face); }catch(e){ console.warn(e); } }
   });
-  document.querySelectorAll('input[name=uview]').forEach(r=>r.onchange=()=>{ if(r.checked) window.LouverBridge.sendView(r.value); });
+  document.querySelectorAll('input[name=uview]').forEach(r=>r.onchange=()=>{ if(!r.checked) return; if(window.simMode==='model'){ if(window.Model3D) Model3D.setView(r.value); } else window.LouverBridge.sendView(r.value); });
 
   const fmtEok = v => (v/1e8).toFixed(2)+'억';
   const fmtMan = v => Math.round(v/1e4).toLocaleString('ko-KR')+'만';
@@ -410,6 +415,8 @@ svg text{font-family:inherit}
     window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
   }
   $('run').onclick=run;
+  // 민감도 슬라이더 기본값: 단가 배율 · 전기요금 · 인상률 · 유지비율을 처음 값으로
+  $('resetSliders').onclick=e=>{ e.stopPropagation(); ['costMul','price','esc','maint'].forEach(id=>$(id).value=$(id).defaultValue); run(); };
   // 값 초기화: 루버 사양 · 가정값을 처음 값 (HTML 기본값) 으로 되돌린다. 입면은 그대로
   $('resetVals').onclick=()=>{
     $('run').closest('section').querySelectorAll('input,select').forEach(el=>{
@@ -434,7 +441,7 @@ svg text{font-family:inherit}
     if(a.protective_glass) $('glass').checked=!!a.protective_glass.external_reactive;
     if(mode){ const r=document.querySelector(`input[name=src][value=${mode}]`); if(r){ r.checked=true; if(r.closest('details')) r.closest('details').open=true; } }
   }
-  window.UI={addRow,run,clearFacades:()=>{tbody.innerHTML='';},readInput,fillInput,getLast:()=>last};
+  window.UI={addRow,run,resetFacades,resetSite:()=>{ $('preset').value=0; setPreset(0); },clearFacades:()=>{tbody.innerHTML='';},readInput,fillInput,getLast:()=>last};
   const dl=(name,obj)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href);};
   $('dlInput').onclick=()=>dl('site_input.json',readInput());
   $('dlResult').onclick=()=>{ if(!last) run(); dl('result.json',{result:last.out.result,warnings:last.out.warnings}); };
@@ -447,11 +454,14 @@ svg text{font-family:inherit}
   if(!window.UI || typeof window.VWorld==='undefined') return;
   const $ = id => document.getElementById(id);
   const status = (t, err) => { const s=$('vwStatus'); s.textContent=t; s.classList.toggle('err',!!err); };
+  // 기본 키 (은미). "인증키 변경"을 켜고 다른 키를 저장하면 이 브라우저에서는 그 키를 쓴다
+  const DEFAULT_VW_KEY='9134829E-B49D-4C50-BE4F-9E4686AFFF41';
   let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
   $('vwKey').value=key;
-  const cfg = () => ({ key: $('vwKey').value.trim(), domain: location.origin });
+  $('vwKeyToggle').onchange=()=>{ $('vwKeyRow').hidden=!$('vwKeyToggle').checked; };
+  const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY, domain: location.origin });
   if(typeof L==='undefined'){ status('지도 라이브러리를 불러오지 못했습니다 (인터넷 연결 확인). 아래 1단계 입력은 그대로 쓸 수 있습니다.', true); return; }
-  const map=L.map('map').setView([37.3595,127.1052],17);
+  const map=L.map('map').setView([37.35888,127.10518],17);
   let base=null;
   function setBase(){
     if(base) map.removeLayer(base);
@@ -461,7 +471,7 @@ svg text{font-family:inherit}
     base.addTo(map);
   }
   setBase();
-  $('vwSave').onclick=()=>{ try{ localStorage.setItem('vworldKey',$('vwKey').value.trim()); }catch(e){} setBase(); status('키를 저장했습니다. 건물을 클릭해 보세요.'); };
+  $('vwSave').onclick=()=>{ const k=$('vwKey').value.trim(); try{ if(k) localStorage.setItem('vworldKey',k); else localStorage.removeItem('vworldKey'); }catch(e){} setBase(); status(k?'키를 저장했습니다. 건물을 클릭해 보세요.':'기본 키로 돌아갔습니다.'); };
 
   let outline=null, marker=null, current=null, edges=null;
   async function pickAt(lat,lon){
@@ -537,8 +547,10 @@ svg text{font-family:inherit}
       LouverEngine.shadeLookup = sel.blocked ? (id,m,hh,mm)=>{ const t=sel.blocked[id]; return t ? t[m-1][Math.round((hh*60+mm)/30)%48]||0 : 0; } : null;
       window.ShadeCorr = ref ? Shade.factors(sel, ref) : Object.fromEntries(Object.entries(sel.k).map(([id,v])=>[id,{cool:1,heat:1,k_cool:v.cool,k_heat:v.heat}]));
       const pct=v=>{ const p=Math.round((v-1)*100); return (p>0?'+':p<0?'−':'±')+Math.abs(p)+'%'; };
-      const rows=lastFs.filter(f=>f.louver).map(f=>{ const c=window.ShadeCorr[f.id]; return c ? `${f.id} 냉방 ${pct(c.cool)} · 난방 ${pct(c.heat)}` : ''; }).filter(Boolean);
-      note(ref ? `그림자 반영 (1784 9층 대비 일사량): ${rows.join(' / ')}${sel.terrain?'':' · 지형 제외'}`
+      // 루버 입면 창 면적 가중 평균으로 한 줄 요약
+      const lf=lastFs.filter(f=>f.louver&&window.ShadeCorr[f.id]), W=lf.reduce((t,f)=>t+(f.window_area_m2||1),0)||1;
+      const avg=k=>lf.reduce((t,f)=>t+window.ShadeCorr[f.id][k]*(f.window_area_m2||1),0)/W;
+      note(ref ? `그림자 반영 (1784 9층 대비 일사량, 루버 입면 ${lf.length}개 평균): 냉방기 ${pct(avg('cool'))} · 난방기 ${pct(avg('heat'))}${sel.terrain?'':' · 지형 제외'}`
                : '1784 기준값을 불러오지 못해 Radiance 값은 보정하지 않았습니다 (간이식에만 그림자 반영)');
       UI.run();
     }catch(e){ console.warn(e); note('그림자 계산 실패: '+e.message); }
@@ -549,15 +561,31 @@ svg text{font-family:inherit}
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
   function showSim(which){
     const m=which==='model';
-    $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m; $('viewSeg').style.display=m?'none':''; $('faceBtns').style.display=m?'none':'';
+    $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m;
+    window.simMode=which;
+    const v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior';
+    if(m){ if(window.Model3D) Model3D.setView(v); } else window.LouverBridge.sendView(v);
     $('simTitle').textContent=m?'· 선택한 건물':'· 네이버 1784';
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
     window.dispatchEvent(new Event('resize'));
   }
   document.querySelectorAll('input[name=simsrc]').forEach(r=>r.onchange=()=>{ if(r.checked) showSim(r.value); });
+  $('floors').addEventListener('change',()=>{ if(current && lastFs) $('makeFacades').click(); });
+  // 1번 값 초기화: 고른 건물 · 입력값을 지우고 처음 (네이버 1784) 으로
+  $('resetMap').onclick=()=>{
+    ['searchAddr','floors','floorH','bWwr','minEdge'].forEach(id=>$(id).value=$(id).defaultValue);
+    $('noNorth').checked=$('noNorth').defaultChecked;
+    for(const l of [outline,marker,edges]) if(l) map.removeLayer(l);
+    outline=marker=edges=current=null; lastFs=null; shadeTok++;
+    window.SiteGeom=null; window.ShadeCorr=null; LouverEngine.shadeLookup=null; $('shadeNote').textContent='';
+    $('makeFacades').disabled=true; map.setView([37.35888,127.10518],17);
+    status('주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.');
+    $('simSrc').style.display='none'; showSim('unity');
+    UI.resetSite(); UI.resetFacades(); UI.run();
+  };
   $('makeFacades').onclick=()=>{
     if(!current) return;
-    const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||5, northNoLouverDeg:$('noNorth').checked?45:-1});
+    const fs=VWorld.facadesFromRing(current.ring, Number($('floors').value)||current.floors, {floorHeight_m:Number($('floorH').value)||4, wwr:Number($('bWwr').value)||0.6, minEdge_m:Number($('minEdge').value)||30, northNoLouverDeg:$('noNorth').checked?45:-1});
     if(!fs.length){ status('입면을 만들지 못했습니다. 짧은 변 제외 값을 줄여 보세요.', true); return; }
     UI.clearFacades();
     fs.forEach(f=>UI.addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:'',louver:f.louver}));
@@ -577,8 +605,8 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=26"></script>
-<script src="shade.js?v=2"></script>
+<script src="model3d.js?v=27"></script>
+<script src="shade.js?v=4"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=28"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>

@@ -104,8 +104,22 @@
     const [a, b] = f.path.map(([x, y]) => [(x - lon0) * S.mx, (y - lat0) * S.my]);
     const nE = Math.sin(f.azimuth_deg * RAD), nN = Math.cos(f.azimuth_deg * RAD);
     const pts = [];
-    for (const s of along) for (const z of heights) pts.push([a[0] + (b[0] - a[0]) * s + nE * 0.5, a[1] + (b[1] - a[1]) * s + nN * 0.5, z]);
+    // 합친 변 (직선) 은 들쭉날쭉한 외곽에서 건물 안을 지날 수 있다 → 점이 자기 건물 안이면 바깥으로 1 m 씩 (최대 20 m) 밀어낸다
+    const own = S.obstacles[0].poly;
+    for (const s of along) {
+      let e = a[0] + (b[0] - a[0]) * s + nE * 0.5, n = a[1] + (b[1] - a[1]) * s + nN * 0.5;
+      for (let k = 0; k < 20 && inside(own, e, n); k++) { e += nE; n += nN; }
+      for (const z of heights) pts.push([e, n, z]);
+    }
     return pts;
+  }
+  function inside(poly, x, y) {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+    }
+    return c;
   }
 
   // 입면마다 보이는 비율 k = {cool, heat} (맑은 날 직달 일사량 가중)
@@ -150,7 +164,8 @@
 
   // ---- 1784 9층 기준값 (팀 Radiance 와 같은 자리: 9층 입면 중앙) ----
   // 브라우저에 한 번 계산해 저장해 둔다 (주변 건물을 다시 불러오지 않게)
-  const REF_KEY = 'shade_ref_1784_v2', REF_LAT = 37.3595, REF_LON = 127.1052, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
+  // 1784 좌표 = 팀 정답표 (LouverRule_TestVectors). 37.3595, 127.1052 는 바로 북쪽의 그린팩토리라서 쓰지 않는다
+  const REF_KEY = 'shade_ref_1784_v4', REF_LAT = 37.35888, REF_LON = 127.10518, REF_FLOOR = 9, REF_FLOOR_H = 4.2;
   let refPromise = null;
   function reference(cfg) {
     if (refPromise) return refPromise;
@@ -159,7 +174,7 @@
       let list;
       try { list = await root.VWorld.buildingsNear(REF_LAT, REF_LON, { ...cfg, timeoutMs: 40000 }, 0.0025); }
       catch (e) { list = await root.VWorld.buildingsNear(REF_LAT, REF_LON, { ...cfg, timeoutMs: 40000 }, 0.0012); }
-      const b = root.VWorld.pickBuilding(list, REF_LAT, REF_LON);
+      const b = list.find(x => /1784/.test(x.name || '')) || root.VWorld.pickBuilding(list, REF_LAT, REF_LON);
       const others = list.filter(x => x.id !== b.id);
       const fs = root.VWorld.facadesFromRing(b.ring, b.floors, { floorHeight_m: REF_FLOOR_H, northNoLouverDeg: -1 });
       const c = centroid(b.ring);

@@ -14,6 +14,8 @@
   let THREE, renderer, scene, camera, controls, sun, hemi, ground, building, slabs, blades = [], box, msg;
   let model = null, lastInput = null, lastTime = null, ready = false;
   let context = null, showCtx = true;   // 주변 건물 (브이월드 외곽선 · 층수)
+  // 화면: exterior 외관 (마우스로 돌리기) · interior 실내 (창 쪽을 봄) · split 나란히 — 유니티 화면과 같은 버튼
+  let icam = null, viewMode = 'exterior', cmpExt = null, cmpInt = null;
   let plinth = null, terrain = null, showTer = true, elevAt = null, terrToken = 0;   // 지형 (AWS Terrain Tiles)
 
   function el(id) { return document.getElementById(id); }
@@ -39,9 +41,78 @@
     scene.add(sun); scene.add(sun.target);
     ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: '#E9ECEF' }));
     ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+    icam = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 5000);
+    box.style.position = 'relative';
+    cmpExt = makeCompass(); cmpInt = makeCompass();
     const ro = new ResizeObserver(resize); ro.observe(box); resize();
     ready = true;
-    (function loop() { requestAnimationFrame(loop); controls.update(); lod(); renderer.render(scene, camera); })();
+    (function loop() { requestAnimationFrame(loop); controls.update(); lod(); render(); })();
+  }
+  function render() {
+    const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
+    if (viewMode === 'split') {
+      renderer.setScissorTest(true);
+      renderer.setViewport(0, 0, w / 2, h); renderer.setScissor(0, 0, w / 2, h); renderer.render(scene, camera);
+      renderer.setViewport(w / 2, 0, w / 2, h); renderer.setScissor(w / 2, 0, w / 2, h); renderer.render(scene, icam);
+      renderer.setScissorTest(false);
+    } else {
+      renderer.setViewport(0, 0, w, h);
+      renderer.render(scene, viewMode === 'interior' ? icam : camera);
+    }
+    // 나침반: 보이는 화면마다 오른쪽 위. 빨간 바늘 = 북
+    const ext = viewMode !== 'interior', inn = viewMode !== 'exterior' && model;
+    setCompass(cmpExt, ext && model, camera, viewMode === 'split' ? w / 2 : w);
+    setCompass(cmpInt, inn, icam, w);
+  }
+  function makeCompass() {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;top:10px;width:56px;height:56px;pointer-events:none;display:none';
+    d.innerHTML = '<svg viewBox="-50 -50 100 100" width="56" height="56"><circle r="46" fill="rgba(255,255,255,.85)" stroke="#283848" stroke-width="3"/>'
+      + '<g class="rose"><path d="M-5 0 L0 -30 L5 0 Z" fill="#DC2E29"/><path d="M-5 0 L0 30 L5 0 Z" fill="#8C99A8"/>'
+      + [['N', 0, '#DC2E29'], ['E', 90, '#283848'], ['S', 180, '#283848'], ['W', 270, '#283848']].map(([t, a, c]) => `<text x="${Math.round(Math.sin(a * RAD) * 34)}" y="${Math.round(-Math.cos(a * RAD) * 34) + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${c}" font-family="sans-serif">${t}</text>`).join('')
+      + '</g></svg>';
+    box.appendChild(d); return d;
+  }
+  function setCompass(d, on, cam, right) {
+    if (!d) return;
+    d.style.display = on ? '' : 'none'; if (!on) return;
+    const f = new THREE.Vector3(); cam.getWorldDirection(f);
+    const heading = Math.atan2(f.x, -f.z) / RAD;   // 0 = 북쪽을 봄 (x = 동, −z = 북)
+    d.style.left = (right - 66) + 'px';
+    d.querySelector('.rose').setAttribute('transform', `rotate(${-heading})`);
+  }
+  // 화면 바꾸기
+  function setView(mode) {
+    viewMode = mode === 'interior' || mode === 'split' ? mode : 'exterior';
+    resize();
+  }
+  // 실내 카메라: 남서쪽에 가까운 루버 입면 가운데, 9층 (낮은 건물은 가운데 층) 안쪽 4 m 에서 창 쪽을 본다
+  function placeInterior() {
+    if (!model || !model.faces.length) return;
+    const f = nearestFace(225, true);
+    const floor = Math.min(9, Math.max(1, Math.round(model.floors / 2)), model.floors);
+    const y = (floor - 1) * model.floorHeight + 1.5;
+    const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2;
+    icam.position.set(mE - f.nE * 4, y, -(mN - f.nN * 4));
+    icam.lookAt(mE + f.nE * 10, y - 0.8, -(mN + f.nN * 10));
+    model.interiorFloor = floor;
+  }
+  function nearestFace(az, louvered) {
+    const d = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
+    const list = model.faces.filter(f => !louvered || f.louver);
+    return (list.length ? list : model.faces).reduce((p, q) => d(q.az, az) < d(p.az, az) ? q : p);
+  }
+  // 입면 보기: 그 입면 바깥에서 비스듬히 (20°) 가까이. 'all' = 처음 시점
+  function lookAtFacade(side) {
+    if (!model) return;
+    const az = { east: 90, south: 180, west: 270, north: 0 }[side];
+    if (az === undefined) { controls.target.copy(model.home.target); camera.position.copy(model.home.pos); controls.update(); return; }
+    const f = nearestFace(az, true);
+    const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2, y = model.height * 0.5;
+    const t = (f.az + 20) * RAD, dist = Math.max(40, Math.min(90, f.len * 0.9));
+    controls.target.set(mE, y, -mN);
+    camera.position.set(mE + Math.sin(t) * dist, y + 6, -(mN + Math.cos(t) * dist));
+    controls.update();
   }
   // 가까이 가면 날을 모두: 날 간격이 화면에서 5 px 이상이면 촘촘하게 (입면마다 따로)
   function lod() {
@@ -56,7 +127,9 @@
   function resize() {
     if (!renderer) return;
     const w = box.clientWidth || 640, h = Math.round(w * 9 / 16);
-    renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    camera.aspect = (viewMode === 'split' ? w / 2 : w) / h; camera.updateProjectionMatrix();
+    if (icam) { icam.aspect = (viewMode === 'split' ? w / 2 : w) / h; icam.updateProjectionMatrix(); }
   }
 
   // 경위도 ring → 평면 (m), 반시계 방향, 마지막 점 중복 제거
@@ -120,17 +193,23 @@
       blades.push({ id: f.id, az: f.azimuth_deg, mesh, pts, nCoarse: coarse.length, box: bb });
       scene.add(mesh);
     }
-    model = { height, step, stepF, spacing, L };
+    const faces = opt.facades.map(f => {
+      const [a, b] = f.path.map(([lon, lat]) => [(lon - L.lon0) * L.mx, (lat - L.lat0) * L.my]);
+      return { id: f.id, az: f.azimuth_deg, louver: f.louver, a, b, len: Math.hypot(b[0] - a[0], b[1] - a[1]), nE: Math.sin(f.azimuth_deg * RAD), nN: Math.cos(f.azimuth_deg * RAD) };
+    });
+    model = { height, step, stepF, spacing, L, faces, floors: opt.floors, floorHeight: opt.floorHeight };
     // 카메라: 남서쪽 위에서 건물 전체
     const r = Math.max(...L.pts.map(p => Math.hypot(p[0], p[1]))) + height * 0.6;
     const dist = Math.max(r, height) * 1.9;
     controls.target.set(0, height * 0.45, 0);
     camera.position.set(-dist * 0.55, height * 0.55 + 10, dist * 0.85);
     camera.far = r * 20; camera.updateProjectionMatrix();
+    model.home = { target: controls.target.clone(), pos: camera.position.clone() };
+    placeInterior();
     const sr = Math.max(r * 1.5, 160);   // 주변 건물 그림자가 들어오게
     sun.shadow.camera.left = sun.shadow.camera.bottom = -sr; sun.shadow.camera.right = sun.shadow.camera.top = sr;
     sun.shadow.camera.far = r * 6; sun.shadow.camera.updateProjectionMatrix();
-    note(`${opt.name || '선택한 건물'} · 지상 ${opt.floors}층 · 높이 ${height.toFixed(0)} m · 루버 면 ${louvered.length}개` + (step > 1 ? ` · 멀리서는 날 ${step}개 중 1개만 그리고 가까이 가면 ${stepF > 1 ? stepF + '개 중 1개' : '모두'} 그림 (계산은 간격 ${Math.round(spacing * 1000)} mm)` : ''));
+    note('');
     if (lastInput && lastTime) update(lastInput, lastTime);
     loadTerrain().catch(e => { console.warn(e); if (opt.onTerrain) opt.onTerrain('지형을 불러오지 못했습니다'); });
     terrCb = opt.onTerrain || null;
@@ -287,5 +366,5 @@
   // 상자의 깊이 축(로컬 +z)을 수평 방향 (동 vE, 북 vN) 으로 돌리는 y 회전. three 좌표의 방향은 (x = vE, z = -vN)
   function yawFor(vE, vN) { return Math.atan2(vE, -vN); }
 
-  window.Model3D = { setBuilding, setContext, showContext, showTerrain, update, get hasModel() { return !!model; } };
+  window.Model3D = { setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, get hasModel() { return !!model; } };
 })();
