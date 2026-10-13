@@ -127,7 +127,7 @@
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]), count = Math.max(2, Math.round(L / 18));
       for (let i = 0; i < count; i++) {
         const q = (i + 0.5) / count, px = a[0] + (b[0] - a[0]) * q + n[0] * off, py = a[1] + (b[1] - a[1]) * q + n[1] * off;
-        blades += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="5" stroke-linecap="round"/>`;
+        blades += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="4" stroke-linecap="round"/>`;
       }
       const m = [(a[0] + b[0]) / 2 + n[0] * (gap + len), (a[1] + b[1]) / 2 + n[1] * (gap + len)];
       labels.push({ m, phi: Math.atan2(m[0] - cx, -(m[1] - cy)), f: s0, w: Math.max(44, String(s0.id).length * 10 + 22) });
