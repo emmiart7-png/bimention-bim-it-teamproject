@@ -155,8 +155,12 @@
     }
     g += edges + blades + lab;
     if (st.sun.alt > 0) { const [sx, sy] = P(st.sun.az); g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="22" fill="#FFF8EC" stroke="#F2B544" stroke-width="8"/>`; }
+    // 위쪽 빈 곳 (여름엔 북쪽 해 길이 비어 있음) 을 잘라 시뮬레이션과 간격을 줄인다
+    const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - LH / 2), ...path.map(az => P(az)[1])];
+    if (st.sun.alt > 0) ysAll.push(P(st.sun.az)[1] - 30);
+    const y0 = Math.max(0, Math.floor(Math.min(...ysAll) - 14));
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
+    return `<svg viewBox="0 ${y0} ${W} ${H - y0}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
   // minsF: 재생 중에는 분 단위 소수 (해가 같은 빠르기로 움직이도록 시간 간격을 바꾼다), 아니면 슬라이더 값
   function renderPlans(minsF) {

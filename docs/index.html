@@ -266,7 +266,7 @@ svg text{font-family:inherit}
   </section>
 </div>
   <section class="panel collapsible collapsed" id="resultPanel" style="grid-column:1 / -1">
-    <h2>결과 <span class="muted" id="srcNote"></span></h2>
+    <h2>결과 <span class="muted" id="srcNote" style="display:none"></span></h2>
     <div id="warnings"></div>
     <div class="topRow">
       <div class="subblock cumBlock">
@@ -672,7 +672,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=33"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=35"></script>
+<script src="features.js?v=36"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=28"></script>
 </body>
