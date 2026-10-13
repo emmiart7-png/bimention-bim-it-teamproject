@@ -86,45 +86,77 @@
     const desc = sides.map(sd => `${sd.key} ${sideText(sd.f)}`).join(', ');
     return { svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 동 · 남 · 서 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`, sides };
   }
-  // 지도에서 고른 건물: 외곽선 그대로 그리고, 루버를 단 입면마다 날을 그 입면 방향으로 그린다
+  // 정사각형 평면도: 건물 외곽선 (지도에서 고른 건물, 없으면 1784 를 직사각형으로) 과 루버를 단 입면마다 날 · 이름표.
+  // 이름표는 건물 둘레 원 위에 두고 서로 겹치지 않게 밀어낸 뒤, 입면 가운데와 가는 선으로 잇는다
+  function defaultPlan(input) {
+    // 1784 타워 대략 64 × 56 m (동서 × 남북), 입면 방위가 북 · 동 · 남 · 서에 가까운 것만
+    const lat = input.site.lat_deg, lon = input.site.lon_deg, mx = 111320 * Math.cos(lat * Math.PI / 180), my = 110540;
+    const ll = ([e, n]) => [lon + e / mx, lat + n / my], hw = 32, hh = 28;
+    const ring = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh], [-hw, -hh]].map(ll);
+    const edge = { 0: [[-hw, hh], [hw, hh]], 90: [[hw, hh], [hw, -hh]], 180: [[hw, -hh], [-hw, -hh]], 270: [[-hw, -hh], [-hw, hh]] };
+    const fs = input.facades.map(f => { const k = [0, 90, 180, 270].find(d => angDiff(d, f.azimuth_deg) <= 45); return k === undefined ? null : { id: f.id, azimuth_deg: f.azimuth_deg, path: edge[k].map(ll) }; }).filter(Boolean);
+    return { ring, fs };
+  }
   function outlinePlanSVG(st, path, ds, plan) {
-    const W = 880, H = 500, cx = 440, cy = 200, rx = 400, ry = 280;
-    const P = az => [cx + rx * Math.sin(az * Math.PI / 180), cy - ry * Math.cos(az * Math.PI / 180)];
+    const W = 640, H = 640, cx = 320, cy = 320, rs = 292;   // 해 길 원
+    const P = az => [cx + rs * Math.sin(az * Math.PI / 180), cy - rs * Math.cos(az * Math.PI / 180)];
     const ring = plan.ring.slice(0, -1), lat0 = ring.reduce((t, p) => t + p[1], 0) / ring.length, lon0 = ring.reduce((t, p) => t + p[0], 0) / ring.length;
     const mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110540, en = ([lon, lat]) => [(lon - lon0) * mx, (lat - lat0) * my];
     const pts = ring.map(en), xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-    const k = Math.min(380 / (Math.max(...xs) - Math.min(...xs) || 1), 250 / (Math.max(...ys) - Math.min(...ys) || 1));
+    const k = Math.min(230 / (Math.max(...xs) - Math.min(...xs) || 1), 230 / (Math.max(...ys) - Math.min(...ys) || 1));
     const ox = (Math.max(...xs) + Math.min(...xs)) / 2, oy = (Math.max(...ys) + Math.min(...ys)) / 2;
     const S = ([e, n]) => [cx + (e - ox) * k, cy - (n - oy) * k];
+    const sp = pts.map(S), rB = Math.max(...sp.map(p => Math.hypot(p[0] - cx, p[1] - cy)));   // 건물이 차지하는 반지름
     let g = `<rect width="${W}" height="${H}" fill="#FFFFFF"/>`;
     if (path.length > 1) g += `<polyline points="${path.map(az => P(az).map(r1).join(',')).join(' ')}" fill="none" stroke="#F2B544" stroke-width="5" stroke-linecap="round" stroke-dasharray="18 16"/>`;
-    g += `<polygon points="${pts.map(p => S(p).map(r1).join(',')).join(' ')}" fill="#E8EDF3" stroke="#1E4E8C" stroke-width="2"/>`;
-    g += `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="16" fill="#8595A4">건물</text>`;
-    const len = 18 * Math.min(1.6, Math.max(0.5, ds)), gap = 6, labels = [];
+    g += `<polygon points="${sp.map(p => p.map(r1).join(',')).join(' ')}" fill="#E8EDF3" stroke="#1E4E8C" stroke-width="2"/>`;
+    const len = 16 * Math.min(1.6, Math.max(0.5, ds)), gap = 5, labels = [];
+    let blades = '', edges = '';
     for (const f of plan.fs) {
       const s0 = st.facades.find(x => x.id === f.id); if (!s0) continue;
       const [a, b] = f.path.map(p => S(en(p))), az = f.azimuth_deg * Math.PI / 180;
       const n = [Math.sin(az), -Math.cos(az)], t = [Math.cos(az), Math.sin(az)];   // 화면: 바깥 법선 · 방위가 커지는 쪽
-      if (!s0.louver) { g += `<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="#8595A4" stroke-width="3" stroke-dasharray="6 6"/>`; continue; }
+      if (!s0.louver) { edges += `<line x1="${r1(a[0])}" y1="${r1(a[1])}" x2="${r1(b[0])}" y2="${r1(b[1])}" stroke="#8595A4" stroke-width="3" stroke-dasharray="6 6"/>`; continue; }
       const sgn = s0.side || 1, ang = (s0.angle || 0) * Math.PI / 180, ux = sgn * Math.sin(ang), uy = Math.cos(ang);
       const vx = ux * t[0] - uy * n[0], vy = ux * t[1] - uy * n[1], h = len / 2, off = gap + len / 2;
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]), count = Math.max(2, Math.round(L / 20));
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]), count = Math.max(2, Math.round(L / 18));
       for (let i = 0; i < count; i++) {
         const q = (i + 0.5) / count, px = a[0] + (b[0] - a[0]) * q + n[0] * off, py = a[1] + (b[1] - a[1]) * q + n[1] * off;
-        g += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="6" stroke-linecap="round"/>`;
+        blades += `<line x1="${r1(px - vx * h)}" y1="${r1(py - vy * h)}" x2="${r1(px + vx * h)}" y2="${r1(py + vy * h)}" stroke="#1E4E8C" stroke-width="5" stroke-linecap="round"/>`;
       }
-      const d = gap + len + 30, mxp = (a[0] + b[0]) / 2 + n[0] * d, myp = (a[1] + b[1]) / 2 + n[1] * d;
-      labels.push({ x: mxp, y: myp, f: s0 });
+      const m = [(a[0] + b[0]) / 2 + n[0] * (gap + len), (a[1] + b[1]) / 2 + n[1] * (gap + len)];
+      labels.push({ m, x: cx + n[0] * (rB + 78), y: cy + n[1] * (rB + 78), f: s0 });
     }
+    // 이름표끼리 겹치지 않게: 겹치면 서로 밀어내고, 건물 원 밖 · 그림 안에 둔다
+    const LW = 128, LH = 48, R0 = rB + 52;
+    for (let it = 0; it < 120; it++) {
+      let moved = false;
+      for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
+        const A = labels[i], B = labels[j], dx = B.x - A.x, dy = B.y - A.y, ox2 = LW + 8 - Math.abs(dx), oy2 = LH + 8 - Math.abs(dy);
+        if (ox2 > 0 && oy2 > 0) {
+          moved = true;
+          if (ox2 < oy2) { const d = ox2 / 2 * (dx >= 0 ? 1 : -1); A.x -= d; B.x += d; } else { const d = oy2 / 2 * (dy >= 0 ? 1 : -1); A.y -= d; B.y += d; }
+        }
+      }
+      for (const l of labels) {
+        const dx = l.x - cx, dy = l.y - cy, d = Math.hypot(dx, dy) || 1;
+        if (d < R0) { l.x = cx + dx / d * R0; l.y = cy + dy / d * R0; }
+        l.x = Math.max(LW / 2 + 4, Math.min(W - LW / 2 - 4, l.x)); l.y = Math.max(LH / 2 + 4, Math.min(H - LH / 2 - 4, l.y));
+      }
+      if (!moved) break;
+    }
+    let lab = '';
     for (const l of labels) {
-      const active = l.f.state === 'closed' || l.f.state === 'winter', w = 132;
-      g += `<rect x="${r1(l.x - w / 2)}" y="${r1(l.y - 26)}" width="${w}" height="52" rx="9" fill="${active ? '#E8F3FF' : '#F1F4F7'}" opacity="0.95"/>`;
-      g += `<text x="${r1(l.x)}" y="${r1(l.y - 5)}" text-anchor="middle" font-size="16" font-weight="700" fill="#0A1317">${esc(l.f.id + ' · ' + l.f.azimuth_deg + '°')}</text>`;
-      g += `<text x="${r1(l.x)}" y="${r1(l.y + 16)}" text-anchor="middle" font-size="14" fill="${active ? '#0064E0' : '#5D6C7B'}">${esc(sideText(l.f))}</text>`;
+      const active = l.f.state === 'closed' || l.f.state === 'winter';
+      lab += `<line x1="${r1(l.m[0])}" y1="${r1(l.m[1])}" x2="${r1(l.x)}" y2="${r1(l.y)}" stroke="#AEB8C2" stroke-width="1.5"/>`;
+      lab += `<rect x="${r1(l.x - LW / 2)}" y="${r1(l.y - LH / 2)}" width="${LW}" height="${LH}" rx="9" fill="${active ? '#E8F3FF' : '#F1F4F7'}" stroke="#FFFFFF" stroke-width="2"/>`;
+      lab += `<text x="${r1(l.x)}" y="${r1(l.y - 4)}" text-anchor="middle" font-size="15" font-weight="700" fill="#0A1317">${esc(l.f.id + ' · ' + l.f.azimuth_deg + '°')}</text>`;
+      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 15)}" text-anchor="middle" font-size="13" fill="${active ? '#0064E0' : '#5D6C7B'}">${esc(sideText(l.f))}</text>`;
     }
-    if (st.sun.alt > 0) { const [sx, sy] = P(st.sun.az); g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="26" fill="#FFF8EC" stroke="#F2B544" stroke-width="9"/>`; }
+    g += edges + blades + lab;
+    if (st.sun.alt > 0) { const [sx, sy] = P(st.sun.az); g += `<circle cx="${r1(sx)}" cy="${r1(sy)}" r="22" fill="#FFF8EC" stroke="#F2B544" stroke-width="8"/>`; }
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
-    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="고른 건물 외곽선과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
   function renderPlans() {
     if (!last) return;
@@ -139,7 +171,8 @@
     const path = [];
     for (let t = 0; t < 1440; t += 10) { const sp = E.sunPosition(last.input.site.lat_deg, last.input.site.lon_deg, y || 2026, m || 6, d || 21, Math.floor(t / 60), t % 60); if (sp.alt > 0) path.push(sp.az); }
     const spec = E.merge(E.DEFAULT_SPEC, last.input.louver_spec), ds = spec.blade_depth_mm / spec.blade_spacing_mm;
-    if (window.SitePlan) { $('plans').innerHTML = `<div class="siteplan">${outlinePlanSVG(st, path, ds, window.SitePlan)}</div>`; return; }
+    // 평면도: 지도에서 고른 건물이면 그 외곽선, 아니면 1784 를 직사각형으로 (정사각형 그림)
+    $('plans').innerHTML = `<div class="siteplan">${outlinePlanSVG(st, path, ds, window.SitePlan || defaultPlan(last.input))}</div>`; return;
     const { svg, sides } = sitePlanSVG(st, path, ds);
     const many = sides.filter(sd => sd.n > 1).map(sd => `${sd.key} ${sd.n}개 면 중 ${sd.f.id}`);
     $('plans').innerHTML = `<div class="siteplan">${svg}</div>` + (many.length ? `<p class="muted">입면이 여러 개인 방위는 대표 입면으로 그렸습니다: ${esc(many.join(' · '))}</p>` : '');
