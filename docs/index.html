@@ -178,7 +178,7 @@ svg text{font-family:inherit}
       <div><label for="maint">반응형 유지비율 (%)</label><input id="maint" type="number" step="0.5" value="5"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="winter" checked> 겨울 모드 (난방일 해와 나란히)</label><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
     <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
   </section>
 
@@ -316,7 +316,7 @@ svg text{font-family:inherit}
     const fp=window.SiteGeom||{lonlat:[],en:[]};
     return {
       site:{address:$('address').value,lat_deg:Number($('lat').value),lon_deg:Number($('lon').value),footprint_lonlat:fp.lonlat,footprint_en_m:fp.en},
-      project_type:$('ptype').value, winter_mode:$('winter').checked, facades,
+      project_type:$('ptype').value, winter_mode:true, /* 겨울 모드 (난방일 해와 나란히) 는 항상 켬 */ facades,
       louver_spec:{blade_depth_mm:Number($('depth').value),blade_spacing_mm:Number($('spacing').value),louver_to_window_ratio:Number($('ratio').value),area_per_unit_m2:Number($('unitArea').value),cutoff_deg:[30,60,45,30],min_sun_alt_deg:5},
       assumptions:{elec_price_krw_kwh:Number($('price').value),elec_escalation:Number($('esc').value)/100,cop_cooling:Number($('cop').value),cop_heating:Number($('copH').value),cooling_load_per_kwh:Number($('coolK').value),heating_load_per_kwh:Number($('heatK').value),emission_t_mwh:Number($('emis').value),cost_multiplier:Number($('costMul').value),maintenance_rate:{internal_reactive:maint,external_fixed:0.02,external_reactive:maint},protective_glass:{external_reactive:$('glass').checked,external_fixed:false}}
     };
@@ -404,7 +404,6 @@ svg text{font-family:inherit}
   function fillInput(inp, mode){
     if(inp.site){ $('address').value=inp.site.address||''; $('lat').value=inp.site.lat_deg; $('lon').value=inp.site.lon_deg; }
     if(inp.project_type) $('ptype').value=inp.project_type;
-    $('winter').checked = inp.winter_mode!==false;
     if(inp.facades){ tbody.innerHTML=''; inp.facades.forEach(f=>addRow({id:f.id,az:f.azimuth_deg,w:f.width_m,h:f.height_m,wwr:f.wwr,area:f.window_area_m2,louver:f.louver})); }
     const s=inp.louver_spec||{}, a=inp.assumptions||{};
     if(s.blade_depth_mm) $('depth').value=s.blade_depth_mm; if(s.blade_spacing_mm) $('spacing').value=s.blade_spacing_mm;
