@@ -162,16 +162,20 @@
     if (st.sun.alt > 0) {
       const [sx, sy] = P(st.sun.az);
       let rays = '';
-      for (let i = 0; i < 12; i++) { const t = i * Math.PI / 6, c = Math.cos(t), s2 = Math.sin(t); rays += `<line x1="${r1(sx + c * 21)}" y1="${r1(sy + s2 * 21)}" x2="${r1(sx + c * (i % 2 ? 28 : 32))}" y2="${r1(sy + s2 * (i % 2 ? 28 : 32))}"/>`; }
-      g += `<g stroke="#F2A20C" stroke-width="3.5" stroke-linecap="round">${rays}</g><circle cx="${r1(sx)}" cy="${r1(sy)}" r="16" fill="#FFC93C" stroke="#F2A20C" stroke-width="3"/>`;
+      for (let i = 0; i < 12; i++) { const t = i * Math.PI / 6, c = Math.cos(t), s2 = Math.sin(t); rays += `<line x1="${r1(sx + c * 18.9)}" y1="${r1(sy + s2 * 18.9)}" x2="${r1(sx + c * (i % 2 ? 25.2 : 28.8))}" y2="${r1(sy + s2 * (i % 2 ? 25.2 : 28.8))}"/>`; }
+      g += `<g stroke="#F2A20C" stroke-width="1.75" stroke-linecap="round">${rays}</g><circle cx="${r1(sx)}" cy="${r1(sy)}" r="14.4" fill="#FFC93C" stroke="#F2A20C" stroke-width="2.7"/>`;
     }
     // 위쪽 빈 곳 (여름엔 북쪽 해 길이 비어 있음) 을 잘라 시뮬레이션과 간격을 줄인다
     const ysAll = [...sp.map(p => p[1]), ...labels.map(l => l.y - 15), ...path.map(az => P(az)[1])];
     if (st.sun.alt > 0) ysAll.push(P(st.sun.az)[1] - 36);
     const y0 = Math.max(0, Math.floor(Math.min(...ysAll) - 14), 0);
     ysAll.length = 0;
-    const nx = W - 40, ny = y0 + 44;
-    g += `<g aria-hidden="true"><circle cx="${nx}" cy="${ny}" r="26" fill="#FFFFFF" stroke="#CED0D4" stroke-width="1.5"/><path d="M${nx} ${ny - 19} L${nx + 7} ${ny + 3} L${nx} ${ny - 2} L${nx - 7} ${ny + 3} Z" fill="#DC2E29"/><path d="M${nx} ${ny + 19} L${nx + 7} ${ny + 3} L${nx} ${ny - 2} L${nx - 7} ${ny + 3} Z" fill="#AEB8C2"/><text x="${nx}" y="${ny - 30}" text-anchor="middle" font-size="15" font-weight="700" fill="#DC2E29">N</text></g>`;
+    // 방위표: 3D · 유니티 화면 나침반과 같은 모양 (위 = 북)
+    const nx = W - 44, ny = y0 + 44, kq = 0.64;
+    g += `<g aria-hidden="true" transform="translate(${nx} ${ny}) scale(${kq})"><circle r="46" fill="rgba(255,255,255,.9)" stroke="#283848" stroke-width="3"/>`
+      + `<path d="M-5 0 L0 -30 L5 0 Z" fill="#DC2E29"/><path d="M-5 0 L0 30 L5 0 Z" fill="#8C99A8"/>`
+      + [['N', 0, '#DC2E29'], ['E', 90, '#283848'], ['S', 180, '#283848'], ['W', 270, '#283848']].map(([t, d, c]) => `<text x="${Math.round(Math.sin(d * Math.PI / 180) * 34)}" y="${Math.round(-Math.cos(d * Math.PI / 180) * 34) + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${c}" font-family="sans-serif">${t}</text>`).join('')
+      + '</g>';
     const desc = labels.map(l => `${l.f.id} ${sideText(l.f)}`).join(', ');
     return `<svg viewBox="0 ${y0} ${W} ${H - y0}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
