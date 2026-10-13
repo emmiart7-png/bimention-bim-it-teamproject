@@ -48,7 +48,7 @@
     if (path.length > 1) g += `<polyline points="${path.map(az => P(az).map(r1).join(',')).join(' ')}" fill="none" stroke="#F2B544" stroke-width="5" stroke-linecap="round" stroke-dasharray="18 16"/>`;
     // 건물
     g += `<rect x="${L}" y="${T}" width="${bw}" height="${bh}" fill="#E8EDF3" stroke="#1E4E8C" stroke-width="2"/>`;
-    g += `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="16" fill="#8595A4">건물 (위 = 북)</text>`;
+    g += `<text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="16" fill="#8595A4">건물</text>`;
     // 루버 날: 각 입면의 바깥 방향 n, 입면을 따라가는 방향 t
     const len = 22 * Math.min(1.6, Math.max(0.5, ds)), gap = 8;
     const sides = pickSides(st.facades.filter(f => f.louver));
@@ -164,9 +164,9 @@
   //  내부 반응형: 같은 규칙으로 닫지만 열은 이미 실내에 (보라). 겨울 모드 없음
   //  외부 고정 (날 0°): 움직이지 않음. 유리까지 들어오는 직달 비율 (노랑이 진할수록 많이 들어옴)
   const HM = {
-    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘 (진할수록 많이 돎)'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 난방일 해와 나란히 (눈부신 시각 0°)'], ['#C9D6E3', '주변 건물 그늘 · 열림']] },
+    external_reactive: { name: '외부 반응형', legend: [['#0064E0', '닫힘'], ['#FCE3A0', '열림 · 햇빛 들어옴'], ['#FA9A2A', '겨울 모드 · 난방일 해와 나란히 (눈부신 시각 0°)'], ['#C9D6E3', '주변 건물 그늘 · 열림']] },
     internal_reactive: { name: '내부 반응형', legend: [['#A121CE', '닫힘 (열은 이미 실내에)'], ['#FCE3A0', '열림 · 햇빛 들어옴']] },
-    external_fixed: { name: '외부 고정 (날 0°)', legend: [['#F7B928', '유리까지 들어오는 직달 (진할수록 많음)']] }
+    external_fixed: { name: '외부 고정 (날 0°)', legend: [['#F7B928', '유리까지 들어오는 직달']] }
   };
   function cell(alt, st) {
     if (!st || st.state === 'night' || st.state === 'back' || !st.tr) return ['#E6EAEE', 1];

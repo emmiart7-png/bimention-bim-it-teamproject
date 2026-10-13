@@ -178,8 +178,7 @@ svg text{font-family:inherit}
       <div><label for="maint" title="날 · 프레임 · 구동장치 · 설치비에 곱하는 연 비율. 일반 건물 연 유지비 2~4% 의 중간">반응형 유지비율 (%/년)</label><input id="maint" type="number" step="0.5" value="3"></div>
       <div><label for="costMul">단가 배율</label><input id="costMul" type="number" step="0.1" value="1"></div>
     </div>
-    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><button class="primary" id="run">계산하기</button></div>
-    <p class="muted">기본값은 엑셀 1_입력값 · 2_단가조사 · 13_탄소·계절효과와 같습니다.</p>
+    <div class="btns" style="align-items:center;justify-content:space-between"><div style="display:flex;gap:14px;flex-wrap:wrap"><label class="check" style="margin:0" title="없으면 루버가 바깥에 그대로 노출: 날 · 프레임을 설계풍압에 맞게 설계하고, 강풍 때 날을 고정 (그 시간은 반응형 효과 없음), 고층 외부 점검 · 구동장치 교체가 잦아짐"><input type="checkbox" id="glass" checked> 보호 유리 포함</label></div><div style="display:flex;gap:8px"><button id="resetVals">값 초기화</button><button class="primary" id="run">계산하기</button></div></div>
   </section>
 
   <section class="panel collapsible collapsed">
@@ -201,7 +200,6 @@ svg text{font-family:inherit}
       <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
     </div>
     <div id="cumChart"></div>
-    <p class="muted">선이 0 위로 올라가는 해가 손익분기입니다. 슬라이더는 왼쪽 가정값과 연결되어 있습니다.</p>
   </section>
   <section class="panel collapsible collapsed">
     <h2>연간 운영 히트맵</h2>
@@ -262,11 +260,11 @@ svg text{font-family:inherit}
     <div class="sun" id="sunInfo"></div>
     <h3 style="font-size:14px;margin:14px 0 0">루버 평면도 <span class="muted">· 외부 반응형</span></h3>
     <div class="plans" id="plans"></div>
-    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>오늘 해가 지나는 길 · 지금 해 위치</span><span>위 = 북</span></div>
+    <div class="legend"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></div>
   </section>
 </div>
 </main>
-<script src="engine.js?v=28"></script>
+<script src="engine.js?v=29"></script>
 <script src="geo.js?v=26"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -406,12 +404,21 @@ svg text{font-family:inherit}
       <tr><td style="text-align:left">구동장치 교체</td><td>${W.drive_life_yr}년마다 · ${W.replacements}회</td><td>${O.drive_life_yr}년마다 · ${O.replacements}회</td><td>${W.replacements-O.replacements}회</td></tr>
       <tr><td style="text-align:left">연 유지관리비 (교체비 포함)</td><td>${fmtMan(W.maint)}</td><td>${fmtMan(O.maint)}</td><td>${dm(W.maint,O.maint)}</td></tr>
       <tr><td style="text-align:left">${gc.life_yr}년 누적 순이익</td><td>${fmtEok(W.cum)}</td><td>${fmtEok(O.cum)}</td><td><b>${d(W.cum,O.cum)}</b></td></tr></tbody></table>
-      <p class="muted" style="margin-top:6px">가정: 유지비 = 루버 시스템비 × 연 3% (일반 건물 2~4% 의 중간), 보호 유리 청소 · 점검 연 1%, 구동장치 교체 보호 10년 / 노출 5년 (제조사 모터 보증 실내 10년 · 실외 5년 참고). 강풍 때 멈추는 시간 · 고층 안전은 숫자에 넣지 않았습니다.</p>`; })() : '';
+      <p class="muted" style="margin-top:6px">가정: 유지비 = 루버 시스템비 × 연 3%, 보호 유리 청소 · 점검 연 1%, 구동장치 교체 보호 10년 / 노출 5년 (제조사 모터 보증 실내 10년 · 실외 5년 참고). 강풍 때 멈추는 시간 · 고층 안전은 숫자에 넣지 않았습니다.</p>`; })() : '';
     const pf=out.result.external_reactive&&out.result.external_reactive.per_facade;
     $('perFacade').innerHTML = pf&&pf.length ? `<table><thead><tr><th>입면</th><th>창 ㎡</th><th>루버 ㎡</th><th>냉방 절감 MWh</th><th>난방 증가 MWh</th><th>닫힘 시간/년</th><th>날 회전/년</th></tr></thead><tbody>${pf.map(p=>`<tr><td>${p.id}</td><td>${f1(p.window_area_m2)}</td><td>${f1(p.louver_area_m2)}</td><td>${f1(p.cooling_saved_mwh_yr)}</td><td>${f1(p.heating_added_mwh_yr)}</td><td>${p.closed_hours_yr??'—'}h</td><td>${p.blade_rotation_deg_yr!=null?Math.round(p.blade_rotation_deg_yr/360)+'바퀴':'—'}</td></tr>`).join('')}</tbody></table><p class="muted">외부 반응형 기준. 루버를 단 입면만 표시합니다.</p>` : '<p class="muted">간이식 또는 Unity 결과일 때 표시됩니다.</p>';
     window.dispatchEvent(new CustomEvent('louver:result',{detail:last}));
   }
   $('run').onclick=run;
+  // 값 초기화: 루버 사양 · 가정값을 처음 값 (HTML 기본값) 으로 되돌린다. 입면은 그대로
+  $('resetVals').onclick=()=>{
+    $('run').closest('section').querySelectorAll('input,select').forEach(el=>{
+      if(el.type==='checkbox') el.checked=el.defaultChecked;
+      else if(el.tagName==='SELECT') [...el.options].forEach(o=>o.selected=o.defaultSelected);
+      else el.value=el.defaultValue;
+    });
+    run();
+  };
   // 공유 링크로 받은 입력을 화면에 다시 채운다
   function fillInput(inp, mode){
     if(inp.site){ $('address').value=inp.site.address||''; $('lat').value=inp.site.lat_deg; $('lon').value=inp.site.lon_deg; }
@@ -573,7 +580,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=26"></script>
 <script src="shade.js?v=2"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=27"></script>
+<script src="features.js?v=28"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=26"></script>
 </body>

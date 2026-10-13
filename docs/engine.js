@@ -295,7 +295,6 @@
     if (mode === 'radiance') { solar = radianceSolar(input); }
     if ((mode === 'solar') && !solar) { solar = clearSkySolar(input, opts); }
     if (mode === 'solar' && solar.meta && solar.meta.weather_source === 'clear_sky') warnings.push('일사량: 맑은 날 간이식 사용 (기상 데이터' + (opts.shade ? ' 미반영)' : ' · 주변 그림자 미반영)'));
-    if (mode !== 'excel') warnings.push('에너지: 팀 EnergyPlus 민감도 (1784 9층 서남 모서리 방) 로 환산한 추정 · 난방 ±20%');
     if (mode === 'excel') warnings.push('엑셀 검증 모드: 엑셀 1·8·13·14번 시트 값(팀 Radiance 9층 가중 평균)으로 계산');
     if (mode === 'radiance') warnings.push('일사량: 팀 Radiance solar_result(1784 9층, 주변 그림자 · 실제 날씨 반영)를 입면 방위에 맞춰 적용. 다른 건물 · 층에서는 근사값');
     // 선택한 건물 주변 그림자 (shade.js, opts.shade = 입면 id → 배수). Radiance 는 1784 대비 배수, 간이식은 보이는 비율을 곱한다
