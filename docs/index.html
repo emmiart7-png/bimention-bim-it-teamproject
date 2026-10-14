@@ -24,6 +24,18 @@
 input[type=number]{-moz-appearance:textfield;appearance:textfield}
 input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+/* 지도에서 건물 고르기: 왼쪽 = 글자 · 입력 · 버튼, 오른쪽 = 지도 */
+.mapGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;align-items:stretch}
+.mapL{display:flex;flex-direction:column;min-width:0}
+.mapL .row4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mapR #map{margin-top:0}
+@media (max-width:900px){.mapGrid{grid-template-columns:1fr}}
+/* 뷰 설정 버튼을 날짜 칸처럼 칸 폭 전체로 */
+.simCtl .ctlrow{align-items:stretch}
+.simCtl .seg{width:100%;flex-wrap:nowrap}
+.simCtl .seg label{flex:1;text-align:center}
+.simCtl #faceBtns{width:100%;flex-wrap:nowrap}
+.simCtl #faceBtns .facebtn{flex:1;justify-content:center}
 .ctlrow{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin:8px 0 10px}   /* 외관 · 실내 · 나란히 아래에 동 · 남 · 서 · 북 · 전체 */
 .facebtn{height:34px;padding:0 10px 0 6px;display:inline-flex;align-items:center;gap:4px;font-size:14px}
 .facebtn svg{display:block}
@@ -206,24 +218,30 @@ svg text{font-family:inherit}
 <div id="leftCol">
   <section class="panel noprint">
     <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
-    <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
-    <div class="inline" id="vwKeyRow" hidden>
-      <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
-      <button id="vwSave">저장</button>
+    <div class="mapGrid">
+      <div class="mapL">
+      <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
+      <div class="inline" id="vwKeyRow" hidden>
+        <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
+        <button id="vwSave">저장</button>
+      </div>
+      <div class="inline">
+        <div><label for="searchAddr">주소 검색</label><input id="searchAddr" placeholder="예: 정자일로 95 · 네이버 1784 · 불정로 6"></div>
+        <button id="searchBtn">찾기</button>
+      </div>
+      <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
+      <div class="row4">
+        <div><label for="floors">지상층수</label><input id="floors" type="number" inputmode="decimal" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
+        <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" inputmode="decimal" step="0.1" value="4"></div>
+        <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" inputmode="decimal" step="0.05" value="0.6"></div>
+        <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" inputmode="decimal" value="10"></div>
+      </div>
+      <div class="btns" style="justify-content:flex-end;margin-top:auto"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
+      </div>
+      <div class="mapR">
+      <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
+      </div>
     </div>
-    <div class="inline">
-      <div><label for="searchAddr">주소 검색</label><input id="searchAddr" placeholder="예: 정자일로 95 · 네이버 1784 · 불정로 6"></div>
-      <button id="searchBtn">찾기</button>
-    </div>
-    <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
-    <div id="map" role="application" aria-label="지도: 건물을 클릭하면 외곽선을 불러옵니다"></div>
-    <div class="row4">
-      <div><label for="floors">지상층수</label><input id="floors" type="number" inputmode="decimal" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
-      <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" inputmode="decimal" step="0.1" value="4"></div>
-      <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" inputmode="decimal" step="0.05" value="0.6"></div>
-      <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" inputmode="decimal" value="10"></div>
-    </div>
-    <div class="btns" style="justify-content:flex-end"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
   </section>
 
   <section class="panel" style="display:none" aria-hidden="true">
