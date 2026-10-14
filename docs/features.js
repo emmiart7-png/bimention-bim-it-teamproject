@@ -14,7 +14,9 @@
   const NS = 'http://www.w3.org/2000/svg';
   const r1 = v => Math.round(v * 10) / 10;
   // 그림(SVG) 글자를 화면에서 정확히 px 크기로: 그림이 화면 폭에 맞게 줄거나 늘어도 글자는 12 · 14 px 로 같게
-  const fz = (px, vbw, el) => { const w = el && el.getBoundingClientRect().width; return r1(px * vbw / (w > 50 ? w : vbw)); };
+  // 인쇄 직전에는 A4 에서의 폭 (px) 으로 계산한다 (printW: 그림 칸 id → 폭)
+  let printW = null;
+  const fz = (px, vbw, el) => { const w = printW && el && printW[el.id] || (el && el.getBoundingClientRect().width); return r1(px * vbw / (w > 50 ? w : vbw)); };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let last = null;
 
@@ -330,7 +332,7 @@
         s += `<rect x="${L + c * cw}" y="${y}" width="${cw - 1}" height="${ch - 2}" fill="${fill}" fill-opacity="${r1(op)}"/>`;
       }
     }
-    const W = L + cols * cw + 8, H = T + 12 * ch + 4;
+    const W = L + cols * cw + Math.round(F * 1.4), H = T + 12 * ch + 4;   // 오른쪽 "24시" 가 잘리지 않게
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(id)} 입면 ${esc(HM[alt].name)}의 월별 · 시각별 상태" xmlns="${NS}" style="width:100%;height:auto">${s}</svg>`;
   }
   function renderHeatmap() {
@@ -362,6 +364,9 @@
   if (framed) note('미리보기 창 안에서는 인쇄와 클립보드 복사가 막혀 있습니다. 크롬이나 엣지에서 직접 열어 주세요.');
   // Ctrl + P 로 바로 인쇄해도 요약이 최신이 되게
   window.addEventListener('beforeprint', renderPrintSummary);
+  // A4 (여백 12 mm) 에서 그림 칸 폭: 누적 순이익 · 에너지 구성은 반 쪽, 히트맵은 한 쪽
+  window.addEventListener('beforeprint', () => { if (!last) return; printW = { cumChart: 330, energyBars: 320, heatmap: 660 }; renderChart(); renderEnergy(); renderHeatmap(); });
+  window.addEventListener('afterprint', () => { printW = null; if (!last) return; renderChart(); renderEnergy(); renderHeatmap(); });
   $('printBtn').onclick = async () => { renderPrintSummary(); if (window.runCapture) { note('인쇄용 화면을 찍는 중입니다 (Unity 는 10~20초)…'); try { await window.runCapture(); } catch (e) { console.warn(e); } } if (window.preparePrint) { try { await window.preparePrint(); } catch (e) { console.warn(e); } } note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
 
   // ---------------- 5. 링크로 공유 ----------------
@@ -390,23 +395,22 @@
     const rows = [['internal_reactive', '내부 반응형'], ['external_fixed', '외부 고정'], ['external_reactive', '외부 반응형']].filter(([k]) => R[k]).map(([k, n]) => ({ n, ...R[k].energy }));
     if (!rows.length) { el.innerHTML = ''; return; }
     // 가운데 0 을 기준으로 왼쪽 = 늘어난 전기 (조명 · 겨울 난방), 오른쪽 = 줄어든 전기 (냉방). 각 줄 아래 가는 막대 = 순 절감
-    const W = 640, labW = 84, netW = 84, head = 22, rowH = 50, H = head + rows.length * rowH;
+    const W = 640, F = fz(12, 640, el), labW = Math.round(F * 6.4), netW = Math.round(F * 5.4), head = Math.round(F * 1.9), rowH = Math.max(50, Math.round(F * 3.4)), H = head + rows.length * rowH;   // 이름 · 순 절감 칸은 글자 크기에 맞춰
     const neg = Math.max(...rows.map(r => r.lighting_added_mwh_yr + r.heating_added_mwh_yr), 1e-6), pos = Math.max(...rows.map(r => Math.max(r.cooling_saved_mwh_yr, r.net_saved_mwh_yr)), 1e-6);
-    const F = fz(12, W, el);
     const sc = (W - labW - netW - 8) / (neg + pos), z = labW + neg * sc;
     const seg = (x, w, y, h, fill, v, tip) => `<rect x="${r1(x)}" y="${r1(y)}" width="${r1(Math.max(w, 0))}" height="${h}" fill="${fill}"><title>${tip} ${r1(v)} MWh/년</title></rect>`
-      + (w >= 34 ? `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + 4.5)}" text-anchor="middle" font-size="${F}" font-weight="700" fill="#FFFFFF">${r1(v)}</text>` : '');
-    let g = `<text x="${r1(z - 6)}" y="14" text-anchor="end" font-size="${F}" fill="#5D6C7B">← 늘어난 전기</text><text x="${r1(z + 6)}" y="14" font-size="${F}" fill="#5D6C7B">줄어든 전기 →</text>`;
+      + (w >= F * 2.8 ? `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + F * 0.36)}" text-anchor="middle" font-size="${F}" font-weight="700" fill="#FFFFFF">${r1(v)}</text>` : '');
+    let g = `<text x="${r1(z - 6)}" y="${r1(F * 1.1)}" text-anchor="end" font-size="${F}" fill="#5D6C7B">← 늘어난 전기</text><text x="${r1(z + 6)}" y="${r1(F * 1.1)}" font-size="${F}" fill="#5D6C7B">줄어든 전기 →</text>`;
     rows.forEach((r, i) => {
-      const y = head + i * rowH, bh = 20, by = y + 6, ny = by + bh + 4, nh = 7;
+      const y = head + i * rowH, bh = r1(F * 1.65), by = r1(y + F * 0.45), ny = r1(by + bh + F * 0.3), nh = r1(F * 0.55), ty = r1(by + bh / 2 + F * 0.36);
       const L = r.lighting_added_mwh_yr * sc, Hh = r.heating_added_mwh_yr * sc, C = r.cooling_saved_mwh_yr * sc, N = r.net_saved_mwh_yr;
-      g += `<text x="0" y="${r1(by + 15)}" font-size="${F}" font-weight="700" fill="#0A1317">${esc(r.n)}</text>`;
+      g += `<text x="0" y="${ty}" font-size="${F}" font-weight="700" fill="#0A1317">${esc(r.n)}</text>`;
       g += seg(z, C, by, bh, '#0064E0', r.cooling_saved_mwh_yr, '냉방 절감');
       g += seg(z - L, L, by, bh, '#8595A4', r.lighting_added_mwh_yr, '조명 증가');
       g += seg(z - L - Hh, Hh, by, bh, '#E08A00', r.heating_added_mwh_yr, '겨울 난방 증가');
       const col = N >= 0 ? '#0A1317' : '#C0392B';
       g += `<rect x="${r1(N >= 0 ? z : z + N * sc)}" y="${r1(ny)}" width="${r1(Math.abs(N) * sc)}" height="${nh}" rx="2" fill="${col}"><title>순 절감 ${r1(N)} MWh/년</title></rect>`;
-      g += `<text x="${W}" y="${r1(by + 15)}" text-anchor="end" font-size="${F}" font-weight="700" fill="${col}">순 ${r1(N)}</text>`;
+      g += `<text x="${W}" y="${ty}" text-anchor="end" font-size="${F}" font-weight="700" fill="${col}">순 ${r1(N)}</text>`;
     });
     g = `<line x1="${r1(z)}" y1="${head - 2}" x2="${r1(z)}" y2="${H}" stroke="#5D6C7B" stroke-width="1.5"/>` + g;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="대안별 에너지 구성: ${esc(rows.map(r => r.n + ' 냉방 절감 ' + r1(r.cooling_saved_mwh_yr) + ', 조명 증가 ' + r1(r.lighting_added_mwh_yr) + ', 난방 증가 ' + r1(r.heating_added_mwh_yr) + ', 순 ' + r1(r.net_saved_mwh_yr) + ' MWh/년').join('; '))}" xmlns="${NS}">${g}</svg>`

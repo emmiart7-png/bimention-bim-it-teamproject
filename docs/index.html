@@ -100,8 +100,14 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .topRow .cards{grid-template-columns:repeat(3,minmax(0,1fr))}
 .cumBlock .sliders{grid-template-columns:1fr 1fr}
 @media (max-width:900px){.topRow{grid-template-columns:1fr}}
-@media print{.topRow{display:block}}
-.resultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
+@media print{
+  .topRow{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"cum en" "cards cards";gap:6px 8px!important;align-items:stretch!important}
+  .topRow>.cumBlock{grid-area:cum;margin:0!important}
+  .topRow>#energyBlock{grid-area:en;margin:0!important;display:flex;flex-direction:column;justify-content:center}
+  .topRow>#cards{grid-area:cards}
+}
+.resultGrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:0 32px;align-items:start}
+.resultGrid>div:nth-child(2){order:-1}   /* 히트맵 칸을 왼쪽에 (위 누적 순이익과 같은 열) */
 @media (max-width:900px){.resultGrid{grid-template-columns:1fr}}
 @media print{.resultGrid{display:block}}
 .hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
@@ -156,7 +162,8 @@ svg text{font-family:inherit}
   main>*,section.panel,.resultGrid>*,.topRow>*{min-width:0;max-width:100%;box-sizing:border-box}
   table{width:100%;table-layout:fixed}
   td,th{overflow-wrap:anywhere}
-  #heatmap svg,#cumChart svg{width:100%;height:auto}
+  #cumChart svg{width:100%;height:auto}
+  #heatmap svg{width:100%;height:auto;display:block}
   .cards{grid-template-columns:repeat(3,1fr)}
   .card.best{background:#fff}
   header p{display:none}
@@ -182,7 +189,6 @@ svg text{font-family:inherit}
   .kv{font-size:10px;padding-top:2px;margin-top:2px}
   .cards{gap:8px}
   #perFacadeBlock{break-before:page}
-  #energyBlock svg{max-height:80px}
   #energyBlock .legend{margin-top:2px;font-size:10px}
 }
 </style>
@@ -208,7 +214,7 @@ svg text{font-family:inherit}
 <main>
 <div id="leftCol">
   <section class="panel noprint">
-    <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
     <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
     <div class="inline" id="vwKeyRow" hidden>
       <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
@@ -793,7 +799,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=38"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=51"></script>
+<script src="features.js?v=53"></script>
 <script src="capture.js?v=7"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=32"></script>
