@@ -79,7 +79,11 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .hidden{display:none}
 .hdr-btns{display:flex;gap:8px}
 .plans{display:block;margin-top:0}
-.simTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:12px}
+.simTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:stretch;margin-bottom:12px}
+.simTopL{display:flex;flex-direction:column}
+.simCtl{margin-top:auto;padding-top:12px}   /* 외관 · 입면 버튼 · 주변 건물: 아래 끝을 평면도 아래 끝에 맞춤 */
+.simCtl .ctlrow{margin:0 0 10px}
+.simCtl #layerToggles{margin:0!important}
 .simTop .legend span{flex-wrap:wrap}
 .simTopL .timebar:first-child{flex-direction:column;align-items:stretch;gap:8px}
 .simTopL .timebar:first-child .btns{justify-content:flex-start!important;flex-wrap:nowrap}
@@ -89,6 +93,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
 .siteplan{max-width:520px;margin:0 auto}
+.siteplan svg{display:block}
 .subh{font-size:16px;font-weight:700;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
 .subblock{break-inside:avoid;min-width:0}
 .topRow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:24px;align-items:start}
@@ -262,16 +267,18 @@ svg text{font-family:inherit}
     </div>
     <div class="legend" style="align-items:center;justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:8px"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
     <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
-     </div>
-     <div class="simTopR">
-    <div class="plans" id="plans"></div>
-     </div>
-    </div>
+      <div class="simCtl">
     <div class="ctlrow noprint">
       <div class="seg" id="viewSeg"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
       <div class="btns" id="faceBtns" style="margin:0" role="group" aria-label="입면 보기"><button class="facebtn" data-face="east" title="동면 보기" aria-label="동면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="22" y1="6" x2="22" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>동</span></button><button class="facebtn" data-face="south" title="남면 보기" aria-label="남면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="6" y1="22" x2="22" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>남</span></button><button class="facebtn" data-face="west" title="서면 보기" aria-label="서면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="6" y1="6" x2="6" y2="22"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>서</span></button><button class="facebtn" data-face="north" title="북면 보기" aria-label="북면 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><line x1="6" y1="6" x2="22" y2="6"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>북</span></button><button class="facebtn" data-face="all" title="전체 보기" aria-label="전체 보기"><svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true"><rect x="6" y="6" width="16" height="16" fill="#EEF2F6" stroke="#9AA6B2" stroke-width="1.5"/><g stroke="#0064E0" stroke-width="4" stroke-linecap="round"><rect x="6" y="6" width="16" height="16" fill="none"/></g><text x="14" y="4.5" text-anchor="middle" font-size="5" fill="#DC2E29" font-family="sans-serif" font-weight="700">N</text></svg><span>전체</span></button></div>
     </div>
     <div id="layerToggles" class="noprint" style="display:flex;gap:16px;flex-wrap:wrap;margin:0 0 14px" title="선택한 건물 3D 에 적용됩니다"><label class="check" style="margin:0"><input type="checkbox" id="ctxToggle" checked> 주변 건물 보이기 <span class="muted" id="ctxNote"></span></label><label class="check" style="margin:0"><input type="checkbox" id="terToggle" checked> 지형 보이기 <span class="muted" id="terNote"></span></label></div>
+      </div>
+     </div>
+     <div class="simTopR">
+    <div class="plans" id="plans"></div>
+     </div>
+    </div>
     <div id="unity">Unity WebGL 빌드가 들어갈 자리입니다.<br>빌드를 unity/Build 폴더에 넣으면 여기에 뜨고, 건물 · 하루 재생 시각이 Unity로 전달됩니다.</div>
     <div id="modelBox" hidden>
       <div class="muted" id="shadeNote" style="margin:-4px 0 8px;font-size:12px"></div>
