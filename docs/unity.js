@@ -16,7 +16,7 @@
   const s = document.createElement('script');
   s.src = loaderUrl;
   s.onload = () => {
-    box.innerHTML = '<canvas id="unity-canvas" tabindex="-1" style="width:100%;height:340px;background:#0A1317;border-radius:12px"></canvas><div id="unity-progress" class="muted" style="margin-top:6px">Unity 불러오는 중… 0%</div>';
+    box.innerHTML = '<canvas id="unity-canvas" tabindex="-1" style="width:100%;aspect-ratio:16/9;height:auto;display:block;background:#0A1317;border-radius:12px"></canvas><div id="unity-progress" class="muted" style="margin-top:6px">Unity 불러오는 중… 0%</div>';
     if (box.style.display !== 'none') box.style.display = 'block'; // 선택한 건물 3D 를 보는 중이면 그대로 숨김
     box.style.padding = '0'; box.style.background = 'none'; box.style.border = 'none';
     const canvas = document.getElementById('unity-canvas');
