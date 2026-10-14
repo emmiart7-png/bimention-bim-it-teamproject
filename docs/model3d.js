@@ -114,6 +114,23 @@
     camera.position.set(mE + Math.sin(t) * dist, y + 6, -(mN + Math.cos(t) * dist));
     controls.update();
   }
+  // 보고서 캡처: 입면 id 를 정면에서 가깝게 (건물 높이 절반, 입면 너비가 화면에 들어오는 거리)
+  function lookAtFaceFront(id) {
+    if (!model) return false;
+    const f = model.faces.find(x => x.id === id); if (!f) return false;
+    const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2, y = model.height * 0.5;
+    const dist = Math.max(25, Math.min(140, f.len / 2 / (Math.tan(camera.fov * RAD / 2) * camera.aspect) * 1.15));   // 입면 너비가 화면 가로에 꽉 차게
+    controls.target.set(mE, y, -mN);
+    camera.position.set(mE + f.nE * dist, y + 4, -(mN + f.nN * dist));
+    controls.update();
+    return true;
+  }
+  // 보고서 캡처: 지금 상태를 그린 직후 바로 이미지로 (preserveDrawingBuffer 없이도 빈 이미지가 아님)
+  function snapshot() {
+    if (!renderer) return null;
+    controls.update(); lod(); render();
+    return renderer.domElement.toDataURL('image/png');
+  }
   // 가까이 가면 날을 모두: 날 간격이 화면에서 5 px 이상이면 촘촘하게 (입면마다 따로)
   function lod() {
     if (!model || model.step === model.stepF) return;
@@ -370,5 +387,5 @@
 
   // 입면별 루버 켜고 끄기: on = {입면 id: true/false}
   function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; }
-  window.Model3D = { setLouvers, setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, get hasModel() { return !!model; } };
+  window.Model3D = { setLouvers, setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, lookAtFaceFront, snapshot, get hasModel() { return !!model; } };
 })();

@@ -24,7 +24,10 @@
     // 압축 설정에 따라 파일 이름 끝이 .gz/.br 일 수 있다 → Decompression Fallback 빌드는 .unityweb
     const config = {
       dataUrl: ext('data'), frameworkUrl: ext('framework.js'), codeUrl: ext('wasm'),
-      streamingAssetsUrl: 'unity/StreamingAssets', companyName: UNITY.COMPANY, productName: UNITY.PRODUCT, productVersion: UNITY.VERSION
+      streamingAssetsUrl: 'unity/StreamingAssets',
+      // 보고서 캡처: 그린 화면을 지우지 않아야 canvas.toDataURL() 이 빈 이미지가 아니다
+      webglContextAttributes: { preserveDrawingBuffer: true },
+      companyName: UNITY.COMPANY, productName: UNITY.PRODUCT, productVersion: UNITY.VERSION
     };
     if (window.UNITY_FILE_SUFFIX) for (const k of ['dataUrl', 'frameworkUrl', 'codeUrl']) config[k] += window.UNITY_FILE_SUFFIX;
     window.createUnityInstance(canvas, config, p => { const el = document.getElementById('unity-progress'); if (el) el.textContent = `Unity 불러오는 중… ${Math.round(p * 100)}%`; })
