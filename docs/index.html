@@ -151,9 +151,9 @@ svg text{font-family:inherit}
       <p style="margin-top:6px">다른 건물을 검토하려면</p>
       <ol style="list-style:none;margin:4px 0 6px 8px;padding:0">
         <li><b>1. 지도에서 건물 고르기</b>: 주소를 검색하거나 지도에서 건물을 누른 뒤 "이 건물로 입면 만들기"를 누릅니다.</li>
-        <li><b>2. 루버 달 입면 고르기</b>: 오른쪽 평면도에서 입면 이름을 누르면 루버를 달거나 뗍니다.</li>
+        <li><b>2. 루버 달 입면 고르기</b>: 아래 루버 시뮬레이션의 평면도에서 입면 이름을 누르면 루버를 달거나 뗍니다.</li>
       </ol>
-      <p>루버가 움직이는 모습은 오른쪽 <b>루버 시뮬레이션 / 평면도</b>에서 날짜와 시각을 바꿔 가며 확인할 수 있습니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
+      <p>루버가 움직이는 모습은 아래 <b>루버 시뮬레이션</b>에서 날짜와 시각을 바꿔 가며 확인할 수 있습니다. 숫자는 임시 단가 기준의 개략 검토입니다.</p>
     </div>
   </details>
   <div id="hdrMsg" class="warn noprint" hidden style="flex-basis:100%;margin:0"></div>
@@ -253,7 +253,7 @@ svg text{font-family:inherit}
     <div id="printSite"></div>
   </section>
   <section class="panel noprint">
-    <h2 style="display:flex;align-items:center;gap:8px">루버 시뮬레이션 / 평면도
+    <h2 style="display:flex;align-items:center;gap:8px">루버 시뮬레이션
       <span class="seg noprint" id="simSrc" style="margin-left:auto;font-weight:400;font-size:14px"><label><input type="radio" name="simsrc" value="unity" checked><span>네이버 1784</span></label><label title="지도에서 건물을 골라 입면을 만들면 선택할 수 있어요"><input type="radio" name="simsrc" value="model" disabled><span>선택한 건물</span></label></span></h2>
     <div class="simTop">
      <div class="simTopL">
@@ -266,6 +266,7 @@ svg text{font-family:inherit}
       <button id="simPlay">재생</button>
     </div>
     <div class="legend" style="align-items:center;justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:8px"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
+    <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
       <div class="simCtl">
       <label id="viewLbl" style="margin-bottom:calc(3px + .4em)">뷰 설정</label>
     <div class="ctlrow noprint">
