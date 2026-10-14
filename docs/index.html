@@ -114,13 +114,16 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .sliders output{font-weight:600;color:var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin-top:6px}
 #energyBars svg{width:100%;height:auto;display:block}
-#energyBlock{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-top:14px}   /* 에너지 구성: 카드처럼 박스 */
-#energyBlock .subh{margin:0 0 6px;padding-top:0;border-top:0}
-#energyBlock .legend{font-size:11px}
-/* 누적 순이익: 그래프 아래 남는 높이의 가운데에 슬라이더 */
-.topRow{align-items:stretch!important}
-.cumBlock{display:flex;flex-direction:column}
-.cumBlock .sliders{margin:auto 0}
+/* 결과 항목은 모두 같은 네모 박스. 위쪽은 2×2 (누적 순이익 | 요약 카드 / 가정 바꿔 보기 | 에너지 구성) 라 박스 아래 끝이 줄마다 맞는다 */
+@media screen{
+  #resultPanel .subblock{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 16px}
+  #resultPanel .subh{margin:0 0 10px;padding-top:0;border-top:0}
+  .topRow{align-items:stretch!important;gap:16px 24px!important;margin-bottom:16px}
+  .topRow>.subblock{margin:0!important}
+  .resultGrid{gap:0 24px!important}
+  .sliderBlock{display:flex;flex-direction:column}
+  .sliderBlock .sliders{margin:auto 0}
+}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
 svg text{font-family:inherit}
 #printSummary,#printSim{display:none}
@@ -348,8 +351,12 @@ svg text{font-family:inherit}
     <div id="warnings"></div>
     <div class="topRow">
       <div class="subblock cumBlock">
-        <h3 class="subh" style="display:flex;align-items:center;gap:6px;margin-top:0;padding-top:0;border-top:0">누적 순이익<button id="resetSliders" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h3>
+        <h3 class="subh">누적 순이익</h3>
         <div id="cumChart"></div>
+      </div>
+      <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
+      <div class="subblock sliderBlock noprint">
+        <h3 class="subh" style="display:flex;align-items:center;gap:6px">가정 바꿔 보기<button id="resetSliders" style="margin-left:auto;font-size:12px;padding:4px 10px">기본값</button></h3>
         <div class="sliders noprint">
           <div><label for="sCost">단가 배율 <output id="oCost"></output></label><input id="sCost" type="range" min="0.5" max="1.5" step="0.05"></div>
           <div><label for="sPrice">전기요금 (원/kWh) <output id="oPrice"></output></label><input id="sPrice" type="range" min="100" max="300" step="10"></div>
@@ -357,13 +364,10 @@ svg text{font-family:inherit}
           <div><label for="sMaint">반응형 유지비율 (%) <output id="oMaint"></output></label><input id="sMaint" type="range" min="1" max="6" step="0.5"></div>
         </div>
       </div>
-      <div>
-        <div class="cards" id="cards"><p class="muted">왼쪽에서 계산하기를 누르세요.</p></div>
-        <div class="subblock" id="energyBlock">
+      <div class="subblock" id="energyBlock">
           <h3 class="subh">에너지 구성 <span class="muted" style="font-size:12px;font-weight:400">MWh/년 · 통유리 대비</span></h3>
           <div id="energyBars"></div>
         </div>
-      </div>
     </div>
     <div class="resultGrid">
       <div>
@@ -789,7 +793,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=38"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=49"></script>
+<script src="features.js?v=51"></script>
 <script src="capture.js?v=7"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=32"></script>
