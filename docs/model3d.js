@@ -154,8 +154,8 @@
   }
   function resize() {
     if (!renderer) return;
-    // 3:1 (지도 · Unity 와 같은 비율)
-    const w = box.clientWidth || 640, h = Math.round(w / 3);
+    // 2:1 (지도 · Unity 와 같은 비율)
+    const w = box.clientWidth || 640, h = Math.round(w / 2);
     renderer.setSize(w, h);
     camera.aspect = (viewMode === 'split' ? w / 2 : w) / h; camera.updateProjectionMatrix();
     if (icam) { icam.aspect = (viewMode === 'split' ? w / 2 : w) / h; icam.updateProjectionMatrix(); }
