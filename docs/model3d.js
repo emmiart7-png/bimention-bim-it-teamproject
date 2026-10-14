@@ -363,7 +363,8 @@
   }
 
   // 날짜 · 시각에 맞춰 해와 날 각도 갱신. t = {y, m, d, hh, mm}
-  function update(input, t) {
+  // ov: 입면 id → 화면용 날 상태 (features.js 가 천천히 돌린 값). 없으면 규칙 값 그대로
+  function update(input, t, ov) {
     lastInput = input; lastTime = t;
     if (!ready || !model || !window.LouverEngine) return;
     const st = window.LouverEngine.stateAt(input, t.y, t.m, t.d, t.hh, t.mm);
@@ -378,7 +379,7 @@
     // 날: 규칙 각도 (엔진과 같은 정의). 입면 로컬 (ux, uy) = (side·sin a, cos a), 화면 아래 = 실내
     const o = new window.THREE.Object3D();
     for (const b of blades) {
-      const f = st.facades.find(x => x.id === b.id);
+      const f = (ov && ov[b.id]) || st.facades.find(x => x.id === b.id);
       const s = f && f.side ? f.side : 1, a = (f && f.angle ? f.angle : 0) * RAD;
       const ph = b.az * RAD;
       const tE = Math.cos(ph), tN = -Math.sin(ph);    // 입면을 따라가는 방향 (방위가 커지는 쪽)

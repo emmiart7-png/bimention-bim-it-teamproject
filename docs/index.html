@@ -115,7 +115,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .cumBlock .sliders{grid-template-columns:1fr 1fr}
 @media (max-width:900px){.topRow{grid-template-columns:1fr}}
 @media print{.topRow{display:block}}
-.resultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
+.resultGrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:0 24px}   /* 위 줄과 같은 2 : 3 → 히트맵 폭 = 에너지 구성 폭 */
 @media (max-width:900px){.resultGrid{grid-template-columns:1fr}}
 @media print{.resultGrid{display:block}}
 .hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
@@ -130,6 +130,8 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 #energyBars svg{width:100%;height:auto;display:block}
 #energyBlock{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-top:14px}   /* 에너지 구성: 카드처럼 박스 */
 #energyBlock .subh{margin:0 0 6px;padding-top:0;border-top:0}
+@media screen{#heatBlock{border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-top:22px}
+#heatBlock .subh{margin:0 0 6px;padding-top:0;border-top:0}}   /* 연간 운영 히트맵도 에너지 구성처럼 박스 */
 #energyBlock .legend{font-size:11px}
 /* 누적 순이익: 그래프 아래 남는 높이의 가운데에 슬라이더 */
 .topRow{align-items:stretch!important}
@@ -400,7 +402,7 @@ svg text{font-family:inherit}
         </div>
       </div>
       <div>
-        <div class="subblock">
+        <div class="subblock" id="heatBlock">
           <h3 class="subh">연간 운영 히트맵</h3>
           <div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap"><div style="min-width:150px;flex:1"><label for="hmFacade">입면</label><select id="hmFacade"></select></div><div style="min-width:150px;flex:1"><label for="hmAlt">대안</label><select id="hmAlt"><option value="all">세 대안 나란히</option><option value="external_reactive">외부 반응형</option><option value="internal_reactive">내부 반응형</option><option value="external_fixed">외부 고정 (날 0°)</option></select></div></div>
           <div id="heatmap"></div>
@@ -814,7 +816,7 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=39"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=55"></script>
+<script src="features.js?v=56"></script>
 <script src="capture.js?v=7"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=33"></script>

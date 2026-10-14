@@ -196,15 +196,36 @@
     return `<svg viewBox="0 ${y0} ${W} ${H - y0}" role="img" aria-label="건물 평면과 루버: ${esc(desc)}" xmlns="${NS}" style="width:100%;height:auto">${g}</svg>`;
   }
   // minsF: 재생 중에는 분 단위 소수 (해가 같은 빠르기로 움직이도록 시간 간격을 바꾼다), 아니면 슬라이더 값
+  // 화면에서만 날을 천천히: 규칙 값이 한 번에 크게 바뀌어도 (예: 동지 15시 겨울 모드 → 0°) 평면도 · 웹 3D 의 날은 초당 45° 까지만 돈다.
+  // 계산 결과 · 엑셀 숫자 · 보고서 캡처는 원래 값 그대로 (capture.js 가 찍는 동안 PlanEase.off = true)
+  const EASE_DEG_S = 45, disp = {};
+  let easeT = 0, easeRaf = null, lastIso = '';
+  window.PlanEase = { off: false };
+  function ease(st) {
+    const now = performance.now(), dt = easeT ? Math.min(0.05, (now - easeT) / 1000) : 1e9; easeT = now;
+    let moving = false;
+    const facades = st.facades.map(f => {
+      const tgt = (f.side || 1) * (f.angle || 0);
+      if (window.PlanEase.off || !(f.id in disp)) { disp[f.id] = tgt; return f; }
+      const cur = disp[f.id], step = EASE_DEG_S * dt, d = tgt - cur;
+      const v = Math.abs(d) <= step ? tgt : cur + Math.sign(d) * step;
+      disp[f.id] = v; if (v !== tgt) moving = true;
+      return { ...f, angle: Math.abs(v), side: v < 0 ? -1 : 1 };
+    });
+    return { st: { ...st, facades }, moving };
+  }
   function renderPlans(minsF) {
     if (!last) return;
     const [y, m, d] = $('simDate').value.split('-').map(Number);
     const mins = typeof minsF === 'number' ? minsF : Number($('simTime').value), hh = Math.floor(mins / 60), mm = mins - hh * 60;
     const mi = Math.floor(mm), sec = Math.floor((mm - mi) * 60);
     $('simTimeOut').textContent = `${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
-        if (window.LouverBridge && window.LouverBridge.sendDateTime) window.LouverBridge.sendDateTime(`${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(sec).padStart(2, '0')}+09:00`);
-    const st = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm);
-    if (window.Model3D) window.Model3D.update(last.input, { y: y || 2026, m: m || 6, d: d || 21, hh, mm });
+    const iso = `${$('simDate').value}T${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}:${String(sec).padStart(2, '0')}+09:00`;
+    if (iso !== lastIso && window.LouverBridge && window.LouverBridge.sendDateTime) { lastIso = iso; window.LouverBridge.sendDateTime(iso); }
+    const st0 = E.stateAt(last.input, y || 2026, m || 6, d || 21, hh, mm), eased = ease(st0), st = eased.st;
+    if (window.Model3D) window.Model3D.update(last.input, { y: y || 2026, m: m || 6, d: d || 21, hh, mm }, Object.fromEntries(st.facades.map(f => [f.id, f])));
+    // 날이 아직 도는 중이면 다음 화면에서 이어 그린다 (재생 중에는 재생이 매 화면 그림)
+    if (eased.moving && !timer && !easeRaf) easeRaf = requestAnimationFrame(() => { easeRaf = null; renderPlans(minsF); });
     $('sunInfo').textContent = st.sun.alt > 0 ? `태양 고도 ${r1(st.sun.alt)}° · 방위 ${r1(st.sun.az)}°` : '해가 진 시각입니다';
     // 오늘 해가 떠 있는 동안의 방위 (10분 간격)
     const path = [];

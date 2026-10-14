@@ -144,6 +144,7 @@
     if (!pick) { status('루버를 단 입면이 없습니다.'); return; }
     const times = pickTimes(last.input, pick.id);
     busy = true; $('capBtn').disabled = true;
+    window.PlanEase && (window.PlanEase.off = true);   // 찍는 동안은 화면도 규칙 값 그대로
     // 지금 화면 기억 (끝나면 되돌림)
     const keep = { date: $('simDate').value, time: $('simTime').value };
     if ($('simPlay').textContent === '멈춤') $('simPlay').click();
@@ -176,6 +177,7 @@
     } finally {
       $('simDate').value = keep.date; $('simTime').value = keep.time; $('simTime').dispatchEvent(new Event('input'));
       busy = false; $('capBtn').disabled = false;
+      window.PlanEase && (window.PlanEase.off = false);
     }
   };
   $('capBtn').onclick = () => window.runCapture();
