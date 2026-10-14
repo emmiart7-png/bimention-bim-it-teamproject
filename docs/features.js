@@ -360,7 +360,7 @@
   if (framed) note('미리보기 창 안에서는 인쇄와 클립보드 복사가 막혀 있습니다. 크롬이나 엣지에서 직접 열어 주세요.');
   // Ctrl + P 로 바로 인쇄해도 요약이 최신이 되게
   window.addEventListener('beforeprint', renderPrintSummary);
-  $('printBtn').onclick = async () => { renderPrintSummary(); if (window.preparePrint) { try { await window.preparePrint(); } catch (e) { console.warn(e); } } note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
+  $('printBtn').onclick = async () => { renderPrintSummary(); if (window.runCapture) { note('인쇄용 화면을 찍는 중입니다 (Unity 는 10~20초)…'); try { await window.runCapture(); } catch (e) { console.warn(e); } } if (window.preparePrint) { try { await window.preparePrint(); } catch (e) { console.warn(e); } } note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
 
   // ---------------- 5. 링크로 공유 ----------------
   const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -381,9 +381,35 @@
     catch (e) { console.warn('공유 링크를 읽지 못함', e); return false; }
   }
 
+  // ---------------- 에너지 구성: 대안마다 냉방 절감(+) 과 조명 · 난방 증가(−), 순 절감 ----------------
+  function renderEnergy() {
+    const el = $('energyBars'); if (!el || !last || !last.out) return;
+    const R = last.out.result;
+    const rows = [['internal_reactive', '내부 반응형'], ['external_fixed', '외부 고정'], ['external_reactive', '외부 반응형']].filter(([k]) => R[k]).map(([k, n]) => ({ n, ...R[k].energy }));
+    if (!rows.length) { el.innerHTML = ''; return; }
+    const W = 640, rowH = 36, top = 6, labW = 92, netW = 78, H = top + rows.length * rowH;
+    const neg = Math.max(...rows.map(r => r.lighting_added_mwh_yr + r.heating_added_mwh_yr)), pos = Math.max(...rows.map(r => r.cooling_saved_mwh_yr), 1e-6);
+    const sc = (W - labW - netW) / (neg + pos), z = labW + neg * sc;
+    let g = '';
+    rows.forEach((r, i) => {
+      const y = top + i * rowH, bh = 18, by = y + (rowH - bh) / 2;
+      const L = r.lighting_added_mwh_yr * sc, Hh = r.heating_added_mwh_yr * sc, C = r.cooling_saved_mwh_yr * sc;
+      g += `<text x="${labW - 10}" y="${r1(by + 13)}" text-anchor="end" font-size="14" fill="#0A1317">${esc(r.n)}</text>`;
+      g += `<rect x="${r1(z)}" y="${r1(by)}" width="${r1(C)}" height="${bh}" rx="3" fill="#0064E0"><title>냉방 절감 ${r1(r.cooling_saved_mwh_yr)} MWh/년</title></rect>`;
+      g += `<rect x="${r1(z - L)}" y="${r1(by)}" width="${r1(L)}" height="${bh}" fill="#8595A4"><title>조명 증가 ${r1(r.lighting_added_mwh_yr)} MWh/년</title></rect>`;
+      g += `<rect x="${r1(z - L - Hh)}" y="${r1(by)}" width="${r1(Hh)}" height="${bh}" fill="#F2A20C"><title>겨울 난방 증가 ${r1(r.heating_added_mwh_yr)} MWh/년</title></rect>`;
+      const nx = z + r.net_saved_mwh_yr * sc;
+      g += `<line x1="${r1(nx)}" y1="${r1(by - 4)}" x2="${r1(nx)}" y2="${r1(by + bh + 4)}" stroke="#0A1317" stroke-width="3" stroke-linecap="round"/>`;
+      g += `<text x="${W - 4}" y="${r1(by + 13)}" text-anchor="end" font-size="14" font-weight="700" fill="${r.net_saved_mwh_yr >= 0 ? '#0A1317' : '#C0392B'}">순 ${r1(r.net_saved_mwh_yr)}</text>`;
+    });
+    g = `<line x1="${r1(z)}" y1="0" x2="${r1(z)}" y2="${H}" stroke="#AEB8C2" stroke-width="1"/>` + g;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="대안별 에너지 구성: ${esc(rows.map(r => r.n + ' 순 ' + r1(r.net_saved_mwh_yr) + ' MWh/년').join(', '))}" xmlns="${NS}">${g}</svg>`
+      + '<div class="legend"><span><i style="background:#0064E0"></i>냉방 절감</span><span><i style="background:#8595A4"></i>조명 증가</span><span><i style="background:#F2A20C"></i>겨울 난방 증가</span><span><i style="background:#0A1317;width:3px"></i>순 절감 (= 냉방 − 조명 − 난방)</span></div>';
+  }
+
   // ---------------- 결과가 나올 때마다 갱신 ----------------
   function onResult(r) {
-    last = r; syncSliders(); renderPlans(); renderChart(); renderHeatmapOptions(); renderHeatmap(); renderPrintSummary();
+    last = r; syncSliders(); renderPlans(); renderChart(); renderEnergy(); renderHeatmapOptions(); renderHeatmap(); renderPrintSummary();
   }
   window.addEventListener('louver:result', e => onResult(e.detail));
   if (!loadFromHash() && window.UI.getLast()) onResult(window.UI.getLast());

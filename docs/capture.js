@@ -13,6 +13,7 @@
   const $ = id => document.getElementById(id);
   const E = window.LouverEngine;
   if (!E || !$('capBtn')) return;
+  window.runCapture = null;
   const sleep = ms => new Promise(ok => setTimeout(ok, ms));
   const frame = () => new Promise(ok => requestAnimationFrame(() => ok()));
   const hm = t => `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
@@ -125,7 +126,8 @@
   window.addEventListener('beforeprint', () => { try { window.preparePrint(); } catch (e) { console.warn(e); } });
 
   let busy = false;
-  $('capBtn').onclick = async () => {
+  // 인쇄 / PDF 를 누르면 features.js 가 부른다 (화면에는 캡처 칸이 없고 인쇄물에만 나옴)
+  window.runCapture = async () => {
     if (busy) return;
     const last = window.UI && window.UI.getLast();
     if (!last || !last.out) { status('먼저 계산 결과가 있어야 합니다.'); return; }
@@ -176,4 +178,5 @@
       busy = false; $('capBtn').disabled = false;
     }
   };
+  $('capBtn').onclick = () => window.runCapture();
 })();
