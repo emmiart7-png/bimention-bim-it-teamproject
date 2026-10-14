@@ -115,7 +115,10 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--sub);margin-top:6px}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
 svg text{font-family:inherit}
-#printSummary{display:none}
+#printSummary,#printSim{display:none}
+.printSimGrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:12px;align-items:center}
+.printSimGrid img{width:100%;border-radius:8px;display:block}
+#printPlan svg{width:100%;height:auto;display:block}
 .collapsible>h2{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px}
 .collapsible>h2::before{content:"▾";color:var(--muted);font-size:12px}
 .collapsible.collapsed>h2::before{content:"▸"}
@@ -134,6 +137,15 @@ svg text{font-family:inherit}
   svg{max-width:100%;height:auto}
   section.panel{break-inside:avoid;border:1px solid #ccc;margin-bottom:8px;padding:8px 10px}
   #printSummary{display:block}
+  #printSim.has{display:block}
+  #capPanel:not(.has){display:none!important}
+  #capOut a{display:none}
+  #capOut img{break-inside:avoid}
+  /* 오른쪽 테두리가 종이 밖으로 나가지 않게: 칸은 종이 폭을 넘지 않고, 표는 칸 폭에 맞춘다 */
+  main>*,section.panel,.resultGrid>*,.topRow>*{min-width:0;max-width:100%;box-sizing:border-box}
+  table{width:100%;table-layout:fixed}
+  td,th{overflow-wrap:anywhere}
+  #heatmap svg,#cumChart svg{width:100%;height:auto}
   .cards{grid-template-columns:repeat(3,1fr)}
   .card.best{background:#fff}
   header p{display:none}
@@ -252,6 +264,10 @@ svg text{font-family:inherit}
     <h2>검토 대상</h2>
     <div id="printSite"></div>
   </section>
+  <section class="panel" id="printSim">
+    <h2 id="printSimTitle">루버 시뮬레이션</h2>
+    <div class="printSimGrid"><div id="printPlan"></div><div><img id="printShot" alt="루버 시뮬레이션 화면"><p class="muted" id="printShotCap"></p></div></div>
+  </section>
   <section class="panel noprint">
     <h2 style="display:flex;align-items:center;gap:8px">루버 시뮬레이션
       <span class="seg noprint" id="simSrc" style="margin-left:auto;font-weight:400;font-size:14px"><label><input type="radio" name="simsrc" value="unity" checked><span>네이버 1784</span></label><label title="지도에서 건물을 골라 입면을 만들면 선택할 수 있어요"><input type="radio" name="simsrc" value="model" disabled><span>선택한 건물</span></label></span></h2>
@@ -289,9 +305,9 @@ svg text{font-family:inherit}
     </div>
   </section>
 </div>
-  <section class="panel noprint" id="capPanel" style="grid-column:1 / -1">
-    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">보고서용 화면 캡처<button id="capBtn" style="margin-left:auto;font-size:14px;font-weight:400" title="냉방 효과가 가장 큰 입면을 골라, 하지 닫힘 · 열림과 하지 · 동지 화면을 자동으로 찍습니다">캡처하기</button></h2>
-    <p class="muted" id="capStatus">지금 시뮬레이션 화면(네이버 1784 = Unity, 선택한 건물 = 웹 3D)으로 찍습니다.</p>
+  <section class="panel" id="capPanel" style="grid-column:1 / -1">
+    <h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">보고서용 화면 캡처<button id="capBtn" class="noprint" style="margin-left:auto;font-size:14px;font-weight:400" title="냉방 효과가 가장 큰 입면을 골라, 하지 닫힘 · 열림과 하지 · 동지 화면을 자동으로 찍습니다">캡처하기</button></h2>
+    <p class="muted noprint" id="capStatus">지금 시뮬레이션 화면(네이버 1784 = Unity, 선택한 건물 = 웹 3D)으로 찍습니다.</p>
     <div id="capOut"></div>
   </section>
   <section class="panel collapsible collapsed" id="resultPanel" style="grid-column:1 / -1">
@@ -720,8 +736,8 @@ svg text{font-family:inherit}
 <script src="model3d.js?v=36"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=44"></script>
-<script src="capture.js?v=3"></script>
+<script src="features.js?v=45"></script>
+<script src="capture.js?v=4"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=31"></script>
 </body>

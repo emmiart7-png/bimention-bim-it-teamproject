@@ -344,7 +344,7 @@
   if (framed) note('미리보기 창 안에서는 인쇄와 클립보드 복사가 막혀 있습니다. 크롬이나 엣지에서 직접 열어 주세요.');
   // Ctrl + P 로 바로 인쇄해도 요약이 최신이 되게
   window.addEventListener('beforeprint', renderPrintSummary);
-  $('printBtn').onclick = () => { renderPrintSummary(); note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
+  $('printBtn').onclick = async () => { renderPrintSummary(); if (window.preparePrint) { try { await window.preparePrint(); } catch (e) { console.warn(e); } } note('인쇄 창이 열리지 않으면 <b>Ctrl + P</b>를 누르세요. 대상에서 "PDF로 저장"을 고르면 PDF가 됩니다.'); try { window.print(); } catch (e) {} };
 
   // ---------------- 5. 링크로 공유 ----------------
   const b64e = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
