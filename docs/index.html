@@ -230,7 +230,8 @@ svg text{font-family:inherit}
         <button id="searchBtn">찾기</button>
       </div>
       <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
-      <div class="row4">
+      <label class="check" style="margin:24px 0 6px"><input type="checkbox" id="infoToggle"> 정보 수정 <span class="muted" style="font-size:12px">지상층수 · 층고 · 창면적비 · 짧은 변</span></label>
+      <div class="row4" id="infoRow" hidden>
         <div><label for="floors">지상층수</label><input id="floors" type="number" inputmode="decimal" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
         <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" inputmode="decimal" step="0.1" value="4"></div>
         <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" inputmode="decimal" step="0.05" value="0.6"></div>
@@ -618,6 +619,8 @@ svg text{font-family:inherit}
   let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
   $('vwKey').value=key;
   $('vwKeyToggle').onchange=()=>{ $('vwKeyRow').hidden=!$('vwKeyToggle').checked; };
+  // 정보 수정: 체크할 때만 지상층수 · 층고 · 창면적비 · 짧은 변 제외 칸을 보인다 (지상층수는 건물을 고르면 자동으로 채워짐)
+  $('infoToggle').onchange=()=>{ $('infoRow').hidden=!$('infoToggle').checked; };
   const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY });
   // 이 브라우저에 저장된 다른 키가 틀렸으면 (인증키 오류) 저장된 키를 지우고 기본 키로 한 번 더
   async function withKey(fn){
