@@ -104,6 +104,12 @@
     const useModel = window.simMode === 'model';
     if (useModel && !(window.Model3D && window.Model3D.hasModel)) { status('선택한 건물 3D 가 아직 없습니다.'); return; }
     if (!useModel && !window.unityInstance) { status('Unity 가 아직 뜨지 않았습니다. 다 뜬 뒤 다시 눌러 주세요.'); return; }
+    // Unity 장면이 아직 로딩 중이면 (로고 화면) 다 뜰 때까지 최대 30초 기다린다
+    if (!useModel && !(window.LouverBridge && window.LouverBridge.ready)) {
+      status('Unity 장면이 다 뜨기를 기다리는 중…');
+      for (let i = 0; i < 60 && !window.LouverBridge.ready; i++) await sleep(500);
+      await sleep(1500);
+    }
     const pick = pickFacade(last);
     if (!pick) { status('루버를 단 입면이 없습니다.'); return; }
     const times = pickTimes(last.input, pick.id);
