@@ -666,9 +666,9 @@ svg text{font-family:inherit}
       current.address=addr||'';
       if(!addr){ $('address').value=''; try{ const [cx,cy]=ringCenter(current.ring); current.address=await withKey(c=>VWorld.reverseGeocode(cy,cx,c)); }catch(e){ console.warn(e); } if(current.address) $('address').value=current.address; }
       setWhere();
-      // 건물 이름 · 주소, 줄바꿈 후 다음 할 일 (밑줄)
+      // 건물 이름 · 주소
       { const e=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); const st=$('vwStatus'); st.classList.remove('err');
-        st.innerHTML=`${e(current.name||'이름 없는 건물')}${current.address?' · '+e(current.address):''}<br><u>건물 클릭 후 "이 건물로 입면 만들기"를 누르세요.</u>`; }
+        st.innerHTML=`${e(current.name||'이름 없는 건물')}${current.address?' · '+e(current.address):''}`; }
     }catch(e){ status(e.message, true); }
   }
   map.on('click', e=>pickAt(e.latlng.lat,e.latlng.lng));
