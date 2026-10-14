@@ -387,24 +387,27 @@
     const R = last.out.result;
     const rows = [['internal_reactive', '내부 반응형'], ['external_fixed', '외부 고정'], ['external_reactive', '외부 반응형']].filter(([k]) => R[k]).map(([k, n]) => ({ n, ...R[k].energy }));
     if (!rows.length) { el.innerHTML = ''; return; }
-    const W = 640, rowH = 36, top = 6, labW = 92, netW = 78, H = top + rows.length * rowH;
-    const neg = Math.max(...rows.map(r => r.lighting_added_mwh_yr + r.heating_added_mwh_yr)), pos = Math.max(...rows.map(r => r.cooling_saved_mwh_yr), 1e-6);
-    const sc = (W - labW - netW) / (neg + pos), z = labW + neg * sc;
-    let g = '';
+    // 가운데 0 을 기준으로 왼쪽 = 늘어난 전기 (조명 · 겨울 난방), 오른쪽 = 줄어든 전기 (냉방). 각 줄 아래 가는 막대 = 순 절감
+    const W = 640, labW = 96, netW = 84, head = 22, rowH = 50, H = head + rows.length * rowH;
+    const neg = Math.max(...rows.map(r => r.lighting_added_mwh_yr + r.heating_added_mwh_yr), 1e-6), pos = Math.max(...rows.map(r => Math.max(r.cooling_saved_mwh_yr, r.net_saved_mwh_yr)), 1e-6);
+    const sc = (W - labW - netW - 8) / (neg + pos), z = labW + neg * sc;
+    const seg = (x, w, y, h, fill, v, tip) => `<rect x="${r1(x)}" y="${r1(y)}" width="${r1(Math.max(w, 0))}" height="${h}" fill="${fill}"><title>${tip} ${r1(v)} MWh/년</title></rect>`
+      + (w >= 34 ? `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + 4.5)}" text-anchor="middle" font-size="12" font-weight="700" fill="#FFFFFF">${r1(v)}</text>` : '');
+    let g = `<text x="${r1(z - 6)}" y="14" text-anchor="end" font-size="12" fill="#5D6C7B">← 늘어난 전기</text><text x="${r1(z + 6)}" y="14" font-size="12" fill="#5D6C7B">줄어든 전기 →</text>`;
     rows.forEach((r, i) => {
-      const y = top + i * rowH, bh = 18, by = y + (rowH - bh) / 2;
-      const L = r.lighting_added_mwh_yr * sc, Hh = r.heating_added_mwh_yr * sc, C = r.cooling_saved_mwh_yr * sc;
-      g += `<text x="${labW - 10}" y="${r1(by + 13)}" text-anchor="end" font-size="14" fill="#0A1317">${esc(r.n)}</text>`;
-      g += `<rect x="${r1(z)}" y="${r1(by)}" width="${r1(C)}" height="${bh}" rx="3" fill="#0064E0"><title>냉방 절감 ${r1(r.cooling_saved_mwh_yr)} MWh/년</title></rect>`;
-      g += `<rect x="${r1(z - L)}" y="${r1(by)}" width="${r1(L)}" height="${bh}" fill="#8595A4"><title>조명 증가 ${r1(r.lighting_added_mwh_yr)} MWh/년</title></rect>`;
-      g += `<rect x="${r1(z - L - Hh)}" y="${r1(by)}" width="${r1(Hh)}" height="${bh}" fill="#F2A20C"><title>겨울 난방 증가 ${r1(r.heating_added_mwh_yr)} MWh/년</title></rect>`;
-      const nx = z + r.net_saved_mwh_yr * sc;
-      g += `<line x1="${r1(nx)}" y1="${r1(by - 4)}" x2="${r1(nx)}" y2="${r1(by + bh + 4)}" stroke="#0A1317" stroke-width="3" stroke-linecap="round"/>`;
-      g += `<text x="${W - 4}" y="${r1(by + 13)}" text-anchor="end" font-size="14" font-weight="700" fill="${r.net_saved_mwh_yr >= 0 ? '#0A1317' : '#C0392B'}">순 ${r1(r.net_saved_mwh_yr)}</text>`;
+      const y = head + i * rowH, bh = 20, by = y + 6, ny = by + bh + 4, nh = 7;
+      const L = r.lighting_added_mwh_yr * sc, Hh = r.heating_added_mwh_yr * sc, C = r.cooling_saved_mwh_yr * sc, N = r.net_saved_mwh_yr;
+      g += `<text x="0" y="${r1(by + 15)}" font-size="14" font-weight="700" fill="#0A1317">${esc(r.n)}</text>`;
+      g += seg(z, C, by, bh, '#0064E0', r.cooling_saved_mwh_yr, '냉방 절감');
+      g += seg(z - L, L, by, bh, '#8595A4', r.lighting_added_mwh_yr, '조명 증가');
+      g += seg(z - L - Hh, Hh, by, bh, '#E08A00', r.heating_added_mwh_yr, '겨울 난방 증가');
+      const col = N >= 0 ? '#0A1317' : '#C0392B';
+      g += `<rect x="${r1(N >= 0 ? z : z + N * sc)}" y="${r1(ny)}" width="${r1(Math.abs(N) * sc)}" height="${nh}" rx="2" fill="${col}"><title>순 절감 ${r1(N)} MWh/년</title></rect>`;
+      g += `<text x="${W}" y="${r1(by + 15)}" text-anchor="end" font-size="14" font-weight="700" fill="${col}">순 ${r1(N)}</text>`;
     });
-    g = `<line x1="${r1(z)}" y1="0" x2="${r1(z)}" y2="${H}" stroke="#AEB8C2" stroke-width="1"/>` + g;
-    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="대안별 에너지 구성: ${esc(rows.map(r => r.n + ' 순 ' + r1(r.net_saved_mwh_yr) + ' MWh/년').join(', '))}" xmlns="${NS}">${g}</svg>`
-      + '<div class="legend"><span><i style="background:#0064E0"></i>냉방 절감</span><span><i style="background:#8595A4"></i>조명 증가</span><span><i style="background:#F2A20C"></i>겨울 난방 증가</span><span><i style="background:#0A1317;width:3px"></i>순 절감 (= 냉방 − 조명 − 난방)</span></div>';
+    g = `<line x1="${r1(z)}" y1="${head - 2}" x2="${r1(z)}" y2="${H}" stroke="#5D6C7B" stroke-width="1.5"/>` + g;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="대안별 에너지 구성: ${esc(rows.map(r => r.n + ' 냉방 절감 ' + r1(r.cooling_saved_mwh_yr) + ', 조명 증가 ' + r1(r.lighting_added_mwh_yr) + ', 난방 증가 ' + r1(r.heating_added_mwh_yr) + ', 순 ' + r1(r.net_saved_mwh_yr) + ' MWh/년').join('; '))}" xmlns="${NS}">${g}</svg>`
+      + '<div class="legend"><span><i style="background:#0064E0"></i>냉방 절감</span><span><i style="background:#8595A4"></i>조명 증가</span><span><i style="background:#E08A00"></i>겨울 난방 증가</span><span><i style="background:#0A1317;height:6px;vertical-align:1px"></i>순 절감 = 냉방 − 조명 − 난방</span></div>';
   }
 
   // ---------------- 결과가 나올 때마다 갱신 ----------------
