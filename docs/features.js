@@ -148,6 +148,22 @@
       if (!moved) break;
     }
     labels.forEach(l => { l.x = cx + RL * Math.sin(l.a); l.y = cy - RL * Math.cos(l.a); });
+    // 그래도 이음선이 엇갈리면 (꺾인 모서리에 입면이 몰려 있을 때) 두 이름표 자리를 맞바꾼다
+    const cross = (p, q) => {
+      const o = (a, b, c) => Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]));
+      const P1 = p.m, P2 = [p.x, p.y], Q1 = q.m, Q2 = [q.x, q.y];
+      return o(P1, P2, Q1) * o(P1, P2, Q2) < 0 && o(Q1, Q2, P1) * o(Q1, Q2, P2) < 0;
+    };
+    for (let it = 0; it < 20; it++) {
+      let swapped = false;
+      for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
+        const A = labels[i], B = labels[j];
+        if (!cross(A, B)) continue;
+        [A.a, B.a] = [B.a, A.a]; [A.x, B.x] = [B.x, A.x]; [A.y, B.y] = [B.y, A.y];
+        swapped = true;
+      }
+      if (!swapped) break;
+    }
     let lab = '';
     // 이름표를 누르면 그 입면의 루버를 달거나 뗀다 (실선 테두리 = 루버 있음, 점선 = 없음, 하늘색 = 지금 닫힘)
     for (const l of labels) {
