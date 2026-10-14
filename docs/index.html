@@ -78,11 +78,17 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
 #unity{border:1px dashed var(--line);border-radius:14px;min-height:180px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:14px;padding:16px;background:var(--soft)}
 .hidden{display:none}
 .hdr-btns{display:flex;gap:8px}
-.plans{display:block;margin-top:12px}
+.plans{display:block;margin-top:0}
+.simTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:12px}
+.simTop .legend span{flex-wrap:wrap}
+.simTopL .timebar:first-child{flex-direction:column;align-items:stretch;gap:8px}
+.simTopL .timebar:first-child .btns{justify-content:flex-start!important;flex-wrap:nowrap}
+.simTopL .timebar:first-child .btns button{flex:1}
+@media (max-width:900px){.simTop{grid-template-columns:1fr}}
 .plan{border:1px solid var(--line);border-radius:12px;padding:8px;text-align:center;font-size:14px}
 .plan svg{width:100%;height:auto;display:block}
 .plan .st{font-weight:600}
-.siteplan{max-width:520px;margin:8px auto 0}
+.siteplan{max-width:520px;margin:0 auto}
 .subh{font-size:16px;font-weight:700;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
 .subblock{break-inside:avoid;min-width:0}
 .topRow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:24px;align-items:start}
@@ -244,6 +250,8 @@ svg text{font-family:inherit}
   <section class="panel noprint">
     <h2 style="display:flex;align-items:center;gap:8px">루버 시뮬레이션 / 평면도
       <span class="seg noprint" id="simSrc" style="margin-left:auto;font-weight:400;font-size:14px"><label><input type="radio" name="simsrc" value="unity" checked><span>네이버 1784</span></label><label title="지도에서 건물을 골라 입면을 만들면 선택할 수 있어요"><input type="radio" name="simsrc" value="model" disabled><span>선택한 건물</span></label></span></h2>
+    <div class="simTop">
+     <div class="simTopL">
     <div class="timebar noprint">
       <div><label for="simDate">날짜</label><input id="simDate" type="date" value="2026-06-21"></div>
       <div class="btns" style="margin:0;justify-content:flex-end"><button data-day="2026-03-21">춘분</button><button data-day="2026-06-21">하지</button><button data-day="2026-09-23">추분</button><button data-day="2026-12-21">동지</button></div>
@@ -251,6 +259,13 @@ svg text{font-family:inherit}
     <div class="timebar noprint" style="margin-top:6px">
       <div style="flex:1"><label for="simTime">시각 <output id="simTimeOut">12:00</output></label><input id="simTime" type="range" min="0" max="1438" step="2" value="720"></div>
       <button id="simPlay">재생</button>
+    </div>
+    <div class="legend" style="align-items:center;justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:8px"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
+    <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
+     </div>
+     <div class="simTopR">
+    <div class="plans" id="plans"></div>
+     </div>
     </div>
     <div class="ctlrow noprint">
       <div class="seg" id="viewSeg"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
@@ -264,9 +279,6 @@ svg text{font-family:inherit}
       <p class="muted" id="model3dMsg" style="margin-top:6px"></p>
       <p class="muted">외곽선 · 층수 · 층고값으로 만든 단순 모형입니다. 마우스 끌어서 돌리기, 휠로 확대 · 축소 가능합니다.</p>
     </div>
-    <div class="plans" id="plans"></div>
-    <div class="legend" style="align-items:center;justify-content:space-between"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
-    <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
   </section>
 </div>
   <section class="panel noprint" id="capPanel" style="grid-column:1 / -1">
