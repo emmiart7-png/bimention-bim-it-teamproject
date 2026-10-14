@@ -72,6 +72,14 @@
     return null;
   }
 
+  // ---- 좌표 → 주소 (지도에서 건물을 눌렀을 때 주소 글자로 보이게) ----
+  async function reverseGeocode(lat, lon, cfg) {
+    const r = check(await vworld('address', { service: 'address', request: 'getAddress', version: '2.0', crs: 'epsg:4326', point: lon + ',' + lat, type: 'both', simple: 'false' }, cfg));
+    const list = (r && r.result) || [];
+    const it = list.find(x => x.type === 'road') || list[0];
+    return it ? it.text : '';
+  }
+
   // ---- 좌표 주변 건물 ----
   async function buildingsNear(lat, lon, cfg, radiusDeg) {
     const d = radiusDeg || 0.0006; // 약 60 m
@@ -145,6 +153,6 @@
     });
   }
 
-  const api = { geocode, buildingsNear, pickBuilding, facadesFromRing, outerRing, isLocal };
+  const api = { geocode, reverseGeocode, buildingsNear, pickBuilding, facadesFromRing, outerRing, isLocal };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VWorld = api;
 })(typeof window !== 'undefined' ? window : globalThis);

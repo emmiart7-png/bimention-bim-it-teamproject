@@ -292,6 +292,7 @@ svg text{font-family:inherit}
   <section class="panel noprint">
     <h2 style="display:flex;align-items:center;gap:8px">루버 시뮬레이션
       <span class="seg noprint" id="simSrc" style="margin-left:auto;font-weight:400;font-size:14px"><label><input type="radio" name="simsrc" value="unity" checked><span>네이버 1784</span></label><label title="지도에서 건물을 골라 입면을 만들면 선택할 수 있어요"><input type="radio" name="simsrc" value="model" disabled><span>선택한 건물</span></label></span></h2>
+    <p class="muted" id="simWhere" style="margin:-4px 0 10px;font-size:14px">네이버 1784 · 경기도 성남시 분당구 정자일로 95</p>
     <div class="simTop">
      <div class="simTopL">
     <div class="timebar noprint">
@@ -371,7 +372,7 @@ svg text{font-family:inherit}
   </section>
 </main>
 <script src="engine.js?v=32"></script>
-<script src="geo.js?v=27"></script>
+<script src="geo.js?v=28"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
@@ -605,7 +606,8 @@ svg text{font-family:inherit}
   $('vwSave').onclick=()=>{ const k=$('vwKey').value.trim(); try{ if(k) localStorage.setItem('vworldKey',k); else localStorage.removeItem('vworldKey'); }catch(e){} setBase(); status(k?'키를 저장했습니다. 건물을 클릭해 보세요.':'기본 키로 돌아갔습니다.'); };
 
   let outline=null, marker=null, current=null, edges=null;
-  async function pickAt(lat,lon){
+  // addr: 주소 검색으로 온 경우 그 주소. 지도를 눌렀으면 비워 두고 건물 가운데 좌표로 주소를 찾는다
+  async function pickAt(lat,lon,addr){
     $('lat').value=lat.toFixed(5); $('lon').value=lon.toFixed(5);
     if(marker) map.removeLayer(marker); marker=L.circleMarker([lat,lon],{radius:5,color:'#0064E0'}).addTo(map);
     if(!cfg().key && !VWorld.isLocal()){ status('브이월드 인증키를 넣어야 건물을 불러올 수 있습니다.', true); return; }
@@ -619,7 +621,10 @@ svg text{font-family:inherit}
       map.fitBounds(outline.getBounds(),{maxZoom:18,padding:[20,20]});
       $('floors').value = current.floors || '';
       $('makeFacades').disabled=false;
-      status(`${current.name||'이름 없는 건물'} · 지상 ${current.floors??'?'}층 · 꼭짓점 ${current.ring.length-1}개. "이 건물로 입면 만들기"를 누르세요.`);
+      current.address=addr||'';
+      if(!addr){ $('address').value=''; try{ const [cx,cy]=ringCenter(current.ring); current.address=await withKey(c=>VWorld.reverseGeocode(cy,cx,c)); }catch(e){ console.warn(e); } if(current.address) $('address').value=current.address; }
+      setWhere();
+      status(`${current.name||'이름 없는 건물'}${current.address?' · '+current.address:''} · 지상 ${current.floors??'?'}층 · 꼭짓점 ${current.ring.length-1}개. "이 건물로 입면 만들기"를 누르세요.`);
     }catch(e){ status(e.message, true); }
   }
   map.on('click', e=>pickAt(e.latlng.lat,e.latlng.lng));
@@ -637,7 +642,7 @@ svg text{font-family:inherit}
       const p=await withKey(c=>VWorld.geocode(q,c));
       if(!p){ status('찾지 못했습니다. 도로명 주소(예: 정자일로 95)나 건물 이름으로 다시 입력해 보세요.', true); return; }
       status(`찾음: ${p.label}${p.address&&p.address!==p.label?' ('+p.address+')':''} · 건물 외곽선을 불러오는 중…`);
-      $('address').value=p.address||q; map.setView([p.lat,p.lon],18); await pickAt(p.lat,p.lon);
+      $('address').value=p.address||q; map.setView([p.lat,p.lon],18); await pickAt(p.lat,p.lon,p.address||q);
     }catch(e){ status(e.message, true); }
   }
   // 한글 조합 중 엔터: 글자가 확정된 뒤(compositionend) 한 번만 찾는다. 두 번 눌린 것처럼 와도 searching 으로 한 번만
@@ -706,7 +711,13 @@ svg text{font-family:inherit}
     const v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior';
     if(m){ if(window.Model3D) Model3D.setView(v); } else window.LouverBridge.sendView(v);
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
+    setWhere();
     window.dispatchEvent(new Event('resize'));
+  }
+  // 시뮬레이션 제목 아래: 지금 보는 건물 이름 · 주소
+  function setWhere(){
+    const w=$('simWhere'); if(!w) return;
+    w.textContent = window.simMode==='model' && current ? [current.name||'선택한 건물', current.address||$('address').value].filter(Boolean).join(' · ') : '네이버 1784 · 경기도 성남시 분당구 정자일로 95';
   }
   document.querySelectorAll('input[name=simsrc]').forEach(r=>r.onchange=()=>{ if(r.checked) showSim(r.value); });
   // 처음엔 네이버 1784 (유니티): 주변 건물 · 지형 토글은 보이되 흐리게
