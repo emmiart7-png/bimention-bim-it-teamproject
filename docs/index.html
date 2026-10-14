@@ -203,7 +203,7 @@ svg text{font-family:inherit}
 <body>
 <header>
   <h1>반응형외피 검토 도구 <span class="muted">v0.1 시제품</span></h1>
-  <div class="hdr-btns noprint"><button id="shareBtn">링크 복사</button><button id="printBtn">인쇄 / PDF</button></div>
+  <div class="hdr-btns noprint"><button id="shareBtn">링크 복사</button><button id="printBtn">인쇄</button><button id="detailBtn" title="종합보고서 양식 (A4 약 20쪽)">상세 인쇄</button></div>
   <details id="howto" class="noprint" style="flex-basis:100%;order:3;font-size:14px;color:var(--sub)">
     <summary style="cursor:pointer;color:var(--ink);font-weight:700;width:max-content">사용법</summary>
     <div style="margin-top:8px;line-height:1.7">
@@ -626,6 +626,7 @@ svg text{font-family:inherit}
   // 정보 수정: 체크할 때만 지상층수 · 층고 · 창면적비 · 짧은 변 제외 칸을 보인다 (지상층수는 건물을 고르면 자동으로 채워짐)
   $('infoToggle').onchange=()=>{ $('infoRow').hidden=!$('infoToggle').checked; };
   const cfg = () => ({ key: $('vwKey').value.trim() || DEFAULT_VW_KEY });
+  window.VW_KEY_FOR_REPORT = () => cfg().key;   // 상세 보고서 지도 그림 (report.js)
   // 이 브라우저에 저장된 다른 키가 틀렸으면 (인증키 오류) 저장된 키를 지우고 기본 키로 한 번 더
   async function withKey(fn){
     try{ return await fn(cfg()); }
@@ -713,7 +714,7 @@ svg text{font-family:inherit}
       let list;
       try{ list=await withKey(c=>VWorld.buildingsNear(lat,lon,{...c,timeoutMs:40000},0.0025)); }
       catch(e){ list=await withKey(c=>VWorld.buildingsNear(lat,lon,{...c,timeoutMs:40000},0.0012)); }
-      list=list.filter(x=>x.id!==b.id);
+      list=list.filter(x=>x.id!==b.id); window.CtxCount=list.length;
       const k=Model3D.setContext(list,{floorHeight:3.3});
       // Unity 그림자용: 같은 기준점 (고른 건물 중심) 의 외곽 + 높이. 층수 없으면 3층, 층고 3.3 m (3D 보기와 같음)
       window.LouverBridge.sendContext({origin_lat_deg:origin[1], origin_lon_deg:origin[0], buildings:list.map(x=>({id:String(x.id??''), floors:x.floors||0, height_m:+((x.floors||3)*3.3).toFixed(1), footprint_en_m:flatRing(x.ring).en}))});
@@ -764,6 +765,10 @@ svg text{font-family:inherit}
   function setWhere(){
     const w=$('simWhere'); if(!w) return;
     w.textContent = window.simMode==='model' && current ? [current.name||'선택한 건물', current.address||$('address').value].filter(Boolean).join(' · ') : '네이버 1784 · 경기도 성남시 분당구 정자일로 95';
+    // 상세 보고서(report.js)가 쓰는 건물 정보
+    window.SiteInfo = window.simMode==='model' && current
+      ? { is1784:false, name:current.name||'선택한 건물', address:current.address||$('address').value||'', floors:Number($('floors').value)||current.floors||null, ring:current.ring }
+      : { is1784:true, name:'네이버 1784', address:'경기도 성남시 분당구 정자일로 95', floors:28, ring:null };
   }
   document.querySelectorAll('input[name=simsrc]').forEach(r=>r.onchange=()=>{ if(r.checked) showSim(r.value); });
   // 처음엔 네이버 1784 (유니티): 주변 건물 · 지형 토글은 보이되 흐리게
@@ -817,7 +822,8 @@ svg text{font-family:inherit}
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=56"></script>
-<script src="capture.js?v=7"></script>
+<script src="report.js?v=2"></script>
+<script src="capture.js?v=8"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=33"></script>
 </body>

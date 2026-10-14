@@ -164,13 +164,14 @@
         const shots = [];
         for (const c of cuts) { status(`캡처 중… ${c.label}`); shots.push({ label: c.label, src: await shoot(c, useModel) }); }
         if (shots.some(s => !s.src)) { out.push({ title, miss: true }); continue; }
-        out.push({ title, key, src: await compose(shots, caption) });
+        out.push({ title, key, labels: shots.map(s => s.label), src: await compose(shots, caption) });
       }
       const why = [!times.why.closed && '하지에 닫히는 시각이 없음', !times.why.open && '하지에 열린 낮 시각이 없음', !times.why.winter && '동지에 겨울 모드 (해와 나란히) 시각이 없음'].filter(Boolean);
       $('capOut').innerHTML = out.map(o => o.miss
         ? `<p class="muted">${o.title}: 고를 시각이 없어 건너뜀</p>`
         : `<figure style="margin:12px 0"><img src="${o.src}" alt="${o.title}" style="width:100%;border-radius:8px;border:1px solid var(--line,#DDE3EA)"><figcaption style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span>${o.title} · ${caption}</span><a download="louver_${o.key}_${pick.id}.png" href="${o.src}" style="font-size:14px;padding:6px 14px;border:1px solid #C9D3DD;border-radius:8px;color:inherit;text-decoration:none;background:#fff">내려받기</a></figcaption></figure>`).join('');
       $('capPanel').classList.toggle('has', out.some(o => !o.miss));
+      window.CaptureResult = { useModel, face: pick.id, az: Math.round(pick.f.azimuth_deg), caption, out };   // 상세 보고서 그림 3-2 · 3-3
       status(`${name} · ㎡당 냉방 절감 ${(pick.v * 1000).toFixed(1)} kWh 로 가장 큼${why.length ? ' · ' + why.join(', ') : ''}`);
     } catch (e) {
       console.warn(e); status('캡처하지 못했습니다: ' + e.message);
