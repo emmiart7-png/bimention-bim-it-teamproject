@@ -77,14 +77,16 @@
   // 4 · 5. 나란히 놓고 라벨 · 캡션
   async function compose(shots, caption) {
     const imgs = await Promise.all(shots.map(s => loadImg(s.src)));
-    const cw = 960, ch = Math.round(cw * imgs[0].height / imgs[0].width), gap = 16, capH = 56;
+    // 각 컷은 2:1 (화면 가운데를 잘라 냄: 입면이 가운데 오도록 카메라를 맞춘 상태)
+    const cw = 960, ch = cw / 2, gap = 16, capH = 56;
     const cv = document.createElement('canvas');
     cv.width = cw * 2 + gap; cv.height = ch + capH;
     const g = cv.getContext('2d'), font = getComputedStyle(document.body).fontFamily;
     g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, cv.width, cv.height);
     imgs.forEach((im, i) => {
       const x = i * (cw + gap);
-      g.drawImage(im, x, 0, cw, ch);
+      const sw = Math.min(im.width, im.height * 2), sh = sw / 2;
+      g.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, x, 0, cw, ch);
       g.font = `700 24px ${font}`;
       const w = g.measureText(shots[i].label).width + 28;
       g.fillStyle = '#0064E0';
