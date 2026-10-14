@@ -106,8 +106,7 @@ button.link{border:none;padding:4px 6px;color:var(--blue)}
   .topRow>#energyBlock{grid-area:en;margin:0!important;display:flex;flex-direction:column;justify-content:center}
   .topRow>#cards{grid-area:cards}
 }
-.resultGrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:0 32px;align-items:start}
-.resultGrid>div:nth-child(2){order:-1}   /* 히트맵 칸을 왼쪽에 (위 누적 순이익과 같은 열) */
+.resultGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 32px}
 @media (max-width:900px){.resultGrid{grid-template-columns:1fr}}
 @media print{.resultGrid{display:block}}
 .hmcap{font-weight:600;font-size:14px;margin:6px 0 2px}
@@ -214,7 +213,7 @@ svg text{font-family:inherit}
 <main>
 <div id="leftCol">
   <section class="panel noprint">
-    <h2 style="display:flex;justify-content:space-between;align-items:center">지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center">1. 지도에서 건물 고르기 <button id="resetMap" style="font-size:12px;padding:4px 10px">기본값</button></h2>
     <label class="check" style="margin:0 0 6px"><input type="checkbox" id="vwKeyToggle"> 브이월드 인증키 변경</label>
     <div class="inline" id="vwKeyRow" hidden>
       <div><label for="vwKey">브이월드 인증키</label><input id="vwKey" type="password" placeholder="비우면 기본 키" autocomplete="off"></div>
