@@ -107,19 +107,30 @@
     if (!model) return;
     const az = { east: 90, south: 180, west: 270, north: 0 }[side];
     if (az === undefined) { controls.target.copy(model.home.target); camera.position.copy(model.home.pos); controls.update(); return; }
-    const f = nearestFace(az, false);   // 루버가 없는 면 (북면 등) 도 그 방향 면을 본다
+    // 그 방향 (±45°) 면 중 가장 긴 면. 꺾인 건물에서 작은 홈 면을 고르면 카메라가 건물 안에 들어가 버린다
+    const d = (p, q) => Math.abs(((p - q + 540) % 360) - 180);
+    const near = model.faces.filter(x => d(x.az, az) <= 45);
+    const f = near.length ? near.reduce((p, q) => q.len > p.len ? q : p) : nearestFace(az, false);   // 루버가 없는 면 (북면 등) 도 그 방향 면을 본다
     const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2, y = model.height * 0.5;
-    const t = (f.az + 20) * RAD, dist = Math.max(40, Math.min(90, f.len * 0.9));
+    const t = (f.az + 20) * RAD, dist = clearDist(mE, mN, Math.sin(t), Math.cos(t), Math.max(40, Math.min(90, f.len * 0.9)));
     controls.target.set(mE, y, -mN);
     camera.position.set(mE + Math.sin(t) * dist, y + 6, -(mN + Math.cos(t) * dist));
     controls.update();
+  }
+  // 카메라가 건물 밖에 있도록 거리를 늘린다: 건물 가운데에서 (가장 먼 꼭짓점 + 10 m) 보다 멀리
+  function clearDist(mE, mN, dE, dN, dist) {
+    const pts = model.faces.flatMap(x => [x.a, x.b]);
+    const cE = pts.reduce((t, p) => t + p[0], 0) / pts.length, cN = pts.reduce((t, p) => t + p[1], 0) / pts.length;
+    const R = Math.max(...pts.map(p => Math.hypot(p[0] - cE, p[1] - cN))) + 10;
+    while (dist < 400 && Math.hypot(mE + dE * dist - cE, mN + dN * dist - cN) < R) dist += 5;
+    return dist;
   }
   // 보고서 캡처: 입면 id 를 정면에서 가깝게 (건물 높이 절반, 입면 너비가 화면에 들어오는 거리)
   function lookAtFaceFront(id) {
     if (!model) return false;
     const f = model.faces.find(x => x.id === id); if (!f) return false;
     const mE = (f.a[0] + f.b[0]) / 2, mN = (f.a[1] + f.b[1]) / 2, y = model.height * 0.5;
-    const dist = Math.max(25, Math.min(140, f.len / 2 / (Math.tan(camera.fov * RAD / 2) * camera.aspect) * 1.15));   // 입면 너비가 화면 가로에 꽉 차게
+    const dist = clearDist(mE, mN, f.nE, f.nN, Math.max(25, Math.min(140, f.len / 2 / (Math.tan(camera.fov * RAD / 2) * camera.aspect) * 1.15)));   // 입면 너비가 화면 가로에 꽉 차게, 건물 밖에서
     controls.target.set(mE, y, -mN);
     camera.position.set(mE + f.nE * dist, y + 4, -(mN + f.nN * dist));
     controls.update();
