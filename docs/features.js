@@ -172,7 +172,7 @@
     ysAll.length = 0;
     // 방위표: 3D · 유니티 화면 나침반과 같은 모양 (위 = 북)
     const nx = W - 44, ny = y0 + 44, kq = 0.64;
-    g += `<g aria-hidden="true" transform="translate(${nx} ${ny}) scale(${kq})"><circle r="46" fill="rgba(255,255,255,.9)" stroke="#283848" stroke-width="3"/>`
+    g += `<g aria-hidden="true" transform="translate(${nx} ${ny}) scale(${kq})"><circle r="46" fill="rgba(255,255,255,.9)" stroke="#283848" stroke-width="2.25"/>`
       + `<path d="M-5 0 L0 -30 L5 0 Z" fill="#DC2E29"/><path d="M-5 0 L0 30 L5 0 Z" fill="#8C99A8"/>`
       + [['N', 0, '#DC2E29'], ['E', 90, '#283848'], ['S', 180, '#283848'], ['W', 270, '#283848']].map(([t, d, c]) => `<text x="${Math.round(Math.sin(d * Math.PI / 180) * 34)}" y="${Math.round(-Math.cos(d * Math.PI / 180) * 34) + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${c}" font-family="sans-serif">${t}</text>`).join('')
       + '</g>';

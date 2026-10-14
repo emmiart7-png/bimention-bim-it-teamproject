@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-#map{aspect-ratio:16/9;height:auto;border-radius:12px;border:1px solid var(--line);margin-top:10px}
+#map{height:340px;border-radius:12px;border:1px solid var(--line);margin-top:10px}
 .status{font-size:14px;margin-top:8px;color:var(--sub);min-height:20px}
 .status.err{color:#C4314B}
 .inline{display:flex;gap:8px;align-items:end}
@@ -266,7 +266,6 @@ svg text{font-family:inherit}
       <button id="simPlay">재생</button>
     </div>
     <div class="legend" style="align-items:center;justify-content:flex-start;flex-direction:column;align-items:flex-start;gap:8px"><span class="sun" id="sunInfo" style="margin:0"></span><span style="display:flex;gap:12px;flex-wrap:wrap"><span><i style="background:#1E4E8C"></i>루버 날 (날 0° = 유리에 수직)</span><span><i style="background:#F2B544"></i>해 위치</span></span></div>
-    <p class="muted" style="margin-top:4px">입면 이름을 누르면 루버를 달거나 뗍니다 (실선 = 루버 있음 · 점선 = 없음)</p>
       <div class="simCtl">
     <div class="ctlrow noprint">
       <div class="seg" id="viewSeg"><label><input type="radio" name="uview" value="exterior" checked><span>외관</span></label><label><input type="radio" name="uview" value="interior"><span>실내</span></label><label><input type="radio" name="uview" value="split"><span>나란히</span></label></div>
@@ -716,12 +715,12 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=35"></script>
+<script src="model3d.js?v=36"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
-<script src="features.js?v=43"></script>
+<script src="features.js?v=44"></script>
 <script src="capture.js?v=3"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
-<script src="unity.js?v=30"></script>
+<script src="unity.js?v=31"></script>
 </body>
 </html>
