@@ -13,8 +13,6 @@
   const E = window.LouverEngine;
   const NS = 'http://www.w3.org/2000/svg';
   const r1 = v => Math.round(v * 10) / 10;
-  // 그림(SVG) 글자를 화면에서 정확히 px 크기로: 그림이 화면 폭에 맞게 줄거나 늘어도 글자는 12 · 14 px 로 같게
-  const fz = (px, vbw, el) => { const w = el && el.getBoundingClientRect().width; return r1(px * vbw / (w > 50 ? w : vbw)); };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   let last = null;
 
@@ -174,7 +172,7 @@
       lab += `<g class="facelab" data-fid="${esc(l.f.id)}" role="button" tabindex="0" aria-pressed="${on}" aria-label="${esc(l.f.id)} 입면 루버 ${on ? '있음 (누르면 뗌)' : '없음 (누르면 닮)'}" style="cursor:pointer">`;
       lab += `<title>${esc(l.f.id)} · ${l.f.azimuth_deg}° · 루버 ${on ? '있음' : '없음'} (누르면 바뀜)</title>`;
       lab += `<rect x="${r1(l.x - l.w / 2)}" y="${r1(l.y - LH / 2)}" width="${l.w}" height="${LH}" rx="8" fill="${on ? (active ? '#E8F3FF' : '#FFFFFF') : '#F7F8FA'}" stroke="${on ? '#1E4E8C' : '#AEB8C2'}" stroke-width="${on ? 2 : 1.5}"${on ? '' : ' stroke-dasharray="4 3"'}/>`;
-      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 5)}" text-anchor="middle" font-size="${fz(12, 640, document.querySelector('#plans .siteplan') || $('plans'))}" font-weight="700" fill="${on ? (active ? '#0064E0' : '#0A1317') : '#8595A4'}">${esc(l.f.id)}</text></g>`;
+      lab += `<text x="${r1(l.x)}" y="${r1(l.y + 5)}" text-anchor="middle" font-size="15" font-weight="700" fill="${on ? (active ? '#0064E0' : '#0A1317') : '#8595A4'}">${esc(l.f.id)}</text></g>`;
     }
     g += edges + blades + lab;
     if (st.sun.alt > 0) {
@@ -272,21 +270,21 @@
     const all = series.flatMap(s => s.v).concat([0]);
     let lo = Math.min(...all), hi = Math.max(...all); if (hi - lo < 1) hi = lo + 1;
     const step = niceStep((hi - lo) / 5); lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
-    const W = 600, H = 320, L = 70, R = 118, T = 20, B = 40, F = fz(12, 600, $('cumChart'));
+    const W = 600, H = 320, L = 70, R = 118, T = 20, B = 40;
     const X = t => L + t / years * (W - L - R), Y = v => T + (hi - v) / (hi - lo) * (H - T - B);
     let s = '';
-    for (let v = lo; v <= hi + 1e-9; v += step) s += `<line x1="${L}" x2="${W - R}" y1="${r1(Y(v))}" y2="${r1(Y(v))}" stroke="#DEE3E9"/><text x="${L - 8}" y="${r1(Y(v) + 4)}" text-anchor="end" font-size="${F}" fill="#5D6C7B">${fmtNum(v)}억</text>`;
-    for (let t = 0; t <= years; t += 20) s += `<text x="${r1(X(t))}" y="${H - 12}" text-anchor="middle" font-size="${F}" fill="#5D6C7B">${t}년</text>`;
+    for (let v = lo; v <= hi + 1e-9; v += step) s += `<line x1="${L}" x2="${W - R}" y1="${r1(Y(v))}" y2="${r1(Y(v))}" stroke="#DEE3E9"/><text x="${L - 8}" y="${r1(Y(v) + 4)}" text-anchor="end" font-size="15" fill="#5D6C7B">${fmtNum(v)}억</text>`;
+    for (let t = 0; t <= years; t += 20) s += `<text x="${r1(X(t))}" y="${H - 12}" text-anchor="middle" font-size="15" fill="#5D6C7B">${t}년</text>`;
     s += `<line x1="${L}" x2="${W - R}" y1="${r1(Y(0))}" y2="${r1(Y(0))}" stroke="#0A1317" stroke-width="1.5"/>`;
     const ends = [{ y: Y(0), c: "#0A1317", t: "통유리 = 0" }];
     for (const se of series) {
       const c = ALT_COLOR[se.k] || '#0064E0';
       s += `<polyline fill="none" stroke="${c}" stroke-width="${se.k === 'external_reactive' ? 3 : 2}" points="${se.v.map((v, t) => r1(X(t)) + ',' + r1(Y(v))).join(' ')}"/>`;
-      if (se.be !== null && se.be <= years) s += `<circle cx="${r1(X(se.be))}" cy="${r1(Y(se.v[se.be]))}" r="5" fill="${c}"/><text x="${r1(X(se.be))}" y="${r1(Y(se.v[se.be]) - 10)}" text-anchor="middle" font-size="${F}" font-weight="600" fill="${c}">${se.be}년</text>`;
+      if (se.be !== null && se.be <= years) s += `<circle cx="${r1(X(se.be))}" cy="${r1(Y(se.v[se.be]))}" r="5" fill="${c}"/><text x="${r1(X(se.be))}" y="${r1(Y(se.v[se.be]) - 10)}" text-anchor="middle" font-size="15" font-weight="600" fill="${c}">${se.be}년</text>`;
       ends.push({ y: Y(se.v[years]), c, t: se.name });
     }
     ends.sort((a, b) => a.y - b.y); for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 19) ends[i].y = ends[i - 1].y + 19;
-    for (const e of ends) s += `<text x="${W - R + 6}" y="${r1(e.y + 4)}" font-size="${F}" font-weight="600" fill="${e.c}">${esc(e.t)}</text>`;
+    for (const e of ends) s += `<text x="${W - R + 6}" y="${r1(e.y + 4)}" font-size="15" font-weight="600" fill="${e.c}">${esc(e.t)}</text>`;
     const beText = series.map(se => `${se.name} ${se.be === null ? '100년 초과' : se.be + '년'}`).join(', ');
     $('cumChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="통유리 대비 누적 순이익 그래프. 손익분기: ${esc(beText)}" xmlns="${NS}" style="width:100%;height:auto">${s}</svg>`;
   }
@@ -319,12 +317,12 @@
     return ['#FCE3A0', 1];
   }
   function heatSVG(id, alt, grid) {
-    const cw = 13, ch = 11, cols = 48, F = fz(12, 44 + 48 * 13 + 8, $('heatmap')), L = Math.round(F * 2.6), T = Math.round(F + 6);  // 촘촘하게 (칸 높이 11)
+    const cw = 13, ch = 11, L = 44, T = 18, cols = 48;  // 촘촘하게 (칸 높이 11)
     let s = '';
-    for (let h = 0; h <= 24; h += 3) s += `<text x="${L + h * 2 * cw}" y="${T - 5}" text-anchor="middle" font-size="${F}" fill="#5D6C7B">${h}시</text>`;
+    for (let h = 0; h <= 24; h += 3) s += `<text x="${L + h * 2 * cw}" y="13" text-anchor="middle" font-size="12" fill="#5D6C7B">${h}시</text>`;
     for (let m = 1; m <= 12; m++) {
       const y = T + (m - 1) * ch;
-      if (m % 2) s += `<text x="${L - 6}" y="${r1(y + ch / 2 + F * 0.35)}" text-anchor="end" font-size="${F}" fill="#5D6C7B">${m}월</text>`;
+      s += `<text x="${L - 6}" y="${y + 9}" text-anchor="end" font-size="10" fill="#5D6C7B">${m}월</text>`;
       for (let c = 0; c < cols; c++) {
         const [fill, op] = cell(alt, grid[m - 1][c]);
         s += `<rect x="${L + c * cw}" y="${y}" width="${cw - 1}" height="${ch - 2}" fill="${fill}" fill-opacity="${r1(op)}"/>`;
@@ -392,21 +390,20 @@
     // 가운데 0 을 기준으로 왼쪽 = 늘어난 전기 (조명 · 겨울 난방), 오른쪽 = 줄어든 전기 (냉방). 각 줄 아래 가는 막대 = 순 절감
     const W = 640, labW = 84, netW = 84, head = 22, rowH = 50, H = head + rows.length * rowH;
     const neg = Math.max(...rows.map(r => r.lighting_added_mwh_yr + r.heating_added_mwh_yr), 1e-6), pos = Math.max(...rows.map(r => Math.max(r.cooling_saved_mwh_yr, r.net_saved_mwh_yr)), 1e-6);
-    const F = fz(12, W, el);
     const sc = (W - labW - netW - 8) / (neg + pos), z = labW + neg * sc;
     const seg = (x, w, y, h, fill, v, tip) => `<rect x="${r1(x)}" y="${r1(y)}" width="${r1(Math.max(w, 0))}" height="${h}" fill="${fill}"><title>${tip} ${r1(v)} MWh/년</title></rect>`
-      + (w >= 34 ? `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + 4.5)}" text-anchor="middle" font-size="${F}" font-weight="700" fill="#FFFFFF">${r1(v)}</text>` : '');
-    let g = `<text x="${r1(z - 6)}" y="14" text-anchor="end" font-size="${F}" fill="#5D6C7B">← 늘어난 전기</text><text x="${r1(z + 6)}" y="14" font-size="${F}" fill="#5D6C7B">줄어든 전기 →</text>`;
+      + (w >= 34 ? `<text x="${r1(x + w / 2)}" y="${r1(y + h / 2 + 4.5)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#FFFFFF">${r1(v)}</text>` : '');
+    let g = `<text x="${r1(z - 6)}" y="14" text-anchor="end" font-size="11" fill="#5D6C7B">← 늘어난 전기</text><text x="${r1(z + 6)}" y="14" font-size="11" fill="#5D6C7B">줄어든 전기 →</text>`;
     rows.forEach((r, i) => {
       const y = head + i * rowH, bh = 20, by = y + 6, ny = by + bh + 4, nh = 7;
       const L = r.lighting_added_mwh_yr * sc, Hh = r.heating_added_mwh_yr * sc, C = r.cooling_saved_mwh_yr * sc, N = r.net_saved_mwh_yr;
-      g += `<text x="0" y="${r1(by + 15)}" font-size="${F}" font-weight="700" fill="#0A1317">${esc(r.n)}</text>`;
+      g += `<text x="0" y="${r1(by + 15)}" font-size="12" font-weight="700" fill="#0A1317">${esc(r.n)}</text>`;
       g += seg(z, C, by, bh, '#0064E0', r.cooling_saved_mwh_yr, '냉방 절감');
       g += seg(z - L, L, by, bh, '#8595A4', r.lighting_added_mwh_yr, '조명 증가');
       g += seg(z - L - Hh, Hh, by, bh, '#E08A00', r.heating_added_mwh_yr, '겨울 난방 증가');
       const col = N >= 0 ? '#0A1317' : '#C0392B';
       g += `<rect x="${r1(N >= 0 ? z : z + N * sc)}" y="${r1(ny)}" width="${r1(Math.abs(N) * sc)}" height="${nh}" rx="2" fill="${col}"><title>순 절감 ${r1(N)} MWh/년</title></rect>`;
-      g += `<text x="${W}" y="${r1(by + 15)}" text-anchor="end" font-size="${F}" font-weight="700" fill="${col}">순 ${r1(N)}</text>`;
+      g += `<text x="${W}" y="${r1(by + 15)}" text-anchor="end" font-size="12" font-weight="700" fill="${col}">순 ${r1(N)}</text>`;
     });
     g = `<line x1="${r1(z)}" y1="${head - 2}" x2="${r1(z)}" y2="${H}" stroke="#5D6C7B" stroke-width="1.5"/>` + g;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="대안별 에너지 구성: ${esc(rows.map(r => r.n + ' 냉방 절감 ' + r1(r.cooling_saved_mwh_yr) + ', 조명 증가 ' + r1(r.lighting_added_mwh_yr) + ', 난방 증가 ' + r1(r.heating_added_mwh_yr) + ', 순 ' + r1(r.net_saved_mwh_yr) + ' MWh/년').join('; '))}" xmlns="${NS}">${g}</svg>`
@@ -418,7 +415,5 @@
     last = r; syncSliders(); renderPlans(); renderChart(); renderEnergy(); renderHeatmapOptions(); renderHeatmap(); renderPrintSummary();
   }
   window.addEventListener('louver:result', e => onResult(e.detail));
-  let rz = null;
-  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (!last) return; renderChart(); renderHeatmap(); renderEnergy(); renderPlans(); }, 150); });
   if (!loadFromHash() && window.UI.getLast()) onResult(window.UI.getLast());
 })();
