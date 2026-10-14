@@ -129,9 +129,8 @@ svg text{font-family:inherit}
   body{background:#fff;color:#000;font-size:12px}
   .noprint,.btns,#warnings{display:none!important}
   /* 두 열을 풀어 한 줄로: 검토 대상 → 결과 → 대안 비교 → 누적 → 히트맵 → 입면별 (접힌 패널도 펴서) */
-  main{display:flex;flex-direction:column;padding:0;gap:0;max-width:none}
+  main{display:block;padding:0;max-width:none}   /* flex 이면 쪽 나눔이 어긋나 빈 공간이 생긴다 */
   #leftCol,#rightCol{display:contents}
-  #printSummary{order:-1}
   .collapsible>h2::before{display:none}
   .collapsible.collapsed>h2{margin:0 0 8px}
   svg{max-width:100%;height:auto}
@@ -149,6 +148,28 @@ svg text{font-family:inherit}
   .cards{grid-template-columns:repeat(3,1fr)}
   .card.best{background:#fff}
   header p{display:none}
+  /* 3쪽: 1쪽 = 검토 대상 · 루버 시뮬레이션 · 보고서용 캡처 / 2쪽 = 누적 순이익 · 대안 비교 / 3쪽 = 입면별 · 히트맵 */
+  .printSimGrid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
+  #capOut figure{margin:4px 0!important}
+  #capOut img{width:auto!important;max-width:100%;max-height:165px;display:block;margin:0 auto}
+  #capOut figcaption{margin-top:2px!important;font-size:10px}
+  .printSimGrid img{width:auto;max-width:100%;max-height:200px;margin:0 auto}
+  #printPlan svg{max-height:200px}
+  /* 결과는 큰 칸 하나로 묶지 않고 항목마다 칸 (쪽이 넘어가도 테두리가 끊기지 않게) */
+  #resultPanel{border:0!important;padding:0!important;margin:0!important;break-before:page;break-inside:auto!important}
+  #resultPanel>h2{display:none}
+  #resultPanel .subblock{border:1px solid #ccc;border-radius:14px;padding:8px 10px;margin:0 0 8px}
+  #resultPanel .subh{margin:0 0 8px!important;padding-top:0!important;border-top:0!important}
+  .topRow .cards{margin:0 0 8px}
+  #cumChart svg{max-height:220px}
+  #resultPanel th,#resultPanel td{padding:2px 4px;font-size:11px}
+  .card{padding:6px 8px;border-radius:10px}
+  .card h3{font-size:12px;margin:0 0 2px}
+  .big{font-size:16px}
+  .big small{font-size:10px}
+  .kv{font-size:10px;padding-top:2px;margin-top:2px}
+  .cards{gap:8px}
+  .resultGrid>div:nth-child(2){break-before:page}
 }
 </style>
 </head>
@@ -737,7 +758,7 @@ svg text{font-family:inherit}
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=45"></script>
-<script src="capture.js?v=5"></script>
+<script src="capture.js?v=6"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1013v9";</script>
 <script src="unity.js?v=31"></script>
 </body>

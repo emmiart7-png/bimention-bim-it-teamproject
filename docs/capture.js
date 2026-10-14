@@ -103,10 +103,17 @@
     const useModel = window.simMode === 'model';
     $('printSimTitle').textContent = `루버 시뮬레이션 · ${$('simDate').value} ${$('simTimeOut').textContent}`;
     $('printPlan').innerHTML = $('plans').innerHTML;
+    // 화면 가운데를 2:1 로 잘라 담는다 (보고서용 캡처와 같은 비율)
+    const crop21 = c => {
+      const sw = Math.min(c.width, c.height * 2), sh = sw / 2, o = document.createElement('canvas');
+      o.width = sw; o.height = sh;
+      o.getContext('2d').drawImage(c, (c.width - sw) / 2, (c.height - sh) / 2, sw, sh, 0, 0, sw, sh);
+      return o.toDataURL('image/png');
+    };
     let src = null;
     try {
-      if (useModel) src = window.Model3D && window.Model3D.hasModel ? window.Model3D.snapshot() : null;
-      else { const c = document.getElementById('unity-canvas'); src = c && window.unityInstance ? c.toDataURL('image/png') : null; }
+      if (useModel) { if (window.Model3D && window.Model3D.hasModel) { window.Model3D.snapshot(); const c = document.querySelector('#model3d canvas'); if (c) src = crop21(c); } }
+      else { const c = document.getElementById('unity-canvas'); if (c && window.unityInstance) src = crop21(c); }
     } catch (e) { console.warn(e); }
     const img = $('printShot');
     img.hidden = !src; if (src) img.src = src;
