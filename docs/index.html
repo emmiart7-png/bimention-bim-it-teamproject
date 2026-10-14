@@ -27,7 +27,9 @@ input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-
 /* 지도에서 건물 고르기: 왼쪽 = 글자 · 입력 · 버튼, 오른쪽 = 지도 */
 .mapGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;align-items:stretch}
 .mapL{display:flex;flex-direction:column;min-width:0}
-.mapL .row4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.mapL .row4{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:0}
+.mapL .row4 label{margin-top:4px}
+.mapL>.btns{padding-top:20px}
 .mapR #map{margin-top:0}
 @media (max-width:900px){.mapGrid{grid-template-columns:1fr}}
 /* 뷰 설정 버튼을 날짜 칸처럼 칸 폭 전체로 */
@@ -664,7 +666,9 @@ svg text{font-family:inherit}
       current.address=addr||'';
       if(!addr){ $('address').value=''; try{ const [cx,cy]=ringCenter(current.ring); current.address=await withKey(c=>VWorld.reverseGeocode(cy,cx,c)); }catch(e){ console.warn(e); } if(current.address) $('address').value=current.address; }
       setWhere();
-      status(`${current.name||'이름 없는 건물'}${current.address?' · '+current.address:''} · 지상 ${current.floors??'?'}층 · 꼭짓점 ${current.ring.length-1}개. "이 건물로 입면 만들기"를 누르세요.`);
+      // 건물 이름 · 주소, 줄바꿈 후 다음 할 일 (밑줄)
+      { const e=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); const st=$('vwStatus'); st.classList.remove('err');
+        st.innerHTML=`${e(current.name||'이름 없는 건물')}${current.address?' · '+e(current.address):''}<br><u>건물 클릭 후 "이 건물로 입면 만들기"를 누르세요.</u>`; }
     }catch(e){ status(e.message, true); }
   }
   map.on('click', e=>pickAt(e.latlng.lat,e.latlng.lng));
