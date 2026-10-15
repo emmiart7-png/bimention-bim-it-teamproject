@@ -47,3 +47,15 @@
 .v3 .v2stage #modelBox>p.muted:last-child{bottom:10px}
 .v3 .v2stage #model3dMsg{bottom:38px}
 .v3 .v2stage #shadeNote{top:40px}
+
+/* 빛반사 보기 스위치 */
+.v3 .v3glare{display:flex;flex-direction:column;gap:4px;margin:12px 0 0}
+.v3 .v3gltog{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;margin:0}
+.v3 .v3gltog input{position:absolute;opacity:0;width:1px;height:1px}
+.v3 .v3gltog .sw{width:34px;height:20px;border-radius:10px;background:#D5DBE1;position:relative;flex:none;transition:background .15s}
+.v3 .v3gltog .sw::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.v3 .v3gltog input:checked+.sw{background:#0A1317}
+.v3 .v3gltog input:checked+.sw::after{left:16px}
+.v3 .v3gltog input:focus-visible+.sw{outline:2px solid #0064E0;outline-offset:2px}
+.v3 .v3glnote{font-size:11px;color:#5D6C7B;line-height:1.4}
+.v3 .v3glnote:empty{display:none}

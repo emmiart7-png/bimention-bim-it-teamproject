@@ -18,6 +18,7 @@
   // 화면: exterior 외관 (마우스로 돌리기) · interior 실내 (창 쪽을 봄) · split 나란히 — 유니티 화면과 같은 버튼
   let icam = null, viewMode = 'exterior', cmpExt = null, cmpInt = null;
   let plinth = null, terrain = null, showTer = true, elevAt = null, terrToken = 0;   // 지형 (AWS Terrain Tiles)
+  let glareOn = false, glareGrp = null, occ = null, glareLast = 0, glareTimer = 0, glareArgs = null;   // 빛반사 (유리 정반사)
 
   function el(id) { return document.getElementById(id); }
   function note(t) { if (msg) msg.textContent = t; }
@@ -233,7 +234,7 @@
       const [a, b] = f.path.map(([lon, lat]) => [(lon - L.lon0) * L.mx, (lat - L.lat0) * L.my]);
       return { id: f.id, az: f.azimuth_deg, louver: f.louver, a, b, len: Math.hypot(b[0] - a[0], b[1] - a[1]), nE: Math.sin(f.azimuth_deg * RAD), nN: Math.cos(f.azimuth_deg * RAD) };
     });
-    model = { height, step, stepF, spacing, L, faces, floors: opt.floors, floorHeight: opt.floorHeight };
+    model = { height, step, stepF, spacing, depth, L, faces, floors: opt.floors, floorHeight: opt.floorHeight };
     // 카메라: 남서쪽 위 35° 에서 내려다보기 (Unity 화면처럼). 낮은 건물도 주변이 보이게 거리 최소 70 m
     const r = Math.max(...L.pts.map(p => Math.hypot(p[0], p[1]))) + height * 0.6;
     const dist = Math.max(r, height, 70) * 2.5, el = 35 * RAD;
@@ -305,7 +306,7 @@
       plinth.position.y = low - 0.3; plinth.castShadow = plinth.receiveShadow = true; plinth.visible = showTer; scene.add(plinth);
     }
     ground.position.y = showTer ? lo - 0.5 : 0;
-    placeContext(); bestHome();
+    placeContext(); buildOcc(); bestHome();
     const hy = elevAt(model.home.pos.x, -model.home.pos.z) + 25;   // 처음 카메라가 언덕에 묻히지 않게
     if (model.home.pos.y < hy) { const atHome = camera.position.distanceTo(model.home.pos) < 0.5; model.home.pos.y = hy; if (atHome) camera.position.y = hy; }
     if (terrCb) terrCb('지형 높이 차 ' + Math.round(hi - lo) + ' m');
@@ -348,7 +349,7 @@
       m.userData.c = c; m.userData.pts = pts; m.userData.h = h; context.add(m); n++;
     }
     context.visible = showCtx; scene.add(context);
-    placeContext();
+    placeContext(); buildOcc();
     bestHome();
     model.contextCount = n;
     return n;
@@ -376,7 +377,7 @@
     h.pos.copy(best.p);
     if (atHome) { camera.position.copy(h.pos); controls.target.copy(h.target); controls.update(); }
   }
-  function showContext(on) { showCtx = on; if (context) context.visible = on; }
+  function showContext(on) { showCtx = on; if (context) context.visible = on; redoGlare(); }
   function inside(pts, x, y) {
     let c = false;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -393,7 +394,7 @@
     if (ground) ground.position.y = 0;
     for (const o of [building, slabs]) if (o) { scene.remove(o); o.geometry.dispose(); }
     for (const b of blades) { scene.remove(b.mesh); b.mesh.geometry.dispose(); }
-    blades = []; building = slabs = null; model = null;
+    blades = []; building = slabs = null; model = null; occ = null; clearGlare();
     if (context) { scene.remove(context); context.traverse(o => o.geometry && o.geometry.dispose()); context = null; }
   }
 
@@ -427,12 +428,114 @@
         o.updateMatrix(); b.mesh.setMatrixAt(i, o.matrix);
       }
       b.mesh.instanceMatrix.needsUpdate = true;
+      b.angle = a; b.side = s;
     }
+    glareArgs = { dE, dN, dU, day };
+    if (glareOn) glareSoon();
   }
   // 상자의 깊이 축(로컬 +z)을 수평 방향 (동 vE, 북 vN) 으로 돌리는 y 회전. three 좌표의 방향은 (x = vE, z = -vN)
   function yawFor(vE, vN) { return Math.atan2(vE, -vN); }
 
   // 입면별 루버 켜고 끄기: on = {입면 id: true/false}
-  function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; }
-  window.Model3D = { setLouvers, setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, lookAtFaceFront, snapshot, get hasModel() { return !!model; } };
+  function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; redoGlare(); }
+
+  // ---- 빛반사: 유리를 평평한 거울로 보고, 입면에서 반사된 햇빛이 주변 건물 · 땅 어디에 닿는지 ----
+  // 입면마다 점(가로 · 세로 최대 20 개)에서 반사 방향으로 2 m 씩 나아가 주변 건물(4 m 격자 높이) 이나 땅에 닿는 곳을 찾는다
+  // 세기 = cos(입사각) × 유리 반사율 0.15 × 루버를 지나는 비율 (들어올 때 × 나갈 때, 날 깊이 · 간격 · 각도로 2D 계산)
+  // 빠진 것: 날 자체의 반사, 여러 번 반사, 유리 종류별 반사율 (1784 는 Unity GlareSim 이 더 정밀)
+  const OCC_C = 4, OCC_N = 260, GLASS_R = 0.15;
+  function buildOcc() {
+    occ = null;
+    if (!context || !model) return;
+    const top = new Float32Array(OCC_N * OCC_N).fill(-1e9), id = new Int32Array(OCC_N * OCC_N).fill(-1), h = OCC_N / 2;
+    context.children.forEach((m, k) => {
+      const P = m.userData.pts, t = m.position.y + m.userData.h * m.scale.y;
+      let e0 = Infinity, e1 = -Infinity, n0 = Infinity, n1 = -Infinity;
+      for (const [e, n] of P) { e0 = Math.min(e0, e); e1 = Math.max(e1, e); n0 = Math.min(n0, n); n1 = Math.max(n1, n); }
+      for (let i = Math.max(0, Math.floor(e0 / OCC_C + h)); i <= Math.min(OCC_N - 1, Math.floor(e1 / OCC_C + h)); i++)
+        for (let j = Math.max(0, Math.floor(n0 / OCC_C + h)); j <= Math.min(OCC_N - 1, Math.floor(n1 / OCC_C + h)); j++) {
+          const ce = (i - h + 0.5) * OCC_C, cn = (j - h + 0.5) * OCC_C, q = j * OCC_N + i;
+          if (t > top[q] && inside(P, ce, cn)) { top[q] = t; id[q] = k; }
+        }
+    });
+    occ = { top, id };
+    redoGlare();
+  }
+  function clearGlare() {
+    if (glareGrp) { scene.remove(glareGrp); glareGrp.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); glareGrp = null; }
+  }
+  function redoGlare() { if (glareOn) glareSoon(); }
+  // 재생 중에는 0.15초에 한 번만 계산
+  function glareSoon() {
+    const now = performance.now();
+    if (now - glareLast > 150) { glareLast = now; computeGlare(); return; }
+    clearTimeout(glareTimer); glareTimer = setTimeout(() => { glareLast = performance.now(); computeGlare(); }, 160);
+  }
+  function computeGlare() {
+    clearGlare();
+    const info = { on: true, rays: 0, buildings: 0, ground: 0, cut: null, sunBehind: false, night: false };
+    if (!model || !glareArgs) return report(info);
+    const { dE, dN, dU, day } = glareArgs;
+    if (!day || dU <= 0) { info.night = true; return report(info); }
+    const H = model.height, D = model.depth, S = model.spacing, hh = OCC_N / 2;
+    // 날 배열을 지나는 비율: 방향 phi (입면 법선에서 잰 수평 각), 날 방향 beta
+    const tr = (phi, beta) => Math.max(0, 1 - D * Math.abs(Math.sin(phi - beta)) / (S * Math.max(0.05, Math.cos(phi))));
+    const ln = [], pt = [], col = [], hitB = new Set(), c = new THREE.Color();
+    let sumBare = 0, sumLouv = 0, anyFace = false;
+    for (const f of model.faces) {
+      const cosI = dE * f.nE + dN * f.nN;          // 해가 이 입면 앞에 있는지 (수평 성분)
+      if (cosI <= 0.03) continue;
+      anyFace = true;
+      const ph = f.az * RAD, tE = Math.cos(ph), tN = -Math.sin(ph);
+      const phi = Math.atan2(dE * tE + dN * tN, cosI);
+      const b = blades.find(x => x.id === f.id), beta = b ? -(b.side || 1) * (b.angle || 0) : 0;
+      const T = b && b.mesh.visible ? tr(phi, beta) * tr(-phi, beta) : 1;
+      const rE = -dE + 2 * cosI * f.nE, rN = -dN + 2 * cosI * f.nN, rU = -dU;   // 반사 방향 (아래로 나간다)
+      const nx = Math.max(3, Math.min(20, Math.round(f.len / 3))), ny = Math.max(3, Math.min(20, Math.round(H / 3.3)));
+      for (let ix = 0; ix < nx; ix++) for (let iy = 0; iy < ny; iy++) {
+        const k = (ix + 0.5) / nx, y0 = (iy + 0.5) / ny * H;
+        let e = f.a[0] + (f.b[0] - f.a[0]) * k + f.nE * 0.6, n = f.a[1] + (f.b[1] - f.a[1]) * k + f.nN * 0.6, y = y0;
+        const e0 = e, n0 = n, I = cosI * GLASS_R;
+        sumBare += I; sumLouv += I * T;
+        let hit = null;
+        for (let step = 0; step < 300 && !hit; step++) {
+          e += rE * 2; n += rN * 2; y += rU * 2;
+          const g = showTer && elevAt ? elevAt(e, n) : 0;
+          if (y <= g) { hit = { y: g + 0.3, k: -1 }; break; }
+          if (occ && showCtx) {
+            const i = Math.floor(e / OCC_C + hh), j = Math.floor(n / OCC_C + hh);
+            if (i < 0 || j < 0 || i >= OCC_N || j >= OCC_N) break;
+            const q = j * OCC_N + i;
+            if (occ.top[q] > y) hit = { y, k: occ.id[q] };
+          }
+        }
+        if (!hit || T < 0.02) continue;
+        info.rays++;
+        if (hit.k >= 0) hitB.add(hit.k); else info.ground++;
+        const v = Math.min(1, T * cosI);   // 0 ~ 1 : 보라(약함) → 빨강 → 노랑(셈), Unity GlareSim 과 같은 색 순서
+        c.setHSL(v < 0.5 ? 0.8 + v * 0.4 : (v - 0.5) * 0.3, 1, 0.5 + v * 0.1);
+        pt.push(e, hit.y, -n); col.push(c.r, c.g, c.b);
+        if ((ix + iy) % 3 === 0) ln.push(e0, y0, -n0, e, hit.y, -n);
+      }
+    }
+    info.buildings = hitB.size;
+    info.sunBehind = !anyFace;
+    info.cut = sumBare > 0 ? 1 - sumLouv / sumBare : null;
+    if (pt.length) {
+      glareGrp = new THREE.Group();
+      const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pt, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      glareGrp.add(new THREE.Points(pg, new THREE.PointsMaterial({ size: 5, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false })));
+      const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(ln, 3));
+      glareGrp.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#7FD3FF', transparent: true, opacity: 0.35, depthWrite: false })));
+      scene.add(glareGrp);
+    }
+    report(info);
+  }
+  function report(info) { if (window.Model3D && window.Model3D.onGlare) window.Model3D.onGlare(info); }
+  function setGlare(on) {
+    glareOn = !!on;
+    if (!glareOn) { clearGlare(); clearTimeout(glareTimer); report({ on: false }); return; }
+    computeGlare();
+  }
+  window.Model3D = { setGlare, onGlare: null, setLouvers, setBuilding, setContext, showContext, showTerrain, update, setView, lookAtFacade, lookAtFaceFront, snapshot, get hasModel() { return !!model; } };
 })();

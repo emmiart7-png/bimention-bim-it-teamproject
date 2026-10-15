@@ -200,7 +200,7 @@ svg text{font-family:inherit}
 }
 </style>
 <link rel="stylesheet" href="v2.css?v=3">
-<link rel="stylesheet" href="v3.css?v=9">
+<link rel="stylesheet" href="v3.css?v=10">
 </head>
 <body>
 <header>
@@ -415,7 +415,7 @@ svg text{font-family:inherit}
     </div>
   </section>
 </main>
-<script src="v3.js?v=8"></script>
+<script src="v3.js?v=9"></script>
 <script src="engine.js?v=32"></script>
 <script src="geo.js?v=28"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -522,6 +522,11 @@ svg text{font-family:inherit}
     },
     ready:false,   // Unity 장면이 다 뜨면 onUnityReady 가 불린다 (보고서 캡처가 이걸 기다림)
     onUnityReady(){ this.ready=true; if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); this.sendView(this.view); if(this.context) this.sendContext(this.context); },
+    // 반사광 (Unity GlareSim). Unity 가 켤 수 있는지 알려 주고(onGlareAvailable), 계산이 끝날 때마다 결과 JSON 을 보낸다
+    glareAvailable:false, glareMode:'off',
+    onGlareAvailable(on){ this.glareAvailable=!!on; window.dispatchEvent(new CustomEvent('glare-available',{detail:!!on})); if(on && this.glareMode!=='off') this.sendGlare(this.glareMode); },
+    sendGlare(mode){ this.glareMode=mode; if(window.unityInstance && this.glareAvailable){ try{ window.unityInstance.SendMessage('LouverBridge','SetGlare',mode); }catch(e){ console.warn(e); } } },
+    receiveGlareResult(json){ let r=null; try{ r=JSON.parse(json); }catch(e){} window.dispatchEvent(new CustomEvent('glare-result',{detail:r})); },
     receiveSolarResult(json){ const s=typeof json==='string'?json:JSON.stringify(json,null,1); $('unityJson').value=s; document.querySelector('input[name=src][value=unity]').checked=true; $('unityBox').classList.remove('hidden'); run(); }
   };
 
@@ -821,7 +826,7 @@ svg text{font-family:inherit}
 </script>
 <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="model3d.js?v=52"></script>
+<script src="model3d.js?v=54"></script>
 <script src="shade.js?v=5"></script>
 <script>document.querySelectorAll(".collapsible>h2").forEach(t=>t.addEventListener("click",()=>{t.parentElement.classList.toggle("collapsed");window.dispatchEvent(new Event("resize"));}));</script>
 <script src="features.js?v=57"></script>
