@@ -1,0 +1,49 @@
+/* 디자인 시안 v3 (v3.html 전용): v2.css 위에 덮어씀 */
+.v3 .v3plan{margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff}
+.v3 .v3plan #plans{margin:0}
+.v3 .v3plan .siteplan{max-width:none}
+.v3 .v3plan p{font-size:11px;color:#5D6C7B;margin:2px 0 0;line-height:1.4}
+.v3 .v3viewrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 10px}
+.v3 .v3viewrow .v2seg{width:300px;margin:0}
+.v3 .v3viewrow .v2faces{display:flex!important;gap:6px;margin:0}
+.v3 .v3viewrow .v2faces .facebtn{width:56px}
+.v3 .v2chip{right:auto}
+.v3 .v2stagehead{margin-bottom:8px}
+@media (max-width:900px){.v3 .v3viewrow{flex-wrap:wrap}.v3 .v3viewrow .v2seg{width:100%}}
+.v3 .v3legend{margin:6px 0 0;font-size:11px;gap:10px;color:#5D6C7B}
+.v3 .v3legend i{width:10px;height:10px}
+.v3 .v3speed{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.v3 .v3speed button{border-radius:8px;padding:5px 0;font-size:12px}
+.v3 .v3speed button.on{background:#0A1317;color:#fff;border-color:#0A1317}
+.v3 #vwStatus{margin-top:4px;min-height:0}
+.v3 .v2inforow{margin-top:6px}
+.v3 .v2infobox>label.check{margin-top:12px!important}
+.v3 .v2layers{display:none!important}   /* 주변 건물 · 지형 체크박스 빼기 (둘 다 보이는 상태 유지) */
+/* v3 추가 */
+.v3 #simSrc{display:none!important}   /* 네이버 1784 | 선택한 건물 버튼 빼기 */
+.v3 .v2seasons button.on{background:#0A1317;color:#fff;border-color:#0A1317}
+.v3 .v3infonote{font-size:11px;color:#5D6C7B;margin:0 0 4px;line-height:1.4}
+/* 루버 시뮬레이션 화면을 왼쪽 칸 아래 끝까지 */
+.v3 .v2shell{align-items:stretch}
+.v3 .v2side>.v2card:last-child{margin-bottom:0}
+.v3 .v2maincol{display:flex;flex-direction:column;min-height:100%}
+.v3 .v2stagecard{flex:1;display:flex;flex-direction:column}
+.v3 .v2stage{flex:1;display:flex;flex-direction:column;min-height:420px}
+.v3 #unity{flex:1;display:flex!important;flex-direction:column}
+.v3 #unity[style*="display: none"]{display:none!important}
+.v3 #unity-canvas{flex:1;width:100%!important;height:100%!important;aspect-ratio:auto!important;min-height:0}
+.v3 #modelBox:not([hidden]){flex:1;display:flex;flex-direction:column}
+.v3 #model3d{flex:1;min-height:0;position:relative}
+.v3 #model3d canvas{position:absolute;inset:0}
+.v3 .v3playbtns{display:flex;gap:4px;flex:none}
+.v3 .v3pbtn{width:34px;height:30px;padding:0;border-radius:8px;background:#fff;color:#0A1317;border:1px solid var(--line);font-size:11px;letter-spacing:-2px;display:flex;align-items:center;justify-content:center}
+.v3 .v3pbtn.sel{background:#0A1317;color:#fff;border-color:#0A1317}
+/* 웹 3D 나침반: 56 → 49 px (원래와 42 px 의 중간), 화면 크기와 상관없이 같은 크기 */
+.v3 #model3d>div[style*="56px"]{transform:scale(.875);transform-origin:top right}
+/* 큰 화면 위아래 검은 띠 없애기: 웹 3D 아래 안내 문구들을 화면 위에 겹쳐 놓고, 빈 줄은 숨김 */
+.v3 .v2stage #modelBox{position:relative}
+.v3 .v2stage #shadeNote:empty,.v3 .v2stage #model3dMsg:empty{display:none}
+.v3 .v2stage #shadeNote,.v3 .v2stage #model3dMsg,.v3 .v2stage #modelBox>p.muted:last-child{position:absolute;left:12px;margin:0!important;padding:3px 8px!important;border-radius:6px;background:rgba(10,19,23,.55);color:#E3E8EE!important;font-size:11px!important;z-index:4;pointer-events:none;max-width:calc(100% - 24px)}
+.v3 .v2stage #modelBox>p.muted:last-child{bottom:10px}
+.v3 .v2stage #model3dMsg{bottom:38px}
+.v3 .v2stage #shadeNote{top:40px}
