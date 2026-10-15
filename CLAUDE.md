@@ -57,7 +57,7 @@
 
 ## 남은 일 · 기다리는 것
 
-- Unity 빌드: 지금 사이트 = 팀 `unity_webgl_1015_glare_v2` (10/15 15:52). 건물 정상, 빛반사 연결 · 해 고도(하지 정오 74°) 확인함. `UNITY_FILE_SUFFIX="?b=1015glare2"`
+- Unity 빌드: 지금 사이트 = 팀 `unity_webgl_1015_glare_v3` (10/15 16:40). 건물 정상, 빛반사 연결 · 해 고도(하지 정오 74°) 확인함. `UNITY_FILE_SUFFIX="?b=1015glare3"`
   새 빌드가 오면: Releases 에서 받아 docs/unity/Build · StreamingAssets 교체 → work/web/index.html 의 `UNITY_FILE_SUFFIX` 를 새 값으로 → 건물 보이는지 · 빛반사 켜기 확인 → publish.js → 배포
 - Unity 나침반 85px 고정 (LouverViewSetup.cs), 날 색 #E8ECEF: 다음 빌드에 넣어 달라고 요청함
 - 팀 저장소 web/README · 엑셀 15_웹도구 시트의 화면 설명을 v3 화면에 맞게 고치기 (아직 안 함)
