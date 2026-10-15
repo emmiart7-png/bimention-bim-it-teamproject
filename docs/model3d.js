@@ -45,7 +45,7 @@
     sun = new THREE.DirectionalLight(0xFFF9F0, 0.95);   // 살짝 따뜻한 햇빛
     sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005;
     scene.add(sun); scene.add(sun.target);
-    ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: '#93AE80' }));
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: '#899C80' }));
     ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
     icam = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 5000);
     box.style.position = 'relative';
@@ -188,7 +188,7 @@
     const shape = new THREE.Shape(L.pts.map(([e, n]) => new THREE.Vector2(e, n)));
     const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false });
     geo.rotateX(-Math.PI / 2); // shape 의 y(북) → -z, 돌출 방향 → +y
-    building = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#4677A3', roughness: 0.15, metalness: 0.35 }));
+    building = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#7F9DC0', roughness: 0.25, metalness: 0.1, emissive: 0x2A3A4E }));
     building.castShadow = true; building.receiveShadow = true; scene.add(building);
     // 층 구분선
     const lines = [];
@@ -197,7 +197,7 @@
       for (let i = 0; i < L.pts.length; i++) { const a = L.pts[i], b = L.pts[(i + 1) % L.pts.length]; lines.push(a[0], y, -a[1], b[0], y, -b[1]); }
     }
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
-    slabs = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#D7E2EC', transparent: true, opacity: 0.55 })); scene.add(slabs);
+    slabs = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#E6EDF4', transparent: true, opacity: 0.8 })); scene.add(slabs);
     // 루버: 입면마다 InstancedMesh 하나
     const spacing = (opt.spacingMm || 350) / 1000, depth = (opt.depthMm || 300) / 1000;
     const louvered = opt.facades;   // 루버 없는 입면도 만들어 두고 숨긴다 (setLouvers 로 켜고 끔)
@@ -236,9 +236,9 @@
     model = { height, step, stepF, spacing, L, faces, floors: opt.floors, floorHeight: opt.floorHeight };
     // 카메라: 남서쪽 위 35° 에서 내려다보기 (Unity 화면처럼). 낮은 건물도 주변이 보이게 거리 최소 70 m
     const r = Math.max(...L.pts.map(p => Math.hypot(p[0], p[1]))) + height * 0.6;
-    const dist = Math.max(r, height, 70) * 1.9, el = 35 * RAD;
-    controls.target.set(0, height * 0.45, 0);
-    camera.position.set(-dist * Math.cos(el) * 0.54, height * 0.45 + dist * Math.sin(el), dist * Math.cos(el) * 0.84);
+    const dist = Math.max(r, height, 70) * 2.5, el = 35 * RAD;
+    controls.target.set(0, height * 0.3, 0);
+    camera.position.set(-dist * Math.cos(el) * 0.54, height * 0.3 + dist * Math.sin(el), dist * Math.cos(el) * 0.84);
     camera.far = r * 20; camera.updateProjectionMatrix();
     model.home = { target: controls.target.clone(), pos: camera.position.clone() };
     placeInterior();
@@ -287,7 +287,7 @@
     const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
     let lo = Infinity, hi = -Infinity; const ys = [];
     for (let i = 0; i < pos.count; i++) { const y = elevAt(pos.getX(i), -pos.getZ(i)); ys.push(y); lo = Math.min(lo, y); hi = Math.max(hi, y); }
-    const c0 = new THREE.Color('#93AE80'), c1 = new THREE.Color('#86A374'), c = new THREE.Color();
+    const c0 = new THREE.Color('#899C80'), c1 = new THREE.Color('#7F9376'), c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) { pos.setY(i, ys[i]); c.copy(c0).lerp(c1, hi - lo > 1 ? (ys[i] - lo) / (hi - lo) : 0); col.set([c.r, c.g, c.b], i * 3); }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
     terrain = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
