@@ -35,17 +35,17 @@
     // 하늘: 위는 맑은 파랑, 지평선 쪽은 밝은 안개색 (낮 · 밤 두 장). 먼 주변 건물은 같은 색 안개로 흐리게
     const sky = (top, mid, low) => { const c = document.createElement('canvas'); c.width = 2; c.height = 256; const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
       gr.addColorStop(0, top); gr.addColorStop(0.62, mid); gr.addColorStop(1, low); g.fillStyle = gr; g.fillRect(0, 0, 2, 256); const t = new THREE.CanvasTexture(c); return t; };
-    skyDay = sky('#8FB9E3', '#CFE1F1', '#E3EAEF'); skyNight = sky('#142033', '#2A3A52', '#3A4658');
+    skyDay = sky('#3FC3CB', '#4AD4D4', '#BFD6DA'); skyNight = sky('#142033', '#2A3A52', '#3A4658');
     scene.background = skyDay;
-    scene.fog = new THREE.Fog('#E3EAEF', 700, 2600);
+    scene.fog = new THREE.Fog('#BFD6DA', 700, 2600);   // 색은 Unity 화면과 맞춤 (청록 하늘 · 흰 건물 · 연두 땅)
     camera = new THREE.PerspectiveCamera(40, 16 / 9, 0.5, 5000);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.495;
-    hemi = new THREE.HemisphereLight(0xEAF2FF, 0xB9B3A6, 0.62); scene.add(hemi);   // 하늘빛 · 땅 반사빛
+    hemi = new THREE.HemisphereLight(0xFFFFFF, 0xC9D4C0, 0.7); scene.add(hemi);   // 하늘빛 · 땅 반사빛
     sun = new THREE.DirectionalLight(0xFFF9F0, 0.95);   // 살짝 따뜻한 햇빛
     sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0005;
     scene.add(sun); scene.add(sun.target);
-    ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: '#A9B5A0' }));
+    ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: '#93AE80' }));
     ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
     icam = new THREE.PerspectiveCamera(70, 16 / 9, 0.05, 5000);
     box.style.position = 'relative';
@@ -234,11 +234,11 @@
       return { id: f.id, az: f.azimuth_deg, louver: f.louver, a, b, len: Math.hypot(b[0] - a[0], b[1] - a[1]), nE: Math.sin(f.azimuth_deg * RAD), nN: Math.cos(f.azimuth_deg * RAD) };
     });
     model = { height, step, stepF, spacing, L, faces, floors: opt.floors, floorHeight: opt.floorHeight };
-    // 카메라: 남서쪽 위에서 건물 전체
+    // 카메라: 남서쪽 위 35° 에서 내려다보기 (Unity 화면처럼). 낮은 건물도 주변이 보이게 거리 최소 70 m
     const r = Math.max(...L.pts.map(p => Math.hypot(p[0], p[1]))) + height * 0.6;
-    const dist = Math.max(r, height) * 1.9;
+    const dist = Math.max(r, height, 70) * 1.9, el = 35 * RAD;
     controls.target.set(0, height * 0.45, 0);
-    camera.position.set(-dist * 0.55, height * 0.55 + 10, dist * 0.85);
+    camera.position.set(-dist * Math.cos(el) * 0.54, height * 0.45 + dist * Math.sin(el), dist * Math.cos(el) * 0.84);
     camera.far = r * 20; camera.updateProjectionMatrix();
     model.home = { target: controls.target.clone(), pos: camera.position.clone() };
     placeInterior();
@@ -287,7 +287,7 @@
     const pos = g.attributes.position, col = new Float32Array(pos.count * 3);
     let lo = Infinity, hi = -Infinity; const ys = [];
     for (let i = 0; i < pos.count; i++) { const y = elevAt(pos.getX(i), -pos.getZ(i)); ys.push(y); lo = Math.min(lo, y); hi = Math.max(hi, y); }
-    const c0 = new THREE.Color('#8DA57A'), c1 = new THREE.Color('#5E7A50'), c = new THREE.Color();
+    const c0 = new THREE.Color('#93AE80'), c1 = new THREE.Color('#86A374'), c = new THREE.Color();
     for (let i = 0; i < pos.count; i++) { pos.setY(i, ys[i]); c.copy(c0).lerp(c1, hi - lo > 1 ? (ys[i] - lo) / (hi - lo) : 0); col.set([c.r, c.g, c.b], i * 3); }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
     terrain = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true }));
@@ -301,11 +301,13 @@
     if (low < -0.2) {
       const pg = new THREE.ExtrudeGeometry(new THREE.Shape(P.map(([e, n]) => new THREE.Vector2(e, n))), { depth: -low + 0.3, bevelEnabled: false });
       pg.rotateX(-Math.PI / 2);
-      plinth = new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ color: '#B8BCC0' }));
+      plinth = new THREE.Mesh(pg, new THREE.MeshLambertMaterial({ color: '#D3D7DA' }));
       plinth.position.y = low - 0.3; plinth.castShadow = plinth.receiveShadow = true; plinth.visible = showTer; scene.add(plinth);
     }
     ground.position.y = showTer ? lo - 0.5 : 0;
-    placeContext();
+    placeContext(); bestHome();
+    const hy = elevAt(model.home.pos.x, -model.home.pos.z) + 25;   // 처음 카메라가 언덕에 묻히지 않게
+    if (model.home.pos.y < hy) { const atHome = camera.position.distanceTo(model.home.pos) < 0.5; model.home.pos.y = hy; if (atHome) camera.position.y = hy; }
     if (terrCb) terrCb('지형 높이 차 ' + Math.round(hi - lo) + ' m');
   }
   // 주변 건물을 땅 높이에 맞춰 올리거나 내린다
@@ -328,7 +330,7 @@
     if (!ready || !model) return;
     if (context) { scene.remove(context); context.traverse(o => o.geometry && o.geometry.dispose()); context = null; }
     opt = opt || {};
-    const L = model.L, fh = opt.floorHeight || 3.3, mat = new THREE.MeshLambertMaterial({ color: '#D8DADC' }), edgeMat = new THREE.LineBasicMaterial({ color: '#9EA4AB', transparent: true, opacity: 0.8 });
+    const L = model.L, fh = opt.floorHeight || 3.3, mat = new THREE.MeshLambertMaterial({ color: '#D9DDE0', emissive: 0x4A4E52 }), edgeMat = new THREE.LineBasicMaterial({ color: '#B8BEC4', transparent: true, opacity: 0.6 });
     context = new THREE.Group();
     let n = 0;
     for (const b of list) {
@@ -347,8 +349,32 @@
     }
     context.visible = showCtx; scene.add(context);
     placeContext();
+    bestHome();
     model.contextCount = n;
     return n;
+  }
+  // 처음 카메라 방향: 8 방향 × 내려다보는 각 (35 · 50 · 65°) 중 주변 건물에 가장 덜 가리는 쪽 (같으면 남남서 35°). 사용자가 카메라를 움직였으면 그대로
+  function bestHome() {
+    if (!model || !context || !model.home) return;
+    const h = model.home, atHome = camera.position.distanceTo(h.pos) < 0.5;
+    if (!h.base) { const off = h.pos.clone().sub(h.target); h.base = { d: off.length(), az: Math.atan2(off.x, off.z) }; }
+    const aims = [h.target.clone()];
+    for (const [e, n] of model.L.pts) for (const y of [1, model.height]) aims.push(new THREE.Vector3(e, y, -n));
+    let best = null;
+    for (const [j, elD] of [35, 50, 65].entries()) for (let k = 0; k < 8; k++) {
+      const a = h.base.az + k * Math.PI / 4, el = elD * RAD, hor = h.base.d * Math.cos(el);
+      const p = new THREE.Vector3(h.target.x + Math.sin(a) * hor, h.target.y + h.base.d * Math.sin(el), h.target.z + Math.cos(a) * hor);
+      let hit = 0;   // 건물 가운데 · 모서리(위 · 아래)로 가는 선이 주변 건물을 지나는 횟수
+      for (const t of aims) for (let i = 1; i <= 16; i++) {
+        const q = t.clone().lerp(p, i / 16), e = q.x, n = -q.z;
+        for (const m of context.children) { const top = m.position.y + m.userData.h * m.scale.y; if (top > q.y && inside(m.userData.pts, e, n)) { hit++; break; } }
+      }
+      hit /= aims.length;
+      const score = hit + Math.min(k, 8 - k) * 0.3 + j * 1.2;   // 기본 방향 · 낮은 각에서 멀수록 조금 불리
+      if (!best || score < best.score) best = { score, p };
+    }
+    h.pos.copy(best.p);
+    if (atHome) { camera.position.copy(h.pos); controls.target.copy(h.target); controls.update(); }
   }
   function showContext(on) { showCtx = on; if (context) context.visible = on; }
   function inside(pts, x, y) {
@@ -384,7 +410,7 @@
     const day = st.sun.alt > 0;
     sun.intensity = day ? 0.3 + 0.65 * Math.min(1, Math.sin(alt) * 2) : 0;   // 밝은 면이 하얗게 날아가지 않게
     hemi.intensity = day ? 0.55 : 0.25;
-    scene.background = day ? skyDay : skyNight; scene.fog.color.set(day ? '#E3EAEF' : '#2E3A4C');
+    scene.background = day ? skyDay : skyNight; scene.fog.color.set(day ? '#BFD6DA' : '#2E3A4C');
     // 날: 규칙 각도 (엔진과 같은 정의). 입면 로컬 (ux, uy) = (side·sin a, cos a), 화면 아래 = 실내
     const o = new window.THREE.Object3D();
     for (const b of blades) {
