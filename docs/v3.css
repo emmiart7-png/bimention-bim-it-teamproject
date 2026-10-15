@@ -76,3 +76,6 @@
 .v3 .v2stage.mixint #unity{position:relative}
 .v3 .v2stage.mixint #unity::after{content:"실내 · 네이버 1784 (예시)";position:absolute;left:12px;bottom:10px;padding:3px 8px;border-radius:6px;background:rgba(10,19,23,.6);color:#fff;font-size:11px;pointer-events:none;z-index:4}
 .v3 .v2stage.mixsplit #modelBox::after{content:"외관 · 선택한 건물";position:absolute;right:12px;bottom:10px;padding:3px 8px;border-radius:6px;background:rgba(10,19,23,.6);color:#fff;font-size:11px;pointer-events:none;z-index:4}
+/* 시뮬레이션 창 아래 선 = 설정 칸 아래 선 (늘): Unity 화면이 그린 크기로 창 높이를 버티지 않게, 웹 3D 처럼 칸을 채우기만 한다 */
+.v3 #unity{position:relative}
+.v3 #unity-canvas{position:absolute;left:0;top:0;right:0;bottom:0}

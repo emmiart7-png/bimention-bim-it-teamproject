@@ -9,5 +9,5 @@ fs.writeFileSync(__dirname + '/v2.html', s);
 console.log('v2.html ok');
 // v3.html = v2.html 의 v2.js 대신 v3.js, v3.css 추가
 { let h = fs.readFileSync(__dirname + '/v2.html', 'utf8');
-  h = h.replace(/<link rel="stylesheet" href="v2\.css\?v=\d+">/, m => m + '\n<link rel="stylesheet" href="v3.css?v=16">').replace(/<script src="v2\.js\?v=\d+"><\/script>/, '<script src="v3.js?v=12"></script>').replace('(디자인 시안 v2)', '(디자인 시안 v3)');
+  h = h.replace(/<link rel="stylesheet" href="v2\.css\?v=\d+">/, m => m + '\n<link rel="stylesheet" href="v3.css?v=17">').replace(/<script src="v2\.js\?v=\d+"><\/script>/, '<script src="v3.js?v=12"></script>').replace('(디자인 시안 v2)', '(디자인 시안 v3)');
   fs.writeFileSync(__dirname + '/v3.html', h); console.log('v3.html ok'); }
