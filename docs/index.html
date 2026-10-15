@@ -176,18 +176,18 @@ svg text{font-family:inherit}
   /* 3쪽: 1쪽 = 검토 대상 · 루버 시뮬레이션 · 보고서용 캡처 / 2쪽 = 누적 순이익 · 대안 비교 / 3쪽 = 입면별 · 히트맵 */
   .printSimGrid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)}
   #capOut figure{margin:4px 0!important}
-  #capOut img{width:auto!important;max-width:100%;max-height:165px;display:block;margin:0 auto}
+  #capOut img{width:auto!important;max-width:100%;max-height:140px;display:block;margin:0 auto}
   #capOut figcaption{margin-top:2px!important;font-size:10px}
-  .printSimGrid img{width:auto;max-width:100%;max-height:200px;margin:0 auto}
-  #printPlan svg{max-height:200px}
+  .printSimGrid img{width:auto;max-width:100%;max-height:170px;margin:0 auto}
+  #printPlan svg{max-height:170px}
   /* 결과는 큰 칸 하나로 묶지 않고 항목마다 칸 (쪽이 넘어가도 테두리가 끊기지 않게) */
   #resultPanel{border:0!important;padding:0!important;margin:0!important;break-before:page;break-inside:auto!important}
   #resultPanel>h2{display:none}
   #resultPanel .subblock{border:1px solid #ccc;border-radius:14px;padding:6px 10px;margin:0 0 6px}
   #resultPanel .subh{margin:0 0 8px!important;padding-top:0!important;border-top:0!important}
   .topRow .cards{margin:0 0 8px}
-  #cumChart svg{max-height:165px}
-  #resultPanel th,#resultPanel td{padding:2px 4px;font-size:11px}
+  #cumChart svg{max-height:135px}
+  #resultPanel th,#resultPanel td{padding:1px 4px;font-size:10.5px;line-height:1.35}
   .card{padding:6px 8px;border-radius:10px}
   .card h3{font-size:12px;margin:0 0 2px}
   .big{font-size:16px}
@@ -195,7 +195,11 @@ svg text{font-family:inherit}
   .kv{font-size:10px;padding-top:2px;margin-top:2px}
   .cards{gap:8px}
   #perFacadeBlock{break-before:page}
-  #energyBlock svg{max-height:80px}
+  #energyBlock svg{max-height:64px}
+  /* 쪽마다 10% 정도 여유 (브라우저 인쇄 설정 · 용지가 조금 달라도 3쪽): 머리 · 칸 간격 줄이기 */
+  header{padding:0 0 6px!important;border-bottom:0!important}
+  section.panel{margin-bottom:6px;padding:6px 10px}
+  #resultPanel .subblock{padding:5px 10px;margin:0 0 5px}
   #energyBlock .legend{margin-top:2px;font-size:10px}
 }
 </style>
