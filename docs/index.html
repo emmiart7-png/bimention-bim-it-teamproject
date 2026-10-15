@@ -629,7 +629,7 @@ svg text{font-family:inherit}
   const $ = id => document.getElementById(id);
   const status = (t, err) => { const s=$('vwStatus'); s.textContent=t; s.classList.toggle('err',!!err); };
   // 기본 키 (은미). "인증키 변경"을 켜고 다른 키를 저장하면 이 브라우저에서는 그 키를 쓴다
-  const DEFAULT_VW_KEY='9134829E-B49D-4C50-BE4F-9E4686AFFF41';
+  const DEFAULT_VW_KEY='9134829E-B49D-4C50-BE4F-9E4686AFFF41';   // 배포할 때 publish.js 가 키를 넣음 (work/vworld_key.txt 또는 지금 사이트 docs/index.html 의 키)
   let key=''; try{ key=localStorage.getItem('vworldKey')||''; }catch(e){}
   $('vwKey').value=key;
   $('vwKeyToggle').onchange=()=>{ $('vwKeyRow').hidden=!$('vwKeyToggle').checked; };

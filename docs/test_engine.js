@@ -1,7 +1,7 @@
 // 엑셀 임시값과 같은 숫자가 나오는지 확인: node test_engine.js
 const E = require('./engine.js');
 const input = {
-  site: { address: '경기 성남시 분당구 정자동', lat_deg: 37.3595, lon_deg: 127.1052 },
+  site: { address: '경기 성남시 분당구 정자동', lat_deg: 37.35888, lon_deg: 127.10518 },
   project_type: 'new', winter_mode: true,
   facades: [
     { id: 'E', azimuth_deg: 90, window_area_m2: 300, louver: true },
@@ -10,11 +10,12 @@ const input = {
     { id: 'N', azimuth_deg: 0, window_area_m2: 300, louver: false }
   ]
 };
-// 엑셀 값 (7_공사비, 8_시공전후, 13_탄소·계절효과, 14_Radiance(팀) ⑥ solar_result · 겨울 햇빛 활용률 0.7 반영 후)
+// 엑셀 값 (10/14 개편: 14_Radiance ⑦ 1784 1~28층 평균, 냉방 1.13/COP 3.5, 난방 0.56/COP 3, 11~3월, 유지비 = 루버 시스템 × 3% + 구동장치 교체)
+// 엑셀은 층 평균을 소수 그대로, 엔진은 0.1 로 반올림한 표를 써서 MWh 는 0.05 까지 같은 것으로 본다
 const expect = {
-  internal_reactive: { total: 641840000, cool: 15.529, light: 4, heat: 0, net: 11.529, t: 5.304, maint: 36092000, be: null },
-  external_fixed: { total: 545790000, cool: 21.15, light: 14, heat: 15.438, net: -8.288, t: -3.812, maint: 10915800, be: null },
-  external_reactive: { total: 1291590000, cool: 34.51, light: 5, heat: 15.438, net: 14.072, t: 6.473, maint: 68579500, be: null }
+  internal_reactive: { total: 641840000, cool: 27.008, light: 4, heat: 0, net: 23.008, t: 10.584, maint: 25750000, be: null },
+  external_fixed: { total: 545790000, cool: 35.413, light: 14, heat: 35.887, net: -14.474, t: -6.658, maint: 4050000, be: null },
+  external_reactive: { total: 1291590000, cool: 60.017, light: 5, heat: 18.081, net: 36.937, t: 16.991, maint: 30750000, be: null }
 };
 const out = E.compute(input, null, { mode: 'excel' });
 let fail = 0;
@@ -23,11 +24,11 @@ for (const [alt, x] of Object.entries(expect)) {
   const r = out.result[alt];
   const checks = [
     ['총 공사비', r.cost.total_krw, x.total, 1],
-    ['냉방 절감', r.energy.cooling_saved_mwh_yr, x.cool, 0.01],
-    ['조명 증가', r.energy.lighting_added_mwh_yr, x.light, 0.01],
-    ['난방 증가', r.energy.heating_added_mwh_yr, x.heat, 0.01],
-    ['순 절감', r.energy.net_saved_mwh_yr, x.net, 0.01],
-    ['탄소', r.carbon.saved_t_yr, x.t, 0.01],
+    ['냉방 절감', r.energy.cooling_saved_mwh_yr, x.cool, 0.05],
+    ['조명 증가', r.energy.lighting_added_mwh_yr, x.light, 0.05],
+    ['난방 증가', r.energy.heating_added_mwh_yr, x.heat, 0.05],
+    ['순 절감', r.energy.net_saved_mwh_yr, x.net, 0.05],
+    ['탄소', r.carbon.saved_t_yr, x.t, 0.05],
     ['유지관리비', r.money.maintenance_krw_yr, x.maint, 1],
     ['손익분기(100년 이내)', r.money.breakeven_year, x.be === null ? null : x.be, 0]
   ];

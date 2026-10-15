@@ -1,0 +1,74 @@
+/* 디자인 시안 v2 (v2.html 전용). 기본 index.html 에는 쓰지 않음 */
+.v2 main{display:block!important;max-width:1500px}
+.v2 .v2shell{display:grid;grid-template-columns:330px minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.v2 .v2card{padding:14px;margin:0 0 12px;border-radius:14px}
+.v2 .v2h{display:flex;justify-content:space-between;align-items:center;font-size:16px;margin:0 0 10px}
+.v2 .v2h #resetMap{border:0;background:none;color:var(--muted);font-size:12px!important;padding:0!important}
+/* 세그먼트 (네이버 1784 | 선택한 건물, 외관 | 실내 | 나란히) */
+.v2 .v2seg{display:flex!important;flex-wrap:nowrap;background:#F1F4F7;border-radius:10px;padding:3px;gap:3px;margin:0 0 10px;width:100%}
+.v2 .v2seg label{flex:1;text-align:center;border:0;border-radius:8px;padding:6px 0;margin:0;font-size:14px;color:#5D6C7B}
+.v2 .v2seg label:has(input:checked){background:#fff;box-shadow:0 1px 2px rgba(10,19,23,.1)}
+.v2 .v2seg label:has(input:disabled){opacity:.45;cursor:not-allowed}
+.v2 .v2seg input:checked+span{color:#0064E0;font-weight:700}
+/* 검색 · 지도 */
+.v2 .v2search{display:flex;gap:8px;align-items:center;margin:0}
+.v2 .v2search>div{flex:1}
+.v2 .v2search label{display:none}
+.v2 .v2map{position:relative;margin-top:10px}
+.v2 #map{height:150px!important;aspect-ratio:auto!important;margin:0}
+.v2 .v2map.big #map{height:420px!important}
+.v2 .v2expand{position:absolute;right:8px;top:8px;z-index:500;width:30px;height:30px;padding:0;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center}
+.v2 #vwStatus{font-size:12px;margin-top:6px}
+.v2 .v2inforow{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}
+.v2 .v2infotog{border:0;background:none;padding:0;font-size:14px;font-weight:600;color:var(--ink)}
+.v2 .v2infotog .muted{font-weight:400;font-size:12px}
+.v2 .v2infotog .chev{display:inline-block;transition:transform .15s}
+.v2 .v2infotog.open .chev{transform:rotate(90deg)}
+.v2 #makeFacades{border-radius:8px}
+.v2 .v2infobox{margin-top:8px}
+.v2 .v2infobox.closed{display:none}
+.v2 .v2infobox .row4{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:0}
+/* 시뮬레이션 */
+.v2 .v2lab{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--sub);margin:12px 0 4px}
+.v2 .v2lab input[type=date]{width:auto;border:0;padding:0;font-size:12px;color:var(--sub);background:none}
+.v2 .v2seasons{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.v2 .v2seasons button{border-radius:8px;padding:6px 0}
+.v2 #simTimeOut{font-family:ui-monospace,Consolas,monospace;font-weight:700;color:var(--ink);font-size:13px}
+.v2 .v2play{display:flex;align-items:center;gap:10px}
+.v2 .v2play input{flex:1}
+.v2 #simPlay{width:30px;height:30px;border-radius:50%;padding:0;background:#0A1317;color:#fff;font-size:0;border:0;flex:none;display:flex;align-items:center;justify-content:center}
+.v2 #simPlay::before{content:"▶";font-size:11px;margin-left:2px}
+.v2 #simPlay.playing::before{content:"❚❚";font-size:10px;margin-left:0}
+.v2 .v2faces{display:grid!important;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0 0}
+.v2 .v2faces .facebtn{justify-content:center;border-radius:8px;padding:0;height:34px}
+.v2 .v2faces svg{display:none}
+.v2 .v2faces .facebtn.on{background:#0A1317;color:#fff;border-color:#0A1317}
+.v2 .v2layers{display:flex!important;gap:16px;margin:12px 0 0!important}
+.v2 .v2layers .muted{display:none}
+.v2 .v2legend{border-top:1px solid var(--line);padding-top:8px;margin-top:12px}
+/* 오른쪽 큰 화면 */
+.v2 .v2stagecard{padding:14px;border-radius:14px;margin:0}
+.v2 .v2stagehead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.v2 .v2stagehead h2{margin:0;font-size:16px}
+.v2 #simWhere{margin:0!important;font-size:13px!important}
+.v2 .v2capbtn{margin-left:auto;border-radius:8px;display:flex;align-items:center;gap:6px}
+.v2 .v2stage{position:relative;background:#0A1317;border-radius:12px;overflow:hidden;min-height:300px}
+.v2 #unity{border:0;border-radius:0;min-height:300px;padding:0;margin:0;color:#8595A4}
+.v2 #unity-canvas{border-radius:0!important}
+.v2 #unity-progress{color:#8595A4;padding:0 12px 8px}
+.v2 #modelBox{margin:0}
+.v2 #modelBox p{color:#9AA6B2;padding:0 12px;margin:6px 0}
+.v2 #model3d{border-radius:0!important}
+.v2 .v2chip{position:absolute;left:14px;top:12px;display:flex;gap:18px;color:#fff;font-size:13px;font-weight:600;pointer-events:none;text-shadow:0 1px 2px rgba(0,0,0,.6);z-index:5}
+.v2 #sunInfo{color:#fff;margin:0;font-size:13px}
+.v2 #sunInfo::before{content:"●";color:#F2B544;margin-right:6px}
+.v2 .v2plan{position:absolute;right:12px;top:12px;width:280px;background:rgba(255,255,255,.96);border-radius:12px;padding:8px 10px;z-index:5}
+.v2 .v2plan #plans{margin:0}
+.v2 .v2plan .siteplan{max-width:none}
+.v2 #plans svg text{font-size:24px}
+.v2 .v2plan p{font-size:11px;color:#5D6C7B;margin:2px 0 0;line-height:1.4}
+.v2 #capPanel.has{display:block!important}
+@media (max-width:900px){.v2 .v2shell{grid-template-columns:1fr}.v2 .v2plan{position:static;width:auto;margin:8px}}
+.v2 .v2stagehead h2,.v2 .v2capbtn{white-space:nowrap;flex:none}
+.v2 #simWhere{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2 .v2chip{flex-wrap:wrap;right:310px}
