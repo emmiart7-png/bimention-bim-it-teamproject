@@ -64,3 +64,5 @@
 .v3 .v3glare .v3glseg label{font-size:13px;padding:4px 0}
 /* 외관 · 실내 · 나란히 도 끄기 | 켜기 와 같은 높이 · 글씨 */
 .v3 .v2seg label{font-size:13px;padding:4px 0;line-height:1.5}
+/* 링크 복사 · 인쇄 · 상세 인쇄: 아래 선을 "사용법" 줄 아래 선에 맞춤 (top 은 v3.js 가 계산) */
+@media (min-width:701px){.v3 header{position:relative}.v3 header .hdr-btns{position:absolute;right:24px}}

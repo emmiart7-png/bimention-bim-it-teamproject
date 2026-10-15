@@ -143,4 +143,9 @@
 
   // 큰 화면: 왼쪽 칸 아래 끝까지 늘리기 (웹 3D 도 칸 높이를 채움)
   $('model3d').dataset.fill = '1';
+
+  // 링크 복사 · 인쇄 · 상세 인쇄 버튼의 아래 선 = 사용법 글자 줄의 아래 선
+  const hdr = document.querySelector('header'), hb = hdr && hdr.querySelector('.hdr-btns'), sm = hdr && hdr.querySelector('#howto summary');
+  const placeBtns = () => { if (!hb || !sm) return; if (innerWidth <= 700) { hb.style.top = ''; return; } hb.style.top = Math.round(sm.getBoundingClientRect().bottom - hdr.getBoundingClientRect().top - hb.offsetHeight) + 'px'; };
+  addEventListener('resize', placeBtns); addEventListener('load', placeBtns); document.fonts && document.fonts.ready.then(placeBtns); placeBtns();
 })();
