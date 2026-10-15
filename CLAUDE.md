@@ -52,14 +52,13 @@
 - **빛반사 보기 (끄기 | 켜기, 기본 끄기)**
   - 다른 건물: 웹 3D 에서 유리 정반사 계산 → 반사광이 닿는 주변 건물 벽 · 지붕에 면으로 칠함 (약하면 노랑 #FFE45C, 셀수록 주황 #FF7A1A)
   - 1784: Unity GlareSim 을 `LouverBridge.SetGlare("instant"|"off")` 로 켜고 끔, 결과는 `receiveGlareResult` 로 받음
-- 인쇄 = 3쪽 요약, 상세 인쇄 = 종합보고서 양식 약 16~17쪽 (report.js)
+- 보고서용 캡처: Unity 를 찍는 동안만 3배 해상도, 입면 가운데 42% 확대 (웹 3D 60%) → 열림 · 닫힘 차이가 보이게 (capture.js ZOOM)
+- 인쇄 = 3쪽 요약 (10/14 양식과 같은 구성, 인쇄 버튼으로 해야 Unity 캡처가 들어감), 상세 인쇄 = 종합보고서 양식 약 16~17쪽 (report.js)
 
 ## 남은 일 · 기다리는 것
 
-- **Unity 빛반사 빌드 (unity_webgl_1015_glare, 팀 Releases)**: 빛반사 연결은 되지만 **건물이 안 보이고 그림자만 보임**
-  (콘솔 `GL_INVALID_OPERATION ... Mismatch between texture format and sampler type (shadow)`). 그래서 사이트에 안 올림.
-  Unity 담당자에게 재빌드 요청함. GlareSim 결과의 해 고도(하지 12:00 = 50°)도 실제(약 74°)와 달라 확인 요청함.
-  새 빌드가 오면: Releases 에서 받아 docs/unity/Build · StreamingAssets 교체 → index.html 의 `UNITY_FILE_SUFFIX` 를 새 값으로 → 건물 보이는지 · 빛반사 켜기 확인 → 배포
+- Unity 빌드: 지금 사이트 = 팀 `unity_webgl_1015_glare_v2` (10/15 15:52). 건물 정상, 빛반사 연결 · 해 고도(하지 정오 74°) 확인함. `UNITY_FILE_SUFFIX="?b=1015glare2"`
+  새 빌드가 오면: Releases 에서 받아 docs/unity/Build · StreamingAssets 교체 → work/web/index.html 의 `UNITY_FILE_SUFFIX` 를 새 값으로 → 건물 보이는지 · 빛반사 켜기 확인 → publish.js → 배포
 - Unity 나침반 85px 고정 (LouverViewSetup.cs), 날 색 #E8ECEF: 다음 빌드에 넣어 달라고 요청함
 - 팀 저장소 web/README · 엑셀 15_웹도구 시트의 화면 설명을 v3 화면에 맞게 고치기 (아직 안 함)
 
