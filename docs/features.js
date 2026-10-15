@@ -258,7 +258,7 @@
     let prevT = performance.now();
     const tick = now => {
       if (!timer) return;
-      const dt = Math.min(0.1, (now - prevT) / 1000); prevT = now;
+      const dt = Math.min(0.1, (now - prevT) / 1000) * (window.PlaySpeed || 1); prevT = now;   // PlaySpeed: 재생 속도 배수 (기본 1)
       if (last) {
         const [y, m, d] = $('simDate').value.split('-').map(Number), lat = last.input.site.lat_deg, lon = last.input.site.lon_deg;
         const at = t => { t = ((t % 1440) + 1440) % 1440; return E.sunPosition(lat, lon, y || 2026, m || 6, d || 21, Math.floor(t / 60), t % 60); };
