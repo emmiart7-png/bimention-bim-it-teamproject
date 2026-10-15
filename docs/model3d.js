@@ -476,8 +476,39 @@
     if (now - glareLast > 150) { glareLast = now; computeGlare(); return; }
     clearTimeout(glareTimer); glareTimer = setTimeout(() => { glareLast = performance.now(); computeGlare(); }, 160);
   }
-  // 닿는 곳 = 주변 건물 벽(또는 지붕)에 반사된 햇빛 한 칸 크기의 판. 약하면 노랑, 셀수록 주황
+  // 닿는 곳 = 주변 건물 벽 · 지붕에 깔끔한 면으로 입힌다. 약하면 노랑, 셀수록 주황
+  // 입면(직사각형)을 반사 방향으로 그 벽(또는 지붕) 평면에 비추면 평행사변형이 된다 → 벽 · 지붕 모양으로 자르고,
+  // 광선이 실제로 닿은 범위(가려진 부분 빼기)로 한 번 더 자른다
   const GL_WEAK = [1, 0.894, 0.361], GL_STRONG = [1, 0.478, 0.102];   // #FFE45C → #FF7A1A
+  // 다각형 자르기 (Sutherland–Hodgman). inside(p) · cut(p, q) 로 반평면 하나씩
+  function clipHalf(poly, inside, cut) {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i], q = poly[(i + 1) % poly.length], ip = inside(p), iq = inside(q);
+      if (ip) out.push(p);
+      if (ip !== iq) out.push(cut(p, q));
+    }
+    return out;
+  }
+  function clipRect(poly, x0, x1, y0, y1) {
+    if (!(x0 < x1 && y0 < y1)) return [];
+    const lerp = (p, q, t) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+    for (const [ax, v, keep] of [[0, x0, 1], [0, x1, -1], [1, y0, 1], [1, y1, -1]]) {
+      poly = clipHalf(poly, p => (p[ax] - v) * keep >= 0, (p, q) => lerp(p, q, (v - p[ax]) / (q[ax] - p[ax])));
+      if (poly.length < 3) return [];
+    }
+    return poly;
+  }
+  function clipConvex(poly, clip) {   // clip = 볼록 다각형
+    let area = 0; for (let i = 0; i < clip.length; i++) { const p = clip[i], q = clip[(i + 1) % clip.length]; area += p[0] * q[1] - q[0] * p[1]; }
+    const sg = area >= 0 ? 1 : -1;
+    for (let i = 0; i < clip.length && poly.length >= 3; i++) {
+      const A = clip[i], B = clip[(i + 1) % clip.length], ex = B[0] - A[0], ey = B[1] - A[1];
+      const side = p => sg * (ex * (p[1] - A[1]) - ey * (p[0] - A[0]));
+      poly = clipHalf(poly, p => side(p) >= 0, (p, q) => { const sp = side(p), sq = side(q), t = sp / (sp - sq); return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]; });
+    }
+    return poly.length >= 3 ? poly : [];
+  }
   function computeGlare() {
     clearGlare();
     const info = { on: true, rays: 0, buildings: 0, cut: null, sunBehind: false, night: false };
@@ -487,7 +518,7 @@
     const H = model.height, D = model.depth, S = model.spacing, hh = OCC_N / 2;
     // 날 배열을 지나는 비율: 방향 phi (입면 법선에서 잰 수평 각), 날 방향 beta
     const tr = (phi, beta) => Math.max(0, 1 - D * Math.abs(Math.sin(phi - beta)) / (S * Math.max(0.05, Math.cos(phi))));
-    const patches = [], ln = [], hitB = new Set();
+    const polys = [], ln = [], hitB = new Set();
     let sumBare = 0, sumLouv = 0, anyFace = false;
     for (const f of model.faces) {
       const cosI = dE * f.nE + dN * f.nN;          // 해가 이 입면 앞에 있는지 (수평 성분)
@@ -498,14 +529,15 @@
       const bl = blades.find(x => x.id === f.id), beta = bl ? -(bl.side || 1) * (bl.angle || 0) : 0;
       const T = bl && bl.mesh.visible ? tr(phi, beta) * tr(-phi, beta) : 1;
       const rE = -dE + 2 * cosI * f.nE, rN = -dN + 2 * cosI * f.nN, rU = -dU;   // 반사 방향 (아래로 나간다)
-      const nx = Math.max(3, Math.min(20, Math.round(f.len / 3))), ny = Math.max(3, Math.min(20, Math.round(H / 3.3)));
-      const pw = f.len / nx * 1.3, phh = H / ny * 1.3;   // 판 크기 = 보내는 쪽 한 칸 크기
+      const nx = Math.max(3, Math.min(24, Math.round(f.len / 2.5))), ny = Math.max(3, Math.min(24, Math.round(H / 3)));
+      const pw = f.len / nx, phh = H / ny;
+      sumBare += cosI * GLASS_R * nx * ny; sumLouv += cosI * GLASS_R * T * nx * ny;
+      if (T < 0.02 || !occ || !showCtx) continue;
+      const grp = new Map();   // 닿은 벽(건물 · 변) 또는 지붕마다 닿은 범위
       for (let ix = 0; ix < nx; ix++) for (let iy = 0; iy < ny; iy++) {
         const k = (ix + 0.5) / nx, y0 = (iy + 0.5) / ny * H;
         let e = f.a[0] + (f.b[0] - f.a[0]) * k + f.nE * 0.6, n = f.a[1] + (f.b[1] - f.a[1]) * k + f.nN * 0.6, y = y0;
-        const e0 = e, n0 = n, I = cosI * GLASS_R;
-        sumBare += I; sumLouv += I * T;
-        if (T < 0.02 || !occ || !showCtx) continue;
+        const e0 = e, n0 = n;
         let hit = null;
         for (let step = 0; step < 300 && !hit; step++) {
           const pe = e, pn = n, py = y;
@@ -516,47 +548,73 @@
           const q = j * OCC_N + i;
           if (occ.top[q] <= y) continue;
           // 그 건물 외곽선과 이번 2 m 구간이 만나는 곳 = 벽에 닿은 곳
-          const kb = occ.id[q], m = context.children[kb], P = m.userData.pts, top = occ.tops[kb];
-          let tb = Infinity, ed = null;
+          const kb = occ.id[q], P = context.children[kb].userData.pts, top = occ.tops[kb];
+          let tb = Infinity, eu = -1;
           for (let u = 0; u < P.length; u++) {
             const A = P[u], B = P[(u + 1) % P.length];
             const sx = e - pe, sy = n - pn, ex = B[0] - A[0], ey = B[1] - A[1], den = sx * ey - sy * ex;
             if (Math.abs(den) < 1e-9) continue;
             const t = ((A[0] - pe) * ey - (A[1] - pn) * ex) / den, w = ((A[0] - pe) * sy - (A[1] - pn) * sx) / den;
-            if (t >= 0 && t <= 1 && w >= 0 && w <= 1 && t < tb) { tb = t; ed = [ex, ey]; }
+            if (t >= 0 && t <= 1 && w >= 0 && w <= 1 && t < tb) { tb = t; eu = u; }
           }
-          const yw = ed ? py + (y - py) * tb : Infinity;
-          if (ed && yw <= top) hit = { e: pe + (e - pe) * tb, n: pn + (n - pn) * tb, y: yw, wall: ed, k: kb };
-          else { const t = py > top ? (py - top) / (py - y) : 0; hit = { e: pe + (e - pe) * t, n: pn + (n - pn) * t, y: top, wall: null, k: kb }; }
+          const yw = eu >= 0 ? py + (y - py) * tb : Infinity;
+          if (eu >= 0 && yw <= top) hit = { e: pe + (e - pe) * tb, n: pn + (n - pn) * tb, y: yw, u: eu, k: kb };
+          else { const t = py > top ? (py - top) / (py - y) : 0; hit = { e: pe + (e - pe) * t, n: pn + (n - pn) * t, y: top, u: -1, k: kb }; }
         }
         if (!hit) continue;
         info.rays++; hitB.add(hit.k);
-        patches.push({ h: hit, v: Math.min(1, T * cosI), w: pw, hgt: phh, r: [rE, rU, -rN] });
-        if ((ix + iy) % 3 === 0) ln.push(e0, y0, -n0, hit.e, hit.y, -hit.n);
+        const key = hit.k + '|' + hit.u;
+        let g = grp.get(key);
+        if (!g) grp.set(key, g = { k: hit.k, u: hit.u, a0: Infinity, a1: -Infinity, b0: Infinity, b1: -Infinity });
+        let ga, gb;
+        if (hit.u >= 0) { const P = context.children[hit.k].userData.pts, A = P[hit.u], B = P[(hit.u + 1) % P.length], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+          ga = ((hit.e - A[0]) * (B[0] - A[0]) + (hit.n - A[1]) * (B[1] - A[1])) / L; gb = hit.y; }
+        else { ga = hit.e; gb = hit.n; }
+        g.a0 = Math.min(g.a0, ga); g.a1 = Math.max(g.a1, ga); g.b0 = Math.min(g.b0, gb); g.b1 = Math.max(g.b1, gb);
+        if ((ix + iy) % 4 === 0) ln.push(e0, y0, -n0, hit.e, hit.y, -hit.n);
+      }
+      // 입면 네 모서리 (유리면에서 0.6 m 앞)
+      const C = [[f.a[0], f.a[1], 0], [f.b[0], f.b[1], 0], [f.b[0], f.b[1], H], [f.a[0], f.a[1], H]].map(([e, n, y]) => [e + f.nE * 0.6, n + f.nN * 0.6, y]);
+      const v = Math.min(1, T * cosI);
+      for (const g of grp.values()) {
+        const m = context.children[g.k], P = m.userData.pts, top = occ.tops[g.k], base = m.position.y;
+        if (g.u >= 0) {
+          const A = P[g.u], B = P[(g.u + 1) % P.length], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+          const d = [(B[0] - A[0]) / L, (B[1] - A[1]) / L], nw = [d[1], -d[0]], den = rE * nw[0] + rN * nw[1];
+          if (Math.abs(den) < 1e-6) continue;
+          const q = [];
+          for (const c of C) { const t = ((A[0] - c[0]) * nw[0] + (A[1] - c[1]) * nw[1]) / den; const pe = c[0] + rE * t, pn = c[1] + rN * t; q.push([(pe - A[0]) * d[0] + (pn - A[1]) * d[1], c[2] + rU * t]); }
+          const poly = clipRect(q, Math.max(0, g.a0 - pw), Math.min(L, g.a1 + pw), Math.max(base, g.b0 - phh), Math.min(top, g.b1 + phh));
+          if (poly.length < 3) continue;
+          const off = -0.12 * Math.sign(den);   // 벽에서 빛이 온 쪽으로 살짝 띄움
+          polys.push({ v, convex: true, pts: poly.map(([s2, y2]) => [A[0] + d[0] * s2 + nw[0] * off, y2, -(A[1] + d[1] * s2 + nw[1] * off)]) });
+        } else {
+          const q = C.map(c => { const t = (top - c[2]) / rU; return [c[0] + rE * t, c[1] + rN * t]; });
+          let poly = clipConvex(P.map(p => [p[0], p[1]]), q);
+          if (poly.length) poly = clipRect(poly, g.a0 - pw, g.a1 + pw, g.b0 - pw, g.b1 + pw);
+          if (poly.length < 3) continue;
+          polys.push({ v, convex: false, pts: poly.map(([e2, n2]) => [e2, top + 0.12, -n2]) });
+        }
       }
     }
     info.buildings = hitB.size;
     info.sunBehind = !anyFace;
     info.cut = sumBare > 0 ? 1 - sumLouv / sumBare : null;
-    if (patches.length) {
+    if (polys.length) {
       glareGrp = new THREE.Group();
-      const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, patches.length);
-      const o = new THREE.Object3D(), c = new THREE.Color();
-      patches.forEach((p, i) => {
-        const { h } = p, rl = Math.hypot(...p.r);
-        o.position.set(h.e - p.r[0] / rl * 0.2, h.y - p.r[1] / rl * 0.2, -h.n - p.r[2] / rl * 0.2);   // 벽에서 살짝 띄움
-        o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1);
-        if (h.wall) { o.lookAt(o.position.x - h.wall[1], o.position.y, o.position.z - h.wall[0]); o.scale.set(p.w, p.hgt, 1); }
-        else { o.rotation.x = -Math.PI / 2; o.scale.set(p.w, p.w, 1); }
-        o.updateMatrix(); im.setMatrixAt(i, o.matrix);
-        c.setRGB(GL_WEAK[0] + (GL_STRONG[0] - GL_WEAK[0]) * p.v, GL_WEAK[1] + (GL_STRONG[1] - GL_WEAK[1]) * p.v, GL_WEAK[2] + (GL_STRONG[2] - GL_WEAK[2]) * p.v);
-        im.setColorAt(i, c);
-      });
-      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
-      glareGrp.add(im);
+      const pos = [], col = [];
+      for (const p of polys) {
+        const c = [0, 1, 2].map(i => GL_WEAK[i] + (GL_STRONG[i] - GL_WEAK[i]) * p.v);
+        let tris;
+        if (p.convex) { tris = []; for (let i = 1; i + 1 < p.pts.length; i++) tris.push([0, i, i + 1]); }
+        else tris = THREE.ShapeUtils.triangulateShape(p.pts.map(q => new THREE.Vector2(q[0], q[2])), []);
+        for (const t of tris) for (const i of t) { pos.push(...p.pts[i]); col.push(...c); }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      glareGrp.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
       const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(ln, 3));
-      glareGrp.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#FFD24D', transparent: true, opacity: 0.25, depthWrite: false })));
+      glareGrp.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#FFD24D', transparent: true, opacity: 0.2, depthWrite: false })));
       scene.add(glareGrp);
     }
     report(info);
