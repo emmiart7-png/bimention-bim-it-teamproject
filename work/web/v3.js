@@ -116,8 +116,8 @@
   const markDay = () => document.querySelectorAll('[data-day]').forEach(b => b.classList.toggle('on', b.dataset.day === $('simDate').value));
   $('simDate').addEventListener('change', markDay); document.querySelectorAll('[data-day]').forEach(b => b.addEventListener('click', () => setTimeout(markDay, 0))); markDay();
 
-  // 짧은 변 제외 기본값 5 m (기본값 버튼도 5 로 되돌림)
-  const me = $('minEdge'); me.defaultValue = '5'; me.value = '5';
+  // 짧은 변 제외 기본값 10 m (index.html 값 그대로, 기본값 버튼도 10 으로 되돌림)
+  const me = $('minEdge'); me.defaultValue = '10'; me.value = '10';
 
   // 정보 수정 값을 바꾸면 고른 건물의 입면을 다시 만든다 (지상층수는 원래 그렇게 동작). 1784 는 팀 측정값을 쓰므로 안내만
   const note = mk('p', 'v3infonote'); infoBox.insertBefore(note, infoBox.firstChild);
