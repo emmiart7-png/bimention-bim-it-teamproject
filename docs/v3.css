@@ -68,3 +68,11 @@
 @media (min-width:701px){.v3 header{position:relative}.v3 header .hdr-btns{position:absolute;right:24px}}
 /* 찾기 · 입면 만들기: 다른 버튼과 같은 크기 · 모양 (높이 28px, 글씨 13px, 모서리 8px). 색은 그대로 */
 .v3 #searchBtn,.v3 #makeFacades{height:28px;padding:0 12px;font-size:13px;line-height:1;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+/* 선택한 건물 + 실내 · 나란히: 실내는 네이버 1784 Unity (예시). 나란히 = 왼쪽 웹 3D 외관, 오른쪽 Unity 실내 */
+.v3 .v2stage.mixsplit{flex-direction:row}
+.v3 .v2stage.mixsplit>#modelBox,.v3 .v2stage.mixsplit>#unity{flex:1 1 0;min-width:0}
+.v3 .v2stage.mixsplit>#modelBox{order:-1}
+.v3 .v2stage.mixsplit>#unity{border-left:2px solid #0A1317}
+.v3 .v2stage.mixint #unity{position:relative}
+.v3 .v2stage.mixint #unity::after{content:"실내 · 네이버 1784 (예시)";position:absolute;left:12px;bottom:10px;padding:3px 8px;border-radius:6px;background:rgba(10,19,23,.6);color:#fff;font-size:11px;pointer-events:none;z-index:4}
+.v3 .v2stage.mixsplit #modelBox::after{content:"외관 · 선택한 건물";position:absolute;right:12px;bottom:10px;padding:3px 8px;border-radius:6px;background:rgba(10,19,23,.6);color:#fff;font-size:11px;pointer-events:none;z-index:4}

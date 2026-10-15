@@ -497,10 +497,11 @@ svg text{font-family:inherit}
   let lastSent='', lastInput=null;
   const clean = o => JSON.stringify(o,(k,v)=>v===null?0:v);
   // 선택한 건물(웹 3D) 을 보는 동안 숨겨진 Unity 를 멈춘다 (안 멈추면 화면을 돌릴 때 7 fps 로 버벅임)
-  window.syncUnityLoop=()=>{ const M=window.unityInstance&&window.unityInstance.Module; if(!M||!M.pauseMainLoop) return; try{ if(window.simMode==='model') M.pauseMainLoop(); else M.resumeMainLoop(); }catch(e){ console.warn(e); } };
+  window.syncUnityLoop=()=>{ const M=window.unityInstance&&window.unityInstance.Module; if(!M||!M.pauseMainLoop) return; const v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior'; try{ if(window.simMode==='model' && v==='exterior') M.pauseMainLoop(); else M.resumeMainLoop(); }catch(e){ console.warn(e); } };
   window.LouverBridge = {
     simDateTime: '2026-06-21T12:00:00+09:00',
     sendToUnity(input, force){
+      if(window.simMode==='model') return;   // 선택한 건물: Unity 는 1784 그대로 (실내 예시로만 씀)
       lastInput=input;
       const key=clean({...input, sim_datetime:undefined});
       if(!window.unityInstance || (!force && key===lastSent)) return;
@@ -521,10 +522,11 @@ svg text{font-family:inherit}
     context: null,
     sendContext(ctx){
       this.context=ctx;
+      if(window.simMode==='model') return;
       if(window.unityInstance && ctx){ try{ window.unityInstance.SendMessage('LouverBridge','OnContext',JSON.stringify(ctx)); }catch(e){ console.warn(e); } }
     },
     ready:false,   // Unity 장면이 다 뜨면 onUnityReady 가 불린다 (보고서 캡처가 이걸 기다림)
-    onUnityReady(){ this.ready=true; if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); this.sendView(this.view); if(this.context) this.sendContext(this.context); },
+    onUnityReady(){ this.ready=true; if(lastInput) this.sendToUnity(lastInput, true); this.sendDateTime(this.simDateTime); this.sendView(this.view); if(this.context && window.simMode!=='model') this.sendContext(this.context); },
     // 반사광 (Unity GlareSim). Unity 가 켤 수 있는지 알려 주고(onGlareAvailable), 계산이 끝날 때마다 결과 JSON 을 보낸다
     glareAvailable:false, glareMode:'off',
     onGlareAvailable(on){ this.glareAvailable=!!on; window.dispatchEvent(new CustomEvent('glare-available',{detail:!!on})); if(on && this.glareMode!=='off') this.sendGlare(this.glareMode); },
@@ -536,11 +538,23 @@ svg text{font-family:inherit}
   // 입면 보기: Unity 외관 카메라를 그 입면 정면으로
   document.querySelectorAll('[data-face]').forEach(b=>b.onclick=()=>{
     const model=window.simMode==='model';
-    const ext=document.querySelector('input[name=uview][value=exterior]'); if(ext && !ext.checked){ ext.checked=true; if(model) Model3D.setView('exterior'); else window.LouverBridge.sendView('exterior'); }
+    const ext=document.querySelector('input[name=uview][value=exterior]'); if(ext && !ext.checked){ ext.checked=true; applyStage(); }
     if(model){ if(window.Model3D) Model3D.lookAtFacade(b.dataset.face); return; }
     if(window.unityInstance){ try{ window.unityInstance.SendMessage('LouverViewSetup','LookAtFacade',b.dataset.face); }catch(e){ console.warn(e); } }
   });
-  document.querySelectorAll('input[name=uview]').forEach(r=>r.onchange=()=>{ if(!r.checked) return; if(window.simMode==='model'){ if(window.Model3D) Model3D.setView(r.value); } else window.LouverBridge.sendView(r.value); });
+  // 화면 배치: 네이버 1784 = Unity (외관 · 실내 · 나란히)
+  // 선택한 건물 = 외관은 그 건물 웹 3D, 실내는 늘 네이버 1784 Unity 실내 (예시), 나란히 = 왼쪽 웹 3D 외관 + 오른쪽 1784 실내
+  function applyStage(){
+    const m=window.simMode==='model', v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior';
+    $('unity').style.display=(!m || v!=='exterior')?'block':'none'; $('modelBox').hidden=!(m && v!=='interior');
+    const st=$('unity').parentElement; st.classList.toggle('mixsplit', m && v==='split'); st.classList.toggle('mixint', m && v!=='exterior');
+    window.syncUnityLoop();
+    if(m){ if(window.Model3D) Model3D.setView('exterior'); window.LouverBridge.sendView(v==='exterior'?'exterior':'interior'); }
+    else window.LouverBridge.sendView(v);
+    window.dispatchEvent(new Event('resize'));
+  }
+  window.applyStage=applyStage;
+  document.querySelectorAll('input[name=uview]').forEach(r=>r.onchange=()=>{ if(r.checked) applyStage(); });
 
   const fmtEok = v => (v/1e8).toFixed(2)+'억';
   const fmtMan = v => Math.round(v/1e4).toLocaleString('ko-KR')+'만';
@@ -763,11 +777,9 @@ svg text{font-family:inherit}
   // 시뮬레이션 창: 처음엔 네이버 1784 (Unity), 지도에서 건물을 고르면 그 건물 3D
   function showSim(which){
     const m=which==='model';
-    $('unity').style.display=m?'none':'block'; $('modelBox').hidden=!m;
-    window.simMode=which; window.syncUnityLoop();
+    window.simMode=which;
     $('layerToggles').querySelectorAll('input').forEach(i=>i.disabled=!m); $('layerToggles').style.opacity=m?1:0.5;
-    const v=(document.querySelector('input[name=uview]:checked')||{}).value||'exterior';
-    if(m){ if(window.Model3D) Model3D.setView(v); } else window.LouverBridge.sendView(v);
+    applyStage();
     const r=document.querySelector(`input[name=simsrc][value=${which}]`); if(r) r.checked=true;
     setWhere();
     window.dispatchEvent(new Event('resize'));
