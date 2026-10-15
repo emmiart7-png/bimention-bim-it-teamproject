@@ -66,3 +66,5 @@
 .v3 .v2seg label{font-size:13px;padding:4px 0;line-height:1.5}
 /* 링크 복사 · 인쇄 · 상세 인쇄: 아래 선을 "사용법" 줄 아래 선에 맞춤 (top 은 v3.js 가 계산) */
 @media (min-width:701px){.v3 header{position:relative}.v3 header .hdr-btns{position:absolute;right:24px}}
+/* 찾기 · 입면 만들기: 다른 버튼과 같은 크기 · 모양 (높이 28px, 글씨 13px, 모서리 8px). 색은 그대로 */
+.v3 #searchBtn,.v3 #makeFacades{height:28px;padding:0 12px;font-size:13px;line-height:1;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
