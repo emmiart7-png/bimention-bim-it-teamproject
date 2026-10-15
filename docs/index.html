@@ -238,10 +238,10 @@ svg text{font-family:inherit}
       <div class="status" id="vwStatus">주소나 건물 이름으로 찾거나, 지도에서 건물을 클릭하세요.</div>
       <label class="check" style="margin:24px 0 6px"><input type="checkbox" id="infoToggle"> 정보 수정 <span class="muted" style="font-size:12px">지상층수 · 층고 · 창면적비 · 짧은 변</span></label>
       <div class="row4" id="infoRow" hidden>
-        <div><label for="floors">지상층수</label><input id="floors" type="number" inputmode="decimal" min="1" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
-        <div><label for="floorH">층고 (m)</label><input id="floorH" type="number" inputmode="decimal" step="0.1" value="4"></div>
-        <div><label for="bWwr">창면적비</label><input id="bWwr" type="number" inputmode="decimal" step="0.05" value="0.6"></div>
-        <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="number" inputmode="decimal" value="10"></div>
+        <div><label for="floors">지상층수</label><input id="floors" type="text" inputmode="numeric" autocomplete="off" placeholder="직접 입력" title="비우면 브이월드 층수"></div>
+        <div><label for="floorH">층고 (m)</label><input id="floorH" type="text" inputmode="decimal" autocomplete="off" value="4"></div>
+        <div><label for="bWwr">창면적비</label><input id="bWwr" type="text" inputmode="decimal" autocomplete="off" title="0.6 또는 60 (%)" value="0.6"></div>
+        <div><label for="minEdge" title="이보다 짧은 변은 입면으로 만들지 않음">짧은 변 제외 (m)</label><input id="minEdge" type="text" inputmode="decimal" autocomplete="off" value="10"></div>
       </div>
       <div class="btns" style="justify-content:flex-end;margin-top:auto"><button class="primary" id="makeFacades" disabled>이 건물로 입면 만들기</button></div>
       </div>
@@ -783,6 +783,9 @@ svg text{font-family:inherit}
   document.querySelectorAll('input[name=simsrc]').forEach(r=>r.onchange=()=>{ if(r.checked) showSim(r.value); });
   // 처음엔 네이버 1784 (유니티): 주변 건물 · 지형 토글은 보이되 흐리게
   window.simMode='unity'; $('layerToggles').querySelectorAll('input').forEach(i=>i.disabled=true); $('layerToggles').style.opacity=0.5;
+  // 정보 수정 칸: 글자 칸으로 받아 정리 (쉼표 → 점, 숫자 아닌 글자 빼기, 범위 맞추기). 창면적비는 60 처럼 % 로 써도 0.6. 누르면 전체 선택
+  const numField=(id,lo,hi,int,pct)=>{ const el=$(id); el.addEventListener('focus',()=>el.select()); el.addEventListener('change',()=>{ const t=el.value.replace(',','.').replace(/[^0-9.]/g,''); if(t===''){ el.value=''; return; } let v=parseFloat(t); if(!isFinite(v)){ el.value=''; return; } if(pct&&v>1) v/=100; v=Math.min(hi,Math.max(lo,v)); el.value=int?Math.round(v):Math.round(v*100)/100; }, true); };
+  numField('floors',1,200,true); numField('floorH',2,10); numField('bWwr',0.05,0.95,false,true); numField('minEdge',0,100);
   $('floors').addEventListener('change',()=>{ if(current && lastFs) $('makeFacades').click(); });
   // 1번 값 초기화: 고른 건물 · 입력값을 지우고 처음 (네이버 1784) 으로
   $('resetMap').onclick=()=>{
@@ -835,6 +838,11 @@ svg text{font-family:inherit}
 <script src="report.js?v=2"></script>
 <script src="capture.js?v=8"></script>
 <script>window.UNITY_FILE_SUFFIX="?b=1015fix";</script>
+<script>
+  // Unity WebGL 은 페이지 전체의 키 입력을 잡아서 지우기(Backspace) · Tab 등을 막는다 (preventDefault).
+  // 글자 칸에 입력 중일 때는 칸 밖(Unity)에서 하는 막기만 무시한다. 칸 자신의 처리(주소 검색 Enter 등)는 그대로
+  ['keydown','keypress','keyup'].forEach(t=>window.addEventListener(t,e=>{ const el=e.target; if(!el || !(el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return; const own=e.preventDefault.bind(e); Object.defineProperty(e,'preventDefault',{configurable:true,value(){ if(e.eventPhase===Event.AT_TARGET) own(); }}); },true));
+</script>
 <script src="unity.js?v=34"></script>
 </body>
 </html>
