@@ -31,6 +31,7 @@
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = false;   // 그림자는 해 · 날 · 건물이 바뀔 때만 다시 계산 (화면을 돌릴 때는 그대로)
     box.appendChild(renderer.domElement);
     scene = new THREE.Scene();
     // 하늘: 위는 맑은 파랑, 지평선 쪽은 밝은 안개색 (낮 · 밤 두 장). 먼 주변 건물은 같은 색 안개로 흐리게
@@ -53,8 +54,9 @@
     cmpExt = makeCompass(); cmpInt = makeCompass();
     const ro = new ResizeObserver(resize); ro.observe(box); resize();
     ready = true;
-    (function loop() { requestAnimationFrame(loop); controls.update(); lod(); render(); })();
+    (function loop() { requestAnimationFrame(loop); if (!box.offsetParent) return; controls.update(); lod(); render(); })();   // Unity 를 보는 중(숨김)이면 쉬기
   }
+  function shadowDirty() { if (renderer) renderer.shadowMap.needsUpdate = true; }
   function render() {
     const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
     if (viewMode === 'split') {
@@ -156,7 +158,8 @@
     const gap = model.spacing * model.stepF;
     for (const b of blades) {
       const d = Math.max(0.1, b.box.distanceToPoint(camera.position));
-      b.mesh.count = gap * k / d >= 5 ? b.pts.length : b.nCoarse;
+      const want = gap * k / d >= 5 ? b.pts.length : b.nCoarse;
+      if (b.mesh.count !== want) { b.mesh.count = want; shadowDirty(); }
     }
   }
   function resize() {
@@ -313,6 +316,7 @@
   }
   // 주변 건물을 땅 높이에 맞춰 올리거나 내린다
   function placeContext() {
+    shadowDirty();
     if (!context) return;
     for (const m of context.children) {
       if (!(showTer && elevAt)) { m.position.y = 0; m.scale.y = 1; continue; }
@@ -322,7 +326,7 @@
     }
   }
   function showTerrain(on) {
-    showTer = on; if (terrain) terrain.visible = on; if (plinth) plinth.visible = on;
+    showTer = on; if (terrain) terrain.visible = on; if (plinth) plinth.visible = on; shadowDirty();
     if (ground) ground.position.y = (on && model && model.terrainRange) ? model.terrainRange[0] - 0.5 : 0;
     placeContext();
   }
@@ -377,7 +381,7 @@
     h.pos.copy(best.p);
     if (atHome) { camera.position.copy(h.pos); controls.target.copy(h.target); controls.update(); }
   }
-  function showContext(on) { showCtx = on; if (context) context.visible = on; redoGlare(); }
+  function showContext(on) { showCtx = on; if (context) context.visible = on; shadowDirty(); redoGlare(); }
   function inside(pts, x, y) {
     let c = false;
     for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -431,13 +435,14 @@
       b.angle = a; b.side = s;
     }
     glareArgs = { dE, dN, dU, day };
+    shadowDirty();
     if (glareOn) glareSoon();
   }
   // 상자의 깊이 축(로컬 +z)을 수평 방향 (동 vE, 북 vN) 으로 돌리는 y 회전. three 좌표의 방향은 (x = vE, z = -vN)
   function yawFor(vE, vN) { return Math.atan2(vE, -vN); }
 
   // 입면별 루버 켜고 끄기: on = {입면 id: true/false}
-  function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; redoGlare(); }
+  function setLouvers(on) { for (const b of blades) if (b.id in on) b.mesh.visible = !!on[b.id]; shadowDirty(); redoGlare(); }
 
   // ---- 빛반사: 유리를 평평한 거울로 보고, 입면에서 반사된 햇빛이 주변 건물 · 땅 어디에 닿는지 ----
   // 입면마다 점(가로 · 세로 최대 20 개)에서 반사 방향으로 2 m 씩 나아가 주변 건물(4 m 격자 높이) 이나 땅에 닿는 곳을 찾는다
@@ -458,7 +463,7 @@
           if (t > top[q] && inside(P, ce, cn)) { top[q] = t; id[q] = k; }
         }
     });
-    occ = { top, id };
+    occ = { top, id, tops: context.children.map(m => m.position.y + m.userData.h * m.scale.y) };
     redoGlare();
   }
   function clearGlare() {
@@ -471,16 +476,18 @@
     if (now - glareLast > 150) { glareLast = now; computeGlare(); return; }
     clearTimeout(glareTimer); glareTimer = setTimeout(() => { glareLast = performance.now(); computeGlare(); }, 160);
   }
+  // 닿는 곳 = 주변 건물 벽(또는 지붕)에 반사된 햇빛 한 칸 크기의 판. 약하면 노랑, 셀수록 주황
+  const GL_WEAK = [1, 0.894, 0.361], GL_STRONG = [1, 0.478, 0.102];   // #FFE45C → #FF7A1A
   function computeGlare() {
     clearGlare();
-    const info = { on: true, rays: 0, buildings: 0, ground: 0, cut: null, sunBehind: false, night: false };
+    const info = { on: true, rays: 0, buildings: 0, cut: null, sunBehind: false, night: false };
     if (!model || !glareArgs) return report(info);
     const { dE, dN, dU, day } = glareArgs;
     if (!day || dU <= 0) { info.night = true; return report(info); }
     const H = model.height, D = model.depth, S = model.spacing, hh = OCC_N / 2;
     // 날 배열을 지나는 비율: 방향 phi (입면 법선에서 잰 수평 각), 날 방향 beta
     const tr = (phi, beta) => Math.max(0, 1 - D * Math.abs(Math.sin(phi - beta)) / (S * Math.max(0.05, Math.cos(phi))));
-    const ln = [], pt = [], col = [], hitB = new Set(), c = new THREE.Color();
+    const patches = [], ln = [], hitB = new Set();
     let sumBare = 0, sumLouv = 0, anyFace = false;
     for (const f of model.faces) {
       const cosI = dE * f.nE + dN * f.nN;          // 해가 이 입면 앞에 있는지 (수평 성분)
@@ -488,45 +495,68 @@
       anyFace = true;
       const ph = f.az * RAD, tE = Math.cos(ph), tN = -Math.sin(ph);
       const phi = Math.atan2(dE * tE + dN * tN, cosI);
-      const b = blades.find(x => x.id === f.id), beta = b ? -(b.side || 1) * (b.angle || 0) : 0;
-      const T = b && b.mesh.visible ? tr(phi, beta) * tr(-phi, beta) : 1;
+      const bl = blades.find(x => x.id === f.id), beta = bl ? -(bl.side || 1) * (bl.angle || 0) : 0;
+      const T = bl && bl.mesh.visible ? tr(phi, beta) * tr(-phi, beta) : 1;
       const rE = -dE + 2 * cosI * f.nE, rN = -dN + 2 * cosI * f.nN, rU = -dU;   // 반사 방향 (아래로 나간다)
       const nx = Math.max(3, Math.min(20, Math.round(f.len / 3))), ny = Math.max(3, Math.min(20, Math.round(H / 3.3)));
+      const pw = f.len / nx * 1.3, phh = H / ny * 1.3;   // 판 크기 = 보내는 쪽 한 칸 크기
       for (let ix = 0; ix < nx; ix++) for (let iy = 0; iy < ny; iy++) {
         const k = (ix + 0.5) / nx, y0 = (iy + 0.5) / ny * H;
         let e = f.a[0] + (f.b[0] - f.a[0]) * k + f.nE * 0.6, n = f.a[1] + (f.b[1] - f.a[1]) * k + f.nN * 0.6, y = y0;
         const e0 = e, n0 = n, I = cosI * GLASS_R;
         sumBare += I; sumLouv += I * T;
+        if (T < 0.02 || !occ || !showCtx) continue;
         let hit = null;
         for (let step = 0; step < 300 && !hit; step++) {
+          const pe = e, pn = n, py = y;
           e += rE * 2; n += rN * 2; y += rU * 2;
-          const g = showTer && elevAt ? elevAt(e, n) : 0;
-          if (y <= g) { hit = { y: g + 0.3, k: -1 }; break; }
-          if (occ && showCtx) {
-            const i = Math.floor(e / OCC_C + hh), j = Math.floor(n / OCC_C + hh);
-            if (i < 0 || j < 0 || i >= OCC_N || j >= OCC_N) break;
-            const q = j * OCC_N + i;
-            if (occ.top[q] > y) hit = { y, k: occ.id[q] };
+          if (y <= (showTer && elevAt ? elevAt(e, n) : 0)) break;   // 땅에 닿으면 끝 (땅은 칠하지 않음)
+          const i = Math.floor(e / OCC_C + hh), j = Math.floor(n / OCC_C + hh);
+          if (i < 0 || j < 0 || i >= OCC_N || j >= OCC_N) break;
+          const q = j * OCC_N + i;
+          if (occ.top[q] <= y) continue;
+          // 그 건물 외곽선과 이번 2 m 구간이 만나는 곳 = 벽에 닿은 곳
+          const kb = occ.id[q], m = context.children[kb], P = m.userData.pts, top = occ.tops[kb];
+          let tb = Infinity, ed = null;
+          for (let u = 0; u < P.length; u++) {
+            const A = P[u], B = P[(u + 1) % P.length];
+            const sx = e - pe, sy = n - pn, ex = B[0] - A[0], ey = B[1] - A[1], den = sx * ey - sy * ex;
+            if (Math.abs(den) < 1e-9) continue;
+            const t = ((A[0] - pe) * ey - (A[1] - pn) * ex) / den, w = ((A[0] - pe) * sy - (A[1] - pn) * sx) / den;
+            if (t >= 0 && t <= 1 && w >= 0 && w <= 1 && t < tb) { tb = t; ed = [ex, ey]; }
           }
+          const yw = ed ? py + (y - py) * tb : Infinity;
+          if (ed && yw <= top) hit = { e: pe + (e - pe) * tb, n: pn + (n - pn) * tb, y: yw, wall: ed, k: kb };
+          else { const t = py > top ? (py - top) / (py - y) : 0; hit = { e: pe + (e - pe) * t, n: pn + (n - pn) * t, y: top, wall: null, k: kb }; }
         }
-        if (!hit || T < 0.02) continue;
-        info.rays++;
-        if (hit.k >= 0) hitB.add(hit.k); else info.ground++;
-        const v = Math.min(1, T * cosI);   // 0 ~ 1 : 보라(약함) → 빨강 → 노랑(셈), Unity GlareSim 과 같은 색 순서
-        c.setHSL(v < 0.5 ? 0.8 + v * 0.4 : (v - 0.5) * 0.3, 1, 0.5 + v * 0.1);
-        pt.push(e, hit.y, -n); col.push(c.r, c.g, c.b);
-        if ((ix + iy) % 3 === 0) ln.push(e0, y0, -n0, e, hit.y, -n);
+        if (!hit) continue;
+        info.rays++; hitB.add(hit.k);
+        patches.push({ h: hit, v: Math.min(1, T * cosI), w: pw, hgt: phh, r: [rE, rU, -rN] });
+        if ((ix + iy) % 3 === 0) ln.push(e0, y0, -n0, hit.e, hit.y, -hit.n);
       }
     }
     info.buildings = hitB.size;
     info.sunBehind = !anyFace;
     info.cut = sumBare > 0 ? 1 - sumLouv / sumBare : null;
-    if (pt.length) {
+    if (patches.length) {
       glareGrp = new THREE.Group();
-      const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(pt, 3)); pg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-      glareGrp.add(new THREE.Points(pg, new THREE.PointsMaterial({ size: 5, vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false })));
+      const mat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), mat, patches.length);
+      const o = new THREE.Object3D(), c = new THREE.Color();
+      patches.forEach((p, i) => {
+        const { h } = p, rl = Math.hypot(...p.r);
+        o.position.set(h.e - p.r[0] / rl * 0.2, h.y - p.r[1] / rl * 0.2, -h.n - p.r[2] / rl * 0.2);   // 벽에서 살짝 띄움
+        o.rotation.set(0, 0, 0); o.scale.set(1, 1, 1);
+        if (h.wall) { o.lookAt(o.position.x - h.wall[1], o.position.y, o.position.z - h.wall[0]); o.scale.set(p.w, p.hgt, 1); }
+        else { o.rotation.x = -Math.PI / 2; o.scale.set(p.w, p.w, 1); }
+        o.updateMatrix(); im.setMatrixAt(i, o.matrix);
+        c.setRGB(GL_WEAK[0] + (GL_STRONG[0] - GL_WEAK[0]) * p.v, GL_WEAK[1] + (GL_STRONG[1] - GL_WEAK[1]) * p.v, GL_WEAK[2] + (GL_STRONG[2] - GL_WEAK[2]) * p.v);
+        im.setColorAt(i, c);
+      });
+      im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true;
+      glareGrp.add(im);
       const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(ln, 3));
-      glareGrp.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#7FD3FF', transparent: true, opacity: 0.35, depthWrite: false })));
+      glareGrp.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#FFD24D', transparent: true, opacity: 0.25, depthWrite: false })));
       scene.add(glareGrp);
     }
     report(info);

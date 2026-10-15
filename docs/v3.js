@@ -41,7 +41,7 @@
   sc.append(mk('h2', 'v2h', '설정'));
   const dr = mk('div', 'v2lab'); dr.append(mk('span', null, '날짜'), $('simDate')); sc.append(dr);
   const seasons = document.querySelector('[data-day]').parentElement; seasons.removeAttribute('style'); seasons.className = 'v2seasons'; sc.append(seasons);
-  const tr = mk('div', 'v2lab'); tr.append(mk('span', null, '시각'), $('simTimeOut')); sc.append(tr);
+  const tr = mk('div', 'v2lab v3timelab'); tr.append(mk('span', null, '시각'), $('simTimeOut')); sc.append(tr);
   const playEl = $('simPlay'), timeEl = $('simTime');   // 옮긴 뒤에는 문서에 붙기 전이라 id 로 못 찾으므로 미리 잡아 둔다
   const pr = mk('div', 'v2play'); pr.append(playEl, timeEl); sc.append(pr);
   playEl.style.display = 'none';
@@ -55,36 +55,20 @@
   const syncPlay = () => pb.querySelectorAll('.v3pbtn').forEach(b => { const sel = window.PlaySpeed === Number(b.dataset.k); b.classList.toggle('sel', sel); b.setAttribute('aria-pressed', sel); b.querySelector('.ic').textContent = sel && playing() ? '❚❚' : (b.dataset.k === '1' ? '▶▶' : '▶'); });
   window.PlaySpeed = 0.5; pr.insertBefore(pb, timeEl); syncPlay();
   new MutationObserver(syncPlay).observe(playEl, { childList: true, characterData: true, subtree: true });
-  // 빛반사 보기: 1784(Unity) = GlareSim, 다른 건물(웹 3D) = 웹에서 계산 (유리 정반사)
-  const gl = mk('div', 'v3glare', '<label class="v3gltog"><input type="checkbox" id="glareChk"><span class="sw" aria-hidden="true"></span>빛반사 보기</label><span class="v3glnote" id="glareNote"></span>');
+  // 빛반사 보기 (기본 끄기): 1784(Unity) = GlareSim, 다른 건물(웹 3D) = 웹에서 계산 → 주변 건물 벽에 노랑 ~ 주황으로 칠함
+  const gl = mk('div', 'v3glare', '<span>빛반사 보기</span><span class="seg v2seg v3glseg" role="radiogroup" aria-label="빛반사 보기"><label><input type="radio" name="glare" value="off" checked><span>끄기</span></label><label><input type="radio" name="glare" value="on"><span>켜기</span></label></span>');
   sc.append(gl);
-  const gChk = gl.querySelector('input'), gNote = gl.querySelector('.v3glnote');
-  let gMode = null, gUnity = null;
-  const pct = v => Math.round(v * 100) + '%';
+  const gOn = () => gl.querySelector('input[value=on]').checked;
+  let gMode = null;
   const applyGlare = () => {
-    const on = gChk.checked, model = window.simMode === 'model';
-    if (window.Model3D) window.Model3D.onGlare = onG;   // 앱 스크립트가 이 파일보다 늦게 뜬다
+    const on = gOn(), model = window.simMode === 'model';
     if (window.Model3D && window.Model3D.setGlare) window.Model3D.setGlare(on && model);
     const LB = window.LouverBridge; if (LB && LB.sendGlare) LB.sendGlare(on && !model ? 'instant' : 'off');
     gMode = window.simMode;
-    if (!on) gNote.textContent = '';
-    else if (!model) gNote.textContent = LB && LB.glareAvailable ? 'Unity 반사광 계산 중…' : 'Unity 빌드에 반사광이 아직 없어요 (다음 빌드에서 켜져요)';
   };
-  gChk.onchange = applyGlare;
-  setInterval(() => { if (gChk.checked && window.simMode !== gMode) applyGlare(); }, 800);   // 1784 ↔ 선택한 건물이 바뀌면 다시
-  const onG = i => {
-    if (!gChk.checked || window.simMode !== 'model' || !i.on) return;
-    if (i.night) gNote.textContent = '해가 진 시각이라 반사광이 없어요';
-    else if (i.sunBehind) gNote.textContent = '지금은 해가 유리면 뒤쪽이라 반사광이 없어요';
-    else if (!i.rays) gNote.textContent = '반사광이 주변에 닿지 않아요' + (i.cut != null && i.cut > 0.01 ? ' · 루버가 ' + pct(i.cut) + ' 막음' : '');
-    else gNote.textContent = '주변 건물 ' + i.buildings + '곳' + (i.ground ? ' · 땅' : '') + '에 닿음' + (i.cut != null ? ' · 루버가 반사광 ' + pct(i.cut) + ' 줄임' : '');
-  };
+  gl.querySelectorAll('input').forEach(r => r.onchange = applyGlare);
+  setInterval(() => { if (gOn() && window.simMode !== gMode) applyGlare(); }, 800);   // 1784 ↔ 선택한 건물이 바뀌면 다시
   window.addEventListener('glare-available', applyGlare);
-  window.addEventListener('glare-result', e => {
-    const r = e.detail; if (!gChk.checked || window.simMode === 'model' || !r) return;
-    const top = r.receivers && r.receivers[0];
-    gNote.textContent = '주변에 닿는 반사 ' + (+r.received || 0).toFixed(1) + ' ' + (r.unit || 'kW') + (top && top.name ? ' · 가장 많이: ' + top.name : '');
-  });
   const vs = $('viewSeg'); vs.classList.add('v2seg');
   const fb = $('faceBtns'); fb.classList.add('v2faces');
   // 마지막으로 누른 입면 버튼을 선택 표시 (처음엔 전체)
