@@ -73,10 +73,12 @@
     const c = document.getElementById('unity-canvas');
     return c ? c.toDataURL('image/png') : null;
   }
+  // 컷은 입면 가운데를 확대해서 쓴다 (전체를 담으면 날이 선 몇 픽셀이라 열림 · 닫힘 차이가 안 보임). 화면 폭 대비 잘라 쓰는 비율
+  const ZOOM = { unity: 0.42, model: 0.6 };
   const loadImg = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
 
   // 4 · 5. 나란히 놓고 라벨 · 캡션
-  async function compose(shots, caption) {
+  async function compose(shots, caption, zoom) {
     const imgs = await Promise.all(shots.map(s => loadImg(s.src)));
     // 각 컷은 2:1 (화면 가운데를 잘라 냄: 입면이 가운데 오도록 카메라를 맞춘 상태)
     const cw = 960, ch = cw / 2, gap = 16, capH = 56;
@@ -86,7 +88,7 @@
     g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, cv.width, cv.height);
     imgs.forEach((im, i) => {
       const x = i * (cw + gap);
-      const sw = Math.min(im.width, im.height * 2), sh = sw / 2;
+      const sw = Math.min(im.width, im.height * 2) * (zoom || 1), sh = sw / 2;
       g.drawImage(im, (im.width - sw) / 2, (im.height - sh) / 2, sw, sh, x, 0, cw, ch);
       g.font = `700 24px ${font}`;
       const w = g.measureText(shots[i].label).width + 28;
@@ -147,6 +149,9 @@
     window.PlanEase && (window.PlanEase.off = true);   // 찍는 동안은 화면도 규칙 값 그대로
     // 지금 화면 기억 (끝나면 되돌림)
     const keep = { date: $('simDate').value, time: $('simTime').value };
+    // Unity 는 찍는 동안만 고해상도로 그린다 (확대해도 선명하게). 끝나면 원래대로
+    const UM = !useModel && window.unityInstance && window.unityInstance.Module, hadDpr = UM && 'devicePixelRatio' in UM, keepDpr = UM && UM.devicePixelRatio;
+    if (UM) UM.devicePixelRatio = Math.max(3, (window.devicePixelRatio || 1) * 2);
     if ($('simPlay').textContent === '멈춤') $('simPlay').click();
     try {
       // 외관 화면, 그 입면을 정면에서 가깝게
@@ -164,7 +169,7 @@
         const shots = [];
         for (const c of cuts) { status(`캡처 중… ${c.label}`); shots.push({ label: c.label, src: await shoot(c, useModel) }); }
         if (shots.some(s => !s.src)) { out.push({ title, miss: true }); continue; }
-        out.push({ title, key, labels: shots.map(s => s.label), src: await compose(shots, caption) });
+        out.push({ title, key, labels: shots.map(s => s.label), src: await compose(shots, caption, useModel ? ZOOM.model : ZOOM.unity) });
       }
       const why = [!times.why.closed && '하지에 닫히는 시각이 없음', !times.why.open && '하지에 열린 낮 시각이 없음', !times.why.winter && '동지에 겨울 모드 (해와 나란히) 시각이 없음'].filter(Boolean);
       $('capOut').innerHTML = out.map(o => o.miss
@@ -176,6 +181,7 @@
     } catch (e) {
       console.warn(e); status('캡처하지 못했습니다: ' + e.message);
     } finally {
+      if (UM) { if (hadDpr) UM.devicePixelRatio = keepDpr; else delete UM.devicePixelRatio; }
       $('simDate').value = keep.date; $('simTime').value = keep.time; $('simTime').dispatchEvent(new Event('input'));
       busy = false; $('capBtn').disabled = false;
       window.PlanEase && (window.PlanEase.off = false);
