@@ -59,6 +59,7 @@
 
 - Unity 빌드: 지금 사이트 = 팀 `unity_webgl_1015_glare_v4` (10/15 16:52). 건물 정상, 빛반사 연결 · 해 고도(하지 정오 74°) 확인함. `UNITY_FILE_SUFFIX="?b=1015glare4"`
   새 빌드가 오면: Releases 에서 받아 docs/unity/Build · StreamingAssets 교체 → work/web/index.html 의 `UNITY_FILE_SUFFIX` 를 새 값으로 → 건물 보이는지 · 빛반사 켜기 확인 → publish.js → 배포
+- Unity 실내 조작: 외관은 왼쪽 끌기인데 실내는 오른쪽 끌기 (다른 스크립트) → 휴대폰에서 실내가 안 움직임. work/unity-link/unity_실내조작_1016 (LouverInteriorLook.cs) 을 Unity 담당자에게 보냄 (10/16). 새 빌드 오면 PC · 휴대폰 실내 조작 확인
 - Unity 나침반 85px 고정 (LouverViewSetup.cs), 날 색 #E8ECEF: 다음 빌드에 넣어 달라고 요청함
 - 팀 저장소 web/README · 엑셀 15_웹도구 시트의 화면 설명을 v3 화면에 맞게 고치기 (아직 안 함)
 
